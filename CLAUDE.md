@@ -3,8 +3,8 @@
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 > **This document has two parts, and they do not describe the same thing.**
-> **Part 1 — Current state** is what the code actually is today; verified against the repo.
-> **Part 2 — Target architecture** is where the project is headed. None of it exists in this repo yet.
+> **Part 1 — Current state** is what the code actually is today; re-verified against the repo and against a running backend on 13 September 2026.
+> **Part 2 — Target architecture** is where the project is headed. Its foundation (env, network, DI, `DataState`) and the auth domain are built; every other feature domain is not.
 > Never run a command or follow a pattern from Part 2 until the corresponding migration step is done. If the two parts conflict, Part 1 wins for any change you make right now.
 
 ## Project identity
@@ -12,7 +12,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Buyer app for a **multi-vendor marketplace**, built on a purchased Flutter UI kit. All three names were unified on 13 September 2026:
 
 - Directory / GitHub repo: `marketplace-app-member`
-- Dart package name (`pubspec.yaml`): **`marketplace_app_member`** — absolute imports are `package:marketplace_app_member/...`. Renaming this breaks every absolute import plus `test/widget_test.dart`.
+- Dart package name (`pubspec.yaml`): **`marketplace_app_member`** — absolute imports are `package:marketplace_app_member/...`. Renaming this breaks every absolute import, in `lib/` and in all four `test/` directories.
 - Bundle id: `com.marketplace.member` (Android `namespace` + `applicationId`, iOS/macOS `PRODUCT_BUNDLE_IDENTIFIER`, Linux `CMakeLists.txt`). The Android `MainActivity.kt` package **must** match the namespace — the manifest resolves `.MainActivity` against it — so the file lives at `android/app/src/main/kotlin/com/marketplace/member/`.
 
 `MaterialApp.title` and the visible product copy still say Shopapay/Markas in places; those are product decisions, not identifiers.
@@ -27,9 +27,10 @@ Buyer app for a **multi-vendor marketplace**, built on a purchased Flutter UI ki
 flutter pub get                       # install dependencies
 flutter run                           # run on connected device/emulator
 flutter analyze                       # static analysis (flutter_lints 4.0.0 via analysis_options.yaml)
-flutter test                          # run all tests
-flutter test test/widget_test.dart    # run a single test file
-flutter test test/widget_test.dart --plain-name 'Counter increments smoke test'   # single test case
+flutter test                          # run all tests (68; all pass — integration needs the backend up)
+flutter test test/data                # one directory
+flutter test test/data/auth_repository_impl_test.dart                       # single file
+flutter test test/ui --plain-name 'token ditolak server berujung logout'    # single test case
 flutter build apk --release           # Android
 flutter build ios --release           # iOS
 ```
@@ -51,7 +52,17 @@ Note: `build_runner` 2.15 **removed `--delete-conflicting-outputs`** — passing
 
 ## Architecture
 
-There is **no backend**. `dio` and `get_it` are declared in `pubspec.yaml` but never imported; all product/review/cart data is hardcoded as fields inside cubits (e.g. `HomePageCubit.productsTShirt`). Models like `ProductModel` already carry `fromJson` factories, so wiring a real API means replacing the cubit's literal lists, not restructuring.
+`dio` and `get_it` **are** wired now — `initialize()` runs before `runApp` and registers a named `"api"` Dio plus ten services and ten repositories. But only the auth domain actually talks to the current backend. Everything else splits three ways, and telling them apart is the single most important thing to get right before editing:
+
+| tree | data source | safe to build on? |
+|---|---|---|
+| `lib/ui/main/auth/` | marketplace-api, live | **yes** |
+| the other `lib/ui/main/*` + the services/repositories/models behind them | the **old Markas backend** — endpoints that no longer exist | **no — see "The dead layer" in Part 2** |
+| `lib/features/` (the UI kit's sample tree) | hardcoded lists inside cubits (`HomePageCubit.productsTShirt`) | as sample UI only |
+
+The dead middle row compiles cleanly and fails only at runtime, so `flutter analyze` gives you no warning about it. Never copy a pattern from it or extend it.
+
+The UI kit's own models (`lib/features/home/data/models/product_model.dart`) carry `fromJson` factories, but they were shaped for the kit's sample JSON, not for marketplace-api — treat them as sample data, not as a starting point for the real catalog models.
 
 ### Feature-first layout
 
@@ -114,10 +125,10 @@ Current state: `en` and `ar` are complete (284 keys) and selectable. `fr` appear
 
 ## Known rough edges
 
-- `test/widget_test.dart` is still the unmodified Flutter counter template and **fails** — it pumps `MyApp` and looks for a `+` icon. Replace it before treating `flutter test` as a signal.
-- Stale `*.dart~` backup files litter `lib/` (and `android/`). They are not compiled but **do show up in grep results** — always confirm a hit isn't in a `~` file before editing.
+- The Flutter counter template `test/widget_test.dart` is **gone** — the suite is real (68 tests, all passing) and is a usable signal. `test/integration/` (17 of those) hits a live backend, so it fails with connection errors when `docker compose up` is not running in the API repo; that is the environment, not a regression.
+- 14 stale `*.dart~` backup files litter `lib/` (and `android/`). They are not compiled but **do show up in grep results** — always confirm a hit isn't in a `~` file before editing.
 - `lib/features/my_cart/presentation/views/map_screen.dart` is 100% commented out, and the `com.google.android.geo.API_KEY` meta-data in `android/app/src/main/AndroidManifest.xml` is commented out too. Restoring the map needs both, plus an iOS key. Location permissions are already declared in the manifest.
-- **The app cannot be built at all until assets are restored.** `flutter build web` fails on three missing entries declared in `pubspec.yaml`: the directories `assets/images/` and `assets/icon/`, and the file `assets/fonts/Hanimation_Arabic_Regular.otf`. Dart compilation itself succeeds — this is purely asset bundling. The UI kit's asset folders were never copied into this repo.
+- **The app builds now, but every image is a placeholder.** The UI kit's asset folders were never copied into this repo, so all 67 files in `assets/images/` and `assets/icon/` are grey 64×64 stubs, and the `Hanimation` font declaration in `pubspec.yaml` stays **commented out** (a fake OTF crashes at start, so it could not be stubbed — all text falls back to the system font). What you see on screen is therefore not the kit's design. `assets/PLACEHOLDER-README.md` documents what was stubbed and how to restore the originals.
 - Android `usesCleartextTraffic` / iOS ATS are **not** configured, so the `http://` base URL will fail on mobile. Not needed for the current web target; required before the first Android/iOS run.
 - `DevicePreview` wraps the app when `kDebugMode`, so debug builds render inside a simulated device frame — layout that looks wrong in debug may be the preview frame, not the code.
 - Orientation is locked to portrait in `main()`.
@@ -135,7 +146,7 @@ Current state: `en` and `ar` are complete (284 keys) and selectable. `fr` appear
 >
 > **Yang selamat tanpa perubahan:** amplop `{success, data, error}` + `meta`, nama kode error (`UNAUTHENTICATED`, `INVALID_CREDENTIALS`, `VALIDATION_ERROR`, `NOT_FOUND`), angka-sebagai-string, dan tinyint sebagai `"0"`/`"1"`. Jadi `DataState`, `parseEnvelope`, dan seluruh `json_converters` dipakai apa adanya.
 >
-> **Yang hilang beserta fiturnya:** satuan majemuk, kalkulator kebutuhan, tier harga PROJECT/B2B, RFQ & kontrak bertahap, struktur order tiga lapis, dan retur berbasis `shipment_id`. `TokenStore.isB2B` kini selalu `false` dan ikut terhapus saat lapisan katalog ditulis ulang.
+> **Yang hilang beserta fiturnya:** satuan majemuk, kalkulator kebutuhan, tier harga PROJECT/B2B, RFQ & kontrak bertahap, struktur order tiga lapis, dan retur berbasis `shipment_id`. `TokenStore.isB2B` kini selalu `false`, tapi **belum dihapus** — ia masih dibaca `CatalogHomeCubit` dan masih memilih label `'Harga proyek (B2B)'` di `catalog_home_screen.dart`, serta menyaring `PriceTierModel` bersegmen `PROJECT` yang tidak pernah lagi dikirim server. Semuanya ikut terbuang bersama lapisan mati di bawah.
 >
 > ### ✅ Bug header `Authorization` case-sensitive SUDAH TIDAK ADA
 >
@@ -165,11 +176,23 @@ Current state: `en` and `ar` are complete (284 keys) and selectable. `fr` appear
 >
 > CodeIgniter menyajikan halaman 404 HTML untuk rute tak terdaftar. Body itu sampai ke `ApiException` sebagai `ClientErrorCode.badResponse`, dan sebelum diperbaiki ia lolos sebagai `isDataNotFound` — artinya salah ketik URL di aplikasi tampil ke user sebagai "data tidak ditemukan". `DataError.isRouteNotFound` kini ikut menganggap `badResponse` + 404 sebagai kesalahan rute.
 >
-> ### ⚠️ Peran kini jamak, dan database uji masih kosong
+> ### ⚠️ Peran kini jamak
 >
 > Satu akun boleh merangkap Buyer, Seller, Affiliate, dan seterusnya; `GET /me` mengembalikan `roles[]` berisi `{code, name}` plus `stores[]`. **Jangan** menulis `user.role == 'buyer'` — pakai `hasRole`/`isBuyer`.
 >
-> Database backend belum di-seed: `/products` dan `/categories` mengembalikan daftar kosong, dan `/search/*` membalas `SEARCH_UNAVAILABLE` karena Elasticsearch belum terpasang. Karena itu lapisan katalog, keranjang, checkout, dan order **sengaja belum ditulis** — menulis model dari dokumen saja sudah tiga kali terbukti salah di proyek ini.
+> ### ⚠️ Seed backend sebagian sudah masuk — cek sendiri, jangan percaya catatan ini
+>
+> Kondisi per 13 September 2026, hasil menembak `http://localhost:8000/api/v1` langsung:
+>
+> | endpoint | isi |
+> |---|---|
+> | `/categories` | **sudah terisi** — tree asli (Elektronik → Handphone & Tablet, dst) dari `database/seeds/03_default_categories.sql` |
+> | `/payment-methods` | **sudah terisi** — `qris`, `virtual_account`, `credit_card`, … |
+> | `/loyalty/tiers` | **sudah terisi** — bronze/silver/gold beserta `min_points` |
+> | `/products`, `/stores/search`, `/recommendations/*` | masih kosong (`total: 0`) — belum ada seed produk/toko |
+> | `/search/*` | `SEARCH_UNAVAILABLE` — tapi sebabnya sekarang **OpenSearch di port 9200 tidak jalan**, bukan belum terpasang. `docker-compose.yml` sudah punya service-nya; `docker compose up -d` menghidupkannya |
+>
+> Karena `/products` masih kosong, lapisan katalog, keranjang, checkout, dan order **tetap belum boleh ditulis dari dokumen saja** — menulis model tanpa melihat respons asli sudah tiga kali terbukti salah di proyek ini. Tunggu seed produk, atau bikin satu produk lewat endpoint seller dan baca bentuk JSON-nya.
 
 **Status: foundation (steps 1-5) plus the auth domain implemented.** What exists today:
 
@@ -178,27 +201,59 @@ Current state: `en` and `ar` are complete (284 keys) and selectable. `fr` appear
 - `lib/core/data_state.dart` — `DataState<T>` union
 - `lib/core/services/` — `token_store.dart`, `auth_events.dart`
 - `lib/util/` — `format_helper.dart`, `json_converters.dart`
-- `lib/di/` — `injector.dart` (called from `main.dart` before `runApp`), `injector_service.dart`, `injector_repository.dart` (both still empty)
+- `lib/di/` — `injector.dart` (called from `main.dart` before `runApp`), `injector_service.dart`, `injector_repository.dart`. **These are not empty**: ten services and ten repositories are registered, but only `AuthService`/`AuthRepository` point at a backend that exists — see "The dead layer" below.
 - **Auth domain (step 2)** — `AuthSessionModel` + `UserModel` (freezed), `AuthService`, `AuthRepository`/`AuthRepositoryImpl`, `AuthCubit`/`AuthState`, and the API-wired `LoginScreen`/`RegisterScreen` under `lib/ui/main/auth/`
 - `lib/util/error_message.dart` — maps `DataError.code` to localized copy; **never** shows `error.message` to users
-- Tests: `test/util/` (17, pure), `test/data/` (6, fake service+store), `test/ui/` (8, fake repository), `test/integration/` (11, needs the backend running)
+- Tests: `test/util/` (17, pure), `test/data/` (11, fake service+store), `test/ui/` (23, fake repository), `test/integration/` (17, needs the backend running) — 68 total, all passing
 
-Still absent: the rest of `lib/features/` (catalog, cart, checkout, orders, …), Firebase, `lib/firebase_options.dart`.
+Still absent: Firebase and `lib/firebase_options.dart`; every feature domain other than auth.
+
+### The dead layer
+
+`lib/core/data/`, plus `lib/ui/main/{cart,checkout,home,order,product,wallet}`, is a **complete data + UI stack written against the old Markas backend**. The 13 September migration commit (`45d5794`) rewrote auth and `/me` only; it did not delete the rest, and nothing in the build complains — `flutter analyze` reports 24 issues, all info-level `withOpacity` deprecations. It fails at runtime, not at compile time.
+
+Of the 53 distinct paths those services call, **37 no longer exist** in marketplace-api's 188 registered routes. Alive: `/auth/*` (all 7), `/me`, `/categories`, `/orders`, `/orders/{id}`, `/orders/{id}/cancel`, `/vouchers/validate`, `/wallet`, `/wallet/topup`, `/wishlist`. Dead, with their replacements:
+
+| called by the app | marketplace-api equivalent |
+|---|---|
+| `/offers`, `/offers/{id}`, `/offers/facets`, `/offers/prices`, `/offers/best-sellers`, `/offers/flash-sale` | `/products`, `/products/{id}`, `/stores/{id}/flash-sales` |
+| `/offers/{id}/reviews`, `/offers/reviews-summary` | `/products/{id}/reviews` |
+| `/sku-master`, `/sku-master/{id}` | `/products/{id}/variants` |
+| `/cart/view`, `/cart/add`, `/cart/remove`, `/cart/clear` | `GET /cart`, `POST /cart/items`, `PATCH`/`DELETE /cart/items/{id}`, `/cart/summary` |
+| `/cart/voucher`, `/cart/voucher_remove` | `/cart/apply-voucher` — **tidak ada rute untuk melepas voucher** |
+| `/checkout` | `/checkout/sessions` + `/shipping-options`, `/shipping`, `/address`, `/confirm`, `/cancel` |
+| `/addresses`, `/addresses/{id}` | `/me/addresses`, `/me/addresses/{id}` |
+| `/payments/initiate`, `/payments/detail` | `/payments/{txId}/pay`, `/payments/{txId}`, `/payment-methods` |
+| `/shipments/{id}`, `/sub-orders/{id}` | `/orders/{id}/tracking` — order sekarang **satu lapis**, bukan tiga |
+| `/search` | `/search/products` |
+| `/sellers/directory` | `/stores/search` |
+| `/wishlist/add`, `/wishlist/remove` | `POST /wishlist/items`, `DELETE /wishlist/items/{id}` |
+| `/wallet/history` | masuk ke dalam `GET /wallet` |
+
+No equivalent at all: `/brands`, `/zones`, `/fleet-types`, `/config/parameters`, `/categories/{id}`, `/chat/seller_response_rate`, `/payments/manual_transfer_proof`, `/shipments/{id}/complete`, `/vouchers`.
+
+The warnings in `injector_service.dart` about `GET /shipments` and `POST /vouchers/apply` describe **the old backend's** holes and no longer apply to anything; they survive only because that file was never revisited.
 
 ### Presentation lives in two trees right now
 
-`lib/ui/main/auth/` (Part 2) and `lib/features/` (the UI kit's sample tree) coexist deliberately. A screen moves to `lib/ui/` **when it gets wired to the API**, not before — so `login`/`register` moved and were rewritten, while `welcome_view` and `reset_password_view` stayed in `lib/features/auth/presentation/views/`. `reset_password` cannot move yet: **the API has no password-reset endpoint at all**, so that screen has nothing to call.
+`lib/ui/main/auth/` (Part 2) and `lib/features/` (the UI kit's sample tree) coexist deliberately. A screen moves to `lib/ui/` **when it gets wired to the API**, not before — so `login`/`register` moved and were rewritten, while `welcome_view` and `reset_password_view` stayed in `lib/features/auth/presentation/views/`.
+
+**`reset_password_view` is no longer blocked** (an earlier revision of this file claimed the API had no password-reset endpoint — it does). `POST /auth/forgot-password` and `POST /auth/reset-password` are both registered routes, `AuthService.forgotPassword`/`resetPassword` already call them, `AuthRepository` already declares them, and `test/integration/auth_service_test.dart` covers forgot-password against the live server. What is missing is only the last hop — `AuthCubit` exposes neither, and no screen calls them. Wiring that screen is a presentation-layer job now.
 
 The kit's social-login buttons were dropped, not ported — the backend has no OAuth, and a button that does nothing is worse than no button.
 
 ### freezed 3 gotcha
 
-A `@freezed` class with custom getters or methods **must** declare a private constructor (`const UserModel._();`), otherwise generation fails with `Getters require a MyClass._() constructor`. Also prefer getters **inside** the class over an `extension`: an extension is only in scope where its own library is imported, so `user.isB2B` silently fails to resolve in a file that imported the model only transitively.
+A `@freezed` class with custom getters or methods **must** declare a private constructor (`const UserModel._();`), otherwise generation fails with `Getters require a MyClass._() constructor`. Also prefer getters **inside** the class over an `extension`: an extension is only in scope where its own library is imported, so `user.isVerified` silently fails to resolve in a file that imported the model only transitively.
 
-**Backend contract**: the member app talks to **marketplace-api** (CodeIgniter 3 modular HMVC + JWT), a multi-vendor marketplace. Reference material lives in that repo, not this one: `docs/03-api-documentation.md` for endpoints, `docs/02-database-schema.md` + `database/schema/*.sql` for field shapes, `docs/04-rbac-permission-matrix.md` for roles, and `postman/Marketplace-API.postman_collection.json` for the authoritative request bodies. Three deviations from the generic plan below were forced by the API and are deliberate:
+**Backend contract**: the member app talks to **marketplace-api** (CodeIgniter 3 modular HMVC + JWT), a multi-vendor marketplace. Reference material lives in that repo, not this one: `docs/02-database-schema.md` + `database/schema/*.sql` for field shapes, `docs/04-rbac-permission-matrix.md` for roles, and `postman/Marketplace-API.postman_collection.json` for the authoritative request bodies.
+
+**`application/config/routes.php` is the only authority on which endpoints exist** — `docs/03-api-documentation.md` is a design document and is ahead of the implementation. It lists `/auth/otp/send` + `/auth/otp/verify` (never registered; the real pair is `/auth/verify-email` + `/auth/resend-verification`), `DELETE /cart/vouchers/{code}`, `/products/{id}/images`, `/bundles/{id}`, and `/products/{id}/subscriptions` — none of which are routed. Its base URL is also still `https://api.marketplace.id/api/v1`. Conversely the Postman collection carries whole folders the doc never mentions: **Wishlist**, **Media** (`/media/upload`), **Compliance** (Tax / Legal & Consent / Product Certification), and **Advanced Features** (Seller Tier, Shipping Insurance, Content Moderation, Restricted Products). Postman tracks routes.php closely; the doc does not.
+
+Three deviations from the generic plan below were forced by the API and are deliberate:
 
 1. **`DataSuccess` carries `meta` and `statusCode`.** Paginated endpoints put `page`/`per_page`/`total` in `meta`, and status codes distinguish created-vs-returned. A repository that forwards only `data` loses both.
-2. **Every numeric and boolean model field must use a converter from `lib/util/json_converters.dart`.** The same logical field arrives as a number from one endpoint and a string from another (`"grand_total": 6500000` from `POST /checkout`, `"grand_total": "6500000"` from `GET /orders/{id}`), and `tinyint` booleans arrive as `"0"`/`"1"`.
+2. **Every numeric and boolean model field must use a converter from `lib/util/json_converters.dart`.** marketplace-api keeps the old backend's habit: `GET /categories` answers `"id": "1"`, `"level": "0"`, `"is_active": "1"` — ints and `tinyint` booleans both as strings. The old backend also returned the *same* logical field as a bare number from one endpoint and a string from another; assume that still happens and let the converters absorb it rather than typing a field `int` because one response looked like one.
 3. **Admin- and seller-scoped endpoints must never get a member service method.** The collection mixes them in freely (`/admin/*`, `/stores/{id}/products`, `/orders/{id}/accept|pack|ship`, `/payments/callback/*`). They answer `403` for a buyer token at best, and calling them is a sign the wrong flow is being built.
 
 This is the layering the project is being moved toward: **data → domain → presentation** per feature, wired with `get_it` for DI and `go_router` for navigation.
@@ -248,20 +303,21 @@ lib/
 
 ## Migration checklist (current → target)
 
-Derived from the gap between Part 1 and Part 2; no step is started yet.
+Derived from the gap between Part 1 and Part 2. Steps 0-5 are done and the auth slice of step 8 is done; the rest is open, and **step 6 gates everything after it**.
 
 0. ~~Unblock `flutter pub get`: `intl` was constrained to `^0.19.0` while `flutter_localizations` on Flutter 3.41 requires `0.20.2`, so the project could not resolve at all.~~ **Done** — bumped to `^0.20.2`.
 1. ~~Add `freezed_annotation`, `json_annotation`, `envied` to dependencies and `build_runner`, `freezed`, `json_serializable`, `envied_generator` to dev_dependencies.~~ **Done** (also `flutter_secure_storage` for tokens).
-2. ~~Create `lib/config/env/env.dart` + `.env` with `API_BASE_URL`; add `.env` to `.gitignore`.~~ **Done.** `.env.example` lists the base URL per target; current target is **Flutter web on Chrome** (`http://localhost/markas/api/v1`).
+2. ~~Create `lib/config/env/env.dart` + `.env` with `API_BASE_URL`; add `.env` to `.gitignore`.~~ **Done.** `.env.example` lists the base URL per target; current target is **Flutter web on Chrome** (`http://localhost:8000/api/v1` — port 8000, the `docker compose` mapping, not port 80). The per-target notes in `.env.example` still describe the old Markas paths and need rewriting.
 3. ~~Create `lib/config/network/dio_client.dart` with the named `"api"` Dio singleton.~~ **Done**, plus auth/refresh/logging interceptors.
 4. ~~Add `lib/core/data_state.dart` with the `DataState<T>` union.~~ **Done** — see deviation 1 above.
-5. ~~Build `lib/di/{injector,injector_service,injector_repository}.dart` and call `initialize()` before `runApp`.~~ **Done**; service/repository registries are still empty stubs.
-6. **In progress.** Move the hardcoded lists out of cubits (`HomePageCubit.productsTShirt` and friends) behind a `*Service` + `*RepositoryImpl` pair. `ProductModel.fromJson` already exists as a starting point.
-7. **In progress** (auth done). Convert marker states to `@freezed` unions, one feature at a time, and switch cubits from public mutable fields to emitted state data.
-8. Split [app_routes.dart](lib/core/utils/app_routes.dart) into per-domain route files under `lib/config/route/`.
-9. Decide the fate of `lib/features/` vs `lib/ui/` — the target names the presentation root `ui/`, which is a rename of the existing tree, not a second one.
+5. ~~Build `lib/di/{injector,injector_service,injector_repository}.dart` and call `initialize()` before `runApp`.~~ **Done**; both registries are populated, but nine of the ten service/repository pairs point at the dead backend.
+6. **Blocked on a decision, and the first thing to settle.** Clear out the dead layer — the nine Markas-era service/repository/model sets, the `lib/ui/main/*` screens on top of them, and their DI registrations — before writing anything new. Rewriting them in place is the alternative, but `/products` is still empty on the server, so the shapes would be guesswork. See "The dead layer" above for the full inventory.
+7. **After step 6.** Rebuild each feature domain against marketplace-api, one at a time, reading real responses rather than `docs/03-api-documentation.md`. Auth is the reference implementation of the target shape.
+8. **In progress** (auth done). Convert the UI kit's marker states to `@freezed` unions and switch its cubits from public mutable fields to emitted state data — for whatever of `lib/features/` survives step 10.
+9. Split [app_routes.dart](lib/core/utils/app_routes.dart) into per-domain route files under `lib/config/route/`.
+10. Decide the fate of `lib/features/` vs `lib/ui/` — the target names the presentation root `ui/`, which is a rename of the existing tree, not a second one.
 
 ## Follow-ups when starting a new project from this base
 
 - **Firebase**: this repo has no Firebase at all today. If it is adopted (or if this project is duplicated from one that has it), run `flutterfire configure` rather than inheriting another project's `firebase.json`, `lib/firebase_options.dart`, and platform config files — a copied config points at the origin project.
-- **App identifier**: Android `applicationId` / iOS bundle identifier are still `com.Shopapay.Shopapay` from the purchased UI kit, and `name:` in `pubspec.yaml` is still `marketplace_app_member`. Update both before shipping this as a separate app — especially if the origin app and this one may be installed on the same device.
+- **App identifier**: already unified — Android `namespace`/`applicationId` and the iOS/macOS `PRODUCT_BUNDLE_IDENTIFIER` all read `com.marketplace.member`, and `name:` in `pubspec.yaml` is `marketplace_app_member`. See "Project identity" at the top of this file before changing either; renaming the Dart package breaks every absolute import.
