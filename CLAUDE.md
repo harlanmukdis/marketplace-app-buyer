@@ -3,7 +3,7 @@
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 > **This document has two parts, and they do not describe the same thing.**
-> **Part 1 — Current state** is what the code actually is today; re-verified against the repo and against a running backend on 13 September 2026.
+> **Part 1 — Current state** is what the code actually is today; re-verified against the repo on 13 September 2026 and against a running, seeded backend on 14 September 2026.
 > **Part 2 — Target architecture** is where the project is headed. Its foundation (env, network, DI, `DataState`) and the auth domain are built; every other feature domain is not.
 > Never run a command or follow a pattern from Part 2 until the corresponding migration step is done. If the two parts conflict, Part 1 wins for any change you make right now.
 
@@ -176,23 +176,19 @@ Current state: `en` and `ar` are complete (284 keys) and selectable. `fr` appear
 >
 > CodeIgniter menyajikan halaman 404 HTML untuk rute tak terdaftar. Body itu sampai ke `ApiException` sebagai `ClientErrorCode.badResponse`, dan sebelum diperbaiki ia lolos sebagai `isDataNotFound` — artinya salah ketik URL di aplikasi tampil ke user sebagai "data tidak ditemukan". `DataError.isRouteNotFound` kini ikut menganggap `badResponse` + 404 sebagai kesalahan rute.
 >
+> **Rute yang benar pun bisa membalas HTML**: error SQL dan exception PHP keluar sebagai halaman 500 HTML, bukan amplop JSON — terbukti pada `POST /me/addresses` dengan field asing dan pada `GET /recommendations/recently-viewed`. Jadi `badResponse` harus ditangani di setiap panggilan, bukan hanya diasumsikan sebagai salah ketik URL.
+>
 > ### ⚠️ Peran kini jamak
 >
 > Satu akun boleh merangkap Buyer, Seller, Affiliate, dan seterusnya; `GET /me` mengembalikan `roles[]` berisi `{code, name}` plus `stores[]`. **Jangan** menulis `user.role == 'buyer'` — pakai `hasRole`/`isBuyer`.
 >
-> ### ⚠️ Seed backend sebagian sudah masuk — cek sendiri, jangan percaya catatan ini
+> ### ✅ Database sudah di-seed — penghalang menulis lapisan katalog SUDAH HILANG
 >
-> Kondisi per 13 September 2026, hasil menembak `http://localhost:8000/api/v1` langsung:
+> Per 14 September 2026, diverifikasi dengan menembak `http://localhost:8000/api/v1` memakai akun buyer sungguhan: **20 produk**, **8 toko**, **12 kategori induk + 39 anak** (lengkap dengan `icon_url`/gambar picsum), plus `payment-methods` dan `loyalty/tiers`. Seluruh alur beli — `cart/items` → `checkout/sessions` → `shipping-options` → `shipping` → `confirm` → `orders/{id}` → `payments/{id}/pay` — **berhasil dijalankan sampai keluar QR string**.
 >
-> | endpoint | isi |
-> |---|---|
-> | `/categories` | **sudah terisi** — tree asli (Elektronik → Handphone & Tablet, dst) dari `database/seeds/03_default_categories.sql` |
-> | `/payment-methods` | **sudah terisi** — `qris`, `virtual_account`, `credit_card`, … |
-> | `/loyalty/tiers` | **sudah terisi** — bronze/silver/gold beserta `min_points` |
-> | `/products`, `/stores/search`, `/recommendations/*` | masih kosong (`total: 0`) — belum ada seed produk/toko |
-> | `/search/*` | `SEARCH_UNAVAILABLE` — tapi sebabnya sekarang **OpenSearch di port 9200 tidak jalan**, bukan belum terpasang. `docker-compose.yml` sudah punya service-nya; `docker compose up -d` menghidupkannya |
+> Catatan lama di file ini yang bilang "`/products` kosong, jadi lapisan katalog sengaja belum ditulis" **tidak berlaku lagi**. Bentuk respons nyatanya ada di bagian "Kontrak sisi member" di bawah — pakai itu, jangan `docs/03-api-documentation.md`.
 >
-> Karena `/products` masih kosong, lapisan katalog, keranjang, checkout, dan order **tetap belum boleh ditulis dari dokumen saja** — menulis model tanpa melihat respons asli sudah tiga kali terbukti salah di proyek ini. Tunggu seed produk, atau bikin satu produk lewat endpoint seller dan baca bentuk JSON-nya.
+> Yang masih mati: `/search/*` → `503 SEARCH_UNAVAILABLE` karena **OpenSearch di port 9200 tidak jalan** (`docker compose up -d` menghidupkannya), dan dua endpoint yang rusak betulan — lihat tabel di bawah.
 
 **Status: foundation (steps 1-5) plus the auth domain implemented.** What exists today:
 
@@ -234,6 +230,37 @@ No equivalent at all: `/brands`, `/zones`, `/fleet-types`, `/config/parameters`,
 
 The warnings in `injector_service.dart` about `GET /shipments` and `POST /vouchers/apply` describe **the old backend's** holes and no longer apply to anything; they survive only because that file was never revisited.
 
+### Kontrak sisi member (diverifikasi ke server, 14 September 2026)
+
+Semua di bawah ini hasil menembak server dengan token buyer, bukan membaca dokumen. Ini yang dipakai saat menulis model — `docs/03-api-documentation.md` tidak memuat satu pun dari detail ini dan sebagian bertentangan.
+
+**Enam kejutan bentuk data yang akan merusak model kalau ditebak:**
+
+1. **`checkout_session_id` adalah UUID string, bukan integer.** `POST /checkout/sessions` membalas `"id": "4e2e1970-cde4-4237-b30e-51866d55bce2"`. Itu sebabnya rutenya `(:any)`, bukan `(:num)`. Model yang menaruh `int id` di sini langsung gagal parse.
+2. **`GET /checkout/sessions/{id}/shipping-options` membalas MAP, bukan LIST** — dikunci `store_id` sebagai **string**: `{"1": [ {courier_code, service_code, service_name, zone, weight_kg, cost, etd_min_days, etd_max_days}, … ]}`. Di Dart ini `Map<String, List<ShippingOptionModel>>`. `PATCH .../shipping` juga menerima map berbentuk sama: `{"1": {"courier_code": "jnt", "service_code": "ez"}}`.
+3. **`cart_snapshot` dan `shipping_address_snapshot` adalah JSON yang di-*string*-kan**, bukan objek bersarang. Isinya harus `jsonDecode` sekali lagi setelah amplopnya dibuka.
+4. **`grand_total` berubah tipe antar endpoint — terbukti, bukan dugaan.** `POST /checkout/sessions` → `"grand_total": 150000` (angka); `GET /checkout/sessions/{id}` → `"grand_total": "150000.00"` (string berdesimal). Inilah alasan setiap field angka wajib lewat converter di `lib/util/json_converters.dart`.
+5. **`POST /checkout/sessions/{id}/confirm` membalas `{"order_ids": [1], "payment_transaction_id": 1}`** — `order_ids` **array**, karena keranjang multi-toko pecah jadi beberapa order. Jangan modelkan sebagai satu order.
+6. **Order sekarang satu lapis.** `GET /orders/{id}` = order + `items[]` + `status_history[]` + `refund`. Tidak ada `sub_orders`, tidak ada `shipments`. Ongkir ada di order (`shipping_cost`, `courier_code`, `courier_service`, `tracking_number`).
+
+**Field alamat memakai nama lain dari app lama.** `POST /me/addresses` menerima `label`, `recipient_name`, `phone`, `full_address`, `city`, `province`, `postal_code`, `is_primary` (+ `latitude`/`longitude` opsional). Nama ala Markas — `address_line`, `district`, `is_default` — **tidak ada kolomnya**, dan mengirimnya membuat server membalas **500 halaman HTML**, bukan `VALIDATION_ERROR`: field yang tidak dikenal diteruskan mentah ke `INSERT`. Cek `database/schema/01_users_auth.sql` kalau ragu.
+
+**Tipe data umum:** hampir semua angka dan boolean datang sebagai **string** (`"id": "1"`, `"quantity": "2"`, `"is_active": "1"`, `"base_price": "75000.00"`), tapi `GET /cart/summary` (`subtotal`, `item_count`) dan seluruh `shipping-options` (`cost`, `etd_*_days`) datang sebagai **angka asli**. Jangan pernah mengetik field `int`/`bool` karena satu respons kebetulan begitu.
+
+**Endpoint member yang rusak / tidak bisa dipakai sekarang:**
+
+| endpoint | hasil |
+|---|---|
+| `GET /recommendations/recently-viewed` | **500**, `Call to a member function result() on false` — query gagal di server. Jangan dipanggil |
+| `GET /search/products`, `/search/stores`, `/search/autocomplete`, `/search/trending` | **503 `SEARCH_UNAVAILABLE`** selama OpenSearch 9200 mati |
+| `POST /analytics/events` | jalan (**201**), tapi field wajibnya `event_name` — mengirim `event_type` membuat **500** |
+| `GET /legal/documents/active` | `404 LEGAL_DOCUMENT_NOT_FOUND` — belum ada dokumen; `requires_reconsent: false` di respons login sejalan dengan itu |
+| `GET /vouchers/validate?code=…` | `422 VOUCHER_INVALID` — belum ada voucher yang di-seed |
+
+**Endpoint privileged memang menolak buyer** (memperkuat deviation 3 di bawah): `/admin/users`, `/admin/settings`, `/stores/{id}/orders`, `/stores/{id}/wallet`, `POST /orders/{id}/accept` semuanya membalas **403 `PERMISSION_DENIED`** dengan pesan menyebut permission yang kurang (`admin.user.view`, `order.view`, `order.process`, …). Kalau kamu melihat kode itu muncul, artinya alur yang sedang dibangun salah sisi.
+
+**Login juga membawa `requires_reconsent`** (boolean) di samping `access_token`/`refresh_token`/`expires_in` — belum dimodelkan di `AuthSessionModel`. `expires_in` = 900 detik terbukti lagi: token habis di tengah sesi eksplorasi ini.
+
 ### Presentation lives in two trees right now
 
 `lib/ui/main/auth/` (Part 2) and `lib/features/` (the UI kit's sample tree) coexist deliberately. A screen moves to `lib/ui/` **when it gets wired to the API**, not before — so `login`/`register` moved and were rewritten, while `welcome_view` and `reset_password_view` stayed in `lib/features/auth/presentation/views/`.
@@ -253,8 +280,8 @@ A `@freezed` class with custom getters or methods **must** declare a private con
 Three deviations from the generic plan below were forced by the API and are deliberate:
 
 1. **`DataSuccess` carries `meta` and `statusCode`.** Paginated endpoints put `page`/`per_page`/`total` in `meta`, and status codes distinguish created-vs-returned. A repository that forwards only `data` loses both.
-2. **Every numeric and boolean model field must use a converter from `lib/util/json_converters.dart`.** marketplace-api keeps the old backend's habit: `GET /categories` answers `"id": "1"`, `"level": "0"`, `"is_active": "1"` — ints and `tinyint` booleans both as strings. The old backend also returned the *same* logical field as a bare number from one endpoint and a string from another; assume that still happens and let the converters absorb it rather than typing a field `int` because one response looked like one.
-3. **Admin- and seller-scoped endpoints must never get a member service method.** The collection mixes them in freely (`/admin/*`, `/stores/{id}/products`, `/orders/{id}/accept|pack|ship`, `/payments/callback/*`). They answer `403` for a buyer token at best, and calling them is a sign the wrong flow is being built.
+2. **Every numeric and boolean model field must use a converter from `lib/util/json_converters.dart`.** Verified on this backend: `POST /checkout/sessions` answers `"grand_total": 150000` while `GET /checkout/sessions/{id}` answers `"grand_total": "150000.00"` — the same field, two types, two endpoints. Ints and `tinyint` booleans normally arrive as strings (`"id": "1"`, `"is_active": "1"`), but `/cart/summary` and `shipping-options` send real numbers. Full list in "Kontrak sisi member" above.
+3. **Admin- and seller-scoped endpoints must never get a member service method.** The collection mixes them in freely (`/admin/*`, `/stores/{id}/products`, `/orders/{id}/accept|pack|ship`, `/payments/callback/*`). Verified: a buyer token gets `403 PERMISSION_DENIED` naming the missing permission. Calling them is a sign the wrong flow is being built.
 
 This is the layering the project is being moved toward: **data → domain → presentation** per feature, wired with `get_it` for DI and `go_router` for navigation.
 
@@ -311,8 +338,8 @@ Derived from the gap between Part 1 and Part 2. Steps 0-5 are done and the auth 
 3. ~~Create `lib/config/network/dio_client.dart` with the named `"api"` Dio singleton.~~ **Done**, plus auth/refresh/logging interceptors.
 4. ~~Add `lib/core/data_state.dart` with the `DataState<T>` union.~~ **Done** — see deviation 1 above.
 5. ~~Build `lib/di/{injector,injector_service,injector_repository}.dart` and call `initialize()` before `runApp`.~~ **Done**; both registries are populated, but nine of the ten service/repository pairs point at the dead backend.
-6. **Blocked on a decision, and the first thing to settle.** Clear out the dead layer — the nine Markas-era service/repository/model sets, the `lib/ui/main/*` screens on top of them, and their DI registrations — before writing anything new. Rewriting them in place is the alternative, but `/products` is still empty on the server, so the shapes would be guesswork. See "The dead layer" above for the full inventory.
-7. **After step 6.** Rebuild each feature domain against marketplace-api, one at a time, reading real responses rather than `docs/03-api-documentation.md`. Auth is the reference implementation of the target shape.
+6. **Next, and it gates everything after it.** Clear out the dead layer — the nine Markas-era service/repository/model sets, the `lib/ui/main/*` screens on top of them, and their DI registrations. See "The dead layer" above for the full inventory. The earlier reason for waiting (server had no products, so shapes would be guesswork) **no longer applies**: the DB is seeded and the real shapes are recorded in "Kontrak sisi member".
+7. **After step 6.** Rebuild each feature domain against marketplace-api, one at a time, against "Kontrak sisi member" and live responses — never `docs/03-api-documentation.md`. Auth is the reference implementation of the target shape. Suggested order, following the buyer flow that was verified end to end: catalog (`/products`, `/categories`) → cart → address → checkout → order → payment → wallet/wishlist.
 8. **In progress** (auth done). Convert the UI kit's marker states to `@freezed` unions and switch its cubits from public mutable fields to emitted state data — for whatever of `lib/features/` survives step 10.
 9. Split [app_routes.dart](lib/core/utils/app_routes.dart) into per-domain route files under `lib/config/route/`.
 10. Decide the fate of `lib/features/` vs `lib/ui/` — the target names the presentation root `ui/`, which is a rename of the existing tree, not a second one.
