@@ -138,6 +138,12 @@ Current state: `en` and `ar` are complete (284 keys) and selectable. `fr` appear
 
 # Part 2 — Target architecture
 
+> ### 📘 BACA DULU: `docs/18-frontend-integration-guide.md`
+>
+> Backend menerbitkan **panduan integrasi frontend khusus untuk app member & app seller** (14 September 2026). Itu titik masuk tunggal untuk pekerjaan FE: cara menjalankan API, kontrak dasar, peta 33 modul → endpoint → app mana yang memakainya, alur inti buyer dari browse sampai terima barang, dan daftar jebakan yang sudah diuji ke server. Poin bertanda **[terverifikasi]** di sana sudah ditembak ke server sungguhan, bukan dibaca dari dokumen.
+>
+> Urutan otoritas kalau sumber saling bertentangan: **`application/config/routes.php` > panduan 18 > Postman > docs lainnya.** Seluruh catatan di bawah ini sudah diselaraskan dengan panduan itu dan diverifikasi ulang ke server pada 14 September 2026.
+>
 > ### 🔁 Backend ganti total pada 13 September 2026
 >
 > Aplikasi ini sekarang berbicara ke **marketplace-api** (`~/Desktop/Harlan/marketplace-api`), sebuah **marketplace multi-vendor umum** model Tokopedia/Shopee — bukan lagi Markas Bangunan. Dokumennya di `<api-repo>/docs/00-…15-*.md` plus koleksi Postman di `<api-repo>/postman/`. Base URL: **`http://localhost:8000/api/v1`** (port 8000, bukan 80).
@@ -184,11 +190,17 @@ Current state: `en` and `ar` are complete (284 keys) and selectable. `fr` appear
 >
 > ### ✅ Database sudah di-seed — penghalang menulis lapisan katalog SUDAH HILANG
 >
-> Per 14 September 2026, diverifikasi dengan menembak `http://localhost:8000/api/v1` memakai akun buyer sungguhan: **20 produk**, **8 toko**, **12 kategori induk + 39 anak** (lengkap dengan `icon_url`/gambar picsum), plus `payment-methods` dan `loyalty/tiers`. Seluruh alur beli — `cart/items` → `checkout/sessions` → `shipping-options` → `shipping` → `confirm` → `orders/{id}` → `payments/{id}/pay` — **berhasil dijalankan sampai keluar QR string**.
+> Diverifikasi 14 September 2026 dengan akun buyer sungguhan: seluruh alur beli — `cart/items` → `checkout/sessions` → `shipping-options` → `shipping` → `confirm` → `orders/{id}` → `payments/{id}/pay` — **berhasil dijalankan sampai keluar QR string**. Catatan lama yang bilang "`/products` kosong, jadi lapisan katalog sengaja belum ditulis" **tidak berlaku lagi**.
 >
-> Catatan lama di file ini yang bilang "`/products` kosong, jadi lapisan katalog sengaja belum ditulis" **tidak berlaku lagi**. Bentuk respons nyatanya ada di bagian "Kontrak sisi member" di bawah — pakai itu, jangan `docs/03-api-documentation.md`.
+> Seed sekarang: **133 tabel, 51 kategori, 8 toko, 19 produk, 9 user**. **DB sering di-seed ulang** — akun probe dan order hasil percobaan hilang tanpa aba-aba, jadi jangan menyandarkan test pada id yang di-hardcode.
 >
-> Yang masih mati: `/search/*` → `503 SEARCH_UNAVAILABLE` karena **OpenSearch di port 9200 tidak jalan** (`docker compose up -d` menghidupkannya), dan dua endpoint yang rusak betulan — lihat tabel di bawah.
+> Panduan 18 §3 memuat **9 akun seed lengkap dengan password** (`budi.santoso@kedaikopi.id` / `RahasiaAman123`, dst; semuanya `active` dan terverifikasi). Pakai itu untuk test integrasi alih-alih mendaftar akun baru tiap kali. Belum ada akun buyer-murni — daftar sendiri kalau perlu menguji pengalaman member baru.
+>
+> ### ⚠️ `docker compose up` TIDAK jalan — API dijalankan dengan `php -S`
+>
+> Catatan sebelumnya di file ini yang menyarankan `docker compose up -d` **salah**. `Dockerfile` menyalin `infra/docker/nginx.conf` yang tidak ada di repo, dan stage runtime-nya nginx tanpa php-fpm. Cara yang benar ada di panduan 18 §1: siapkan MySQL, jalankan `database/schema/*.sql` lalu `database/seeds/*.sql`, kemudian `php -S 127.0.0.1:8000 -t . router.php` dengan `router.php` yang isinya diberikan di panduan itu (tidak ada di repo).
+>
+> Konsekuensinya untuk `/search/*`: **Elasticsearch/OpenSearch di 9200 tidak punya cara mudah dinyalakan**, jadi anggap search mati secara default dan pakai fallback yang dijelaskan di bawah.
 
 **Status: foundation (steps 1-5) plus the auth domain implemented.** What exists today:
 
@@ -245,21 +257,60 @@ Semua di bawah ini hasil menembak server dengan token buyer, bukan membaca dokum
 
 **Field alamat memakai nama lain dari app lama.** `POST /me/addresses` menerima `label`, `recipient_name`, `phone`, `full_address`, `city`, `province`, `postal_code`, `is_primary` (+ `latitude`/`longitude` opsional). Nama ala Markas — `address_line`, `district`, `is_default` — **tidak ada kolomnya**, dan mengirimnya membuat server membalas **500 halaman HTML**, bukan `VALIDATION_ERROR`: field yang tidak dikenal diteruskan mentah ke `INSERT`. Cek `database/schema/01_users_auth.sql` kalau ragu.
 
-**Tipe data umum:** hampir semua angka dan boolean datang sebagai **string** (`"id": "1"`, `"quantity": "2"`, `"is_active": "1"`, `"base_price": "75000.00"`), tapi `GET /cart/summary` (`subtotal`, `item_count`) dan seluruh `shipping-options` (`cost`, `etd_*_days`) datang sebagai **angka asli**. Jangan pernah mengetik field `int`/`bool` karena satu respons kebetulan begitu.
+**Tipe data umum:** hampir semua angka dan boolean datang sebagai **string** (`"id": "1"`, `"quantity": "2"`, `"is_active": "1"`, `"base_price": "75000.00"`) — ini perilaku driver MySQL PHP, bukan kesengajaan. Pengecualiannya justru yang penting: `GET /cart/summary` (`subtotal`, `item_count`), seluruh `shipping-options` (`cost`, `etd_*_days`), dan **`stock` di detail produk** datang sebagai **angka asli**. Jangan pernah mengetik field `int`/`bool` karena satu respons kebetulan begitu.
 
-**Endpoint member yang rusak / tidak bisa dipakai sekarang:**
+#### Katalog — listing vs detail
+
+**`GET /products` tidak membawa gambar maupun stok.** Isinya hanya kolom tabel `products` (+ `compare_at_price`, + `flash_sale` bila sedang promo). Gambar, stok, varian, dan kurir **hanya ada di `GET /products/{id}`**. Kartu produk di listing harus pakai placeholder — **jangan N+1 request detail per kartu**.
+
+**`GET /products/{id}` cukup untuk merender seluruh halaman detail** dalam satu request: `variants[]` (masing-masing dengan `stock` **integer** dan `variant_options` berupa JSON opsi), `images[]`, `couriers[]`, `stock` **integer** total lintas gudang, dan `compare_at_price` (harga coret, `null` kalau tidak ada).
+
+**`flash_sale` adalah key OPSIONAL** — ia *tidak ada* saat produk tidak sedang flash sale, bukan `null`. Cek keberadaan key-nya, jangan `?? null`. Bentuknya `{flash_price, sold_count, stock_quota, ends_at}`, dan disisipkan juga ke item listing. `compare_at_price` dan `flash_sale` bisa muncul bersamaan — FE yang memutuskan mana menang (umumnya flash sale).
+
+**Produk tanpa varian tetap punya satu default variant.** `cart_items` dan `order_items` selalu merujuk `product_variant_id`, **tidak pernah** `product_id`.
+
+**Parameter `GET /products`:** `q` (LIKE nama+deskripsi), `category_id`, `store_id`, `min_price`, `max_price`, `min_rating`, `city`, `province`, `courier`, `sort_by` (`latest` default, `popular`, `trending`, `price_asc`, `price_desc`, `rating` — nilai asing diabaikan jadi `latest`), `page`, `per_page` (maks 100).
+
+**Dua facet di `meta.facets` berbeda bentuk — jangan satu parser untuk keduanya:**
+
+| | `facets.rating` | `facets.category` |
+|---|---|---|
+| kapan muncul | **selalu** | **hanya kalau ada `q`** |
+| bentuk | `{min_rating, count}` | `{category_id, cnt}` |
+| tipe angka | `count` **integer** | `cnt` **string** |
+| sifat | kumulatif (`>= n`) | hitung per kategori |
+
+Jangan pula tertukar dengan `meta.rating_histogram` di `GET /products/{id}/reviews` — itu menghitung **ulasan per bintang persis** untuk satu produk (`{total, breakdown:[{rating, count, percentage}]}`), bukan produk per ambang.
+
+#### Dua hal yang mengubah konfigurasi app, bukan sekadar model
+
+**`Idempotency-Key` BELUM diimplementasikan backend.** `docs/03` menyebutnya wajib untuk endpoint finansial, tapi tidak ada kode yang membacanya — idempotensi nyata hanya di level DB. Artinya **retry otomatis pada `checkout/confirm`, `wallet/topup`, dan `wallet/withdraw` berisiko menggandakan transaksi**. Kalau interceptor Dio diberi retry, endpoint-endpoint itu wajib dikecualikan.
+
+**Bahasa bisa dinegosiasikan** dengan urutan `?lang=id|en` → header `X-Language` → `Accept-Language` → default `id` (ketiganya terverifikasi). Tapi ini **tidak menggantikan `lib/util/error_message.dart`**: API hanya punya `id`/`en` sementara app juga mendukung `ar`, dan aturan "jangan pernah tampilkan `error.message` ke user, petakan `error.code`" tetap berlaku. Kirim `X-Language` hanya supaya log dan pesan tak terpetakan terbaca.
+
+**Endpoint member yang rusak / kosong sekarang** (dicek ulang 14 September 2026 sesudah pembaruan backend):
 
 | endpoint | hasil |
 |---|---|
-| `GET /recommendations/recently-viewed` | **500**, `Call to a member function result() on false` — query gagal di server. Jangan dipanggil |
-| `GET /search/products`, `/search/stores`, `/search/autocomplete`, `/search/trending` | **503 `SEARCH_UNAVAILABLE`** selama OpenSearch 9200 mati |
+| `GET /recommendations/recently-viewed` | ✅ **sudah diperbaiki** — dulu 500, sekarang `200` dengan list. Catatan lama yang menyuruh menghindarinya sudah dicabut |
+| `GET /search/products`, `/search/stores`, `/search/autocomplete` | **503 `SEARCH_UNAVAILABLE`** selama ES/OpenSearch 9200 mati — dan itu keadaan normal, lihat catatan docker di atas. **Fallback: `GET /products?q=…`** yang berbasis MySQL dan tetap memberi `meta.facets`. Rancang lapisan search supaya bisa berpindah di antara keduanya |
+| `GET /search/trending` | tetap **200** tanpa ES — jangan ikut dimatikan bersama endpoint search lain |
+| `GET /home/layout` | **200 tapi `[]`** — tabel home CMS tidak punya seed. Homepage wajib punya tampilan fallback; jangan berasumsi ada minimal satu section |
 | `POST /analytics/events` | jalan (**201**), tapi field wajibnya `event_name` — mengirim `event_type` membuat **500** |
 | `GET /legal/documents/active` | `404 LEGAL_DOCUMENT_NOT_FOUND` — belum ada dokumen; `requires_reconsent: false` di respons login sejalan dengan itu |
-| `GET /vouchers/validate?code=…` | `422 VOUCHER_INVALID` — belum ada voucher yang di-seed |
+| `GET /vouchers/validate?code=…`, `POST /vouchers/claim` | `422 VOUCHER_INVALID` — belum ada voucher yang di-seed |
+
+**Endpoint member baru** (18 rute ditambahkan backend; total kini 206): `GET /home/layout` (home CMS — lihat `docs/16-home-layout-cms.md`), `GET /categories/{id}/layout`, `GET /couriers` (publik; `jne`, `jnt`, `sicepat`, …), `GET /me/favorite-categories`, `GET /me/vouchers`, `POST /vouchers/claim` (POST saja — GET dibalas 405), `GET /campaigns/{id}/products` (lihat `docs/17-campaign-engine.md`).
+
+**`POST /stores` adalah tombol "Buka Toko".** Tidak ada endpoint "upgrade jadi seller" terpisah — memanggil `POST /stores` yang memberi role `seller` dan mengisi `stores[]` di `GET /me`. Ini satu-satunya endpoint seller yang wajar ada di app member.
 
 **Endpoint privileged memang menolak buyer** (memperkuat deviation 3 di bawah): `/admin/users`, `/admin/settings`, `/stores/{id}/orders`, `/stores/{id}/wallet`, `POST /orders/{id}/accept` semuanya membalas **403 `PERMISSION_DENIED`** dengan pesan menyebut permission yang kurang (`admin.user.view`, `order.view`, `order.process`, …). Kalau kamu melihat kode itu muncul, artinya alur yang sedang dibangun salah sisi.
 
-**Login juga membawa `requires_reconsent`** (boolean) di samping `access_token`/`refresh_token`/`expires_in` — belum dimodelkan di `AuthSessionModel`. `expires_in` = 900 detik terbukti lagi: token habis di tengah sesi eksplorasi ini.
+**Login membawa `requires_reconsent`** (boolean) di samping `access_token`/`refresh_token`/`expires_in` — **belum dimodelkan di `AuthSessionModel`**, dan ia punya perilaku wajib: `true` berarti ada versi baru dokumen legal, FE harus menampilkan modal blocking lalu `GET /legal/documents/active` → `POST /legal/documents/{id}/accept`. `expires_in` = 900 detik terbukti berulang kali: token habis dua kali di tengah sesi eksplorasi ini, jadi refresh otomatis bukan kemewahan.
+
+**Register `409` bisa karena email ATAU nomor telepon.** Bedakan lewat `error.code` — `EMAIL_TAKEN` vs `PHONE_TAKEN` — lalu sorot field yang tepat. Keduanya perlu entri di `lib/util/error_message.dart`.
+
+**Upload file** lewat `POST /media/upload`, multipart dengan nama field **`file`**; balasan `201` berisi `{url, file_name, file_size_kb, mime_type}`, dan `url`-nya dikirim di payload JSON berikutnya. ⚠️ `url` dirakit dari `$config['base_url']` yang di repo masih `http://localhost:8080/marketplace-api/` — selama itu belum disetel, URL hasil upload akan salah.
 
 ### Presentation lives in two trees right now
 
@@ -273,9 +324,11 @@ The kit's social-login buttons were dropped, not ported — the backend has no O
 
 A `@freezed` class with custom getters or methods **must** declare a private constructor (`const UserModel._();`), otherwise generation fails with `Getters require a MyClass._() constructor`. Also prefer getters **inside** the class over an `extension`: an extension is only in scope where its own library is imported, so `user.isVerified` silently fails to resolve in a file that imported the model only transitively.
 
-**Backend contract**: the member app talks to **marketplace-api** (CodeIgniter 3 modular HMVC + JWT), a multi-vendor marketplace. Reference material lives in that repo, not this one: `docs/02-database-schema.md` + `database/schema/*.sql` for field shapes, `docs/04-rbac-permission-matrix.md` for roles, and `postman/Marketplace-API.postman_collection.json` for the authoritative request bodies.
+**Backend contract**: the member app talks to **marketplace-api** (CodeIgniter 3 modular HMVC + JWT), a multi-vendor marketplace. Reference material lives in that repo, not this one. Start at **`docs/18-frontend-integration-guide.md`** — it is written for exactly this app and marks which claims were tested against a running server. Then `docs/02-database-schema.md` + `database/schema/*.sql` for field shapes, `docs/04-rbac-permission-matrix.md` for roles, `docs/16-home-layout-cms.md` and `docs/17-campaign-engine.md` for the two newest modules, and `postman/Marketplace-API.postman_collection.json` (223 request, 32 folder) for request bodies.
 
-**`application/config/routes.php` is the only authority on which endpoints exist** — `docs/03-api-documentation.md` is a design document and is ahead of the implementation. It lists `/auth/otp/send` + `/auth/otp/verify` (never registered; the real pair is `/auth/verify-email` + `/auth/resend-verification`), `DELETE /cart/vouchers/{code}`, `/products/{id}/images`, `/bundles/{id}`, and `/products/{id}/subscriptions` — none of which are routed. Its base URL is also still `https://api.marketplace.id/api/v1`. Conversely the Postman collection carries whole folders the doc never mentions: **Wishlist**, **Media** (`/media/upload`), **Compliance** (Tax / Legal & Consent / Product Certification), and **Advanced Features** (Seller Tier, Shipping Insurance, Content Moderation, Restricted Products). Postman tracks routes.php closely; the doc does not.
+⚠️ **Koleksi Postman-nya kini bentrok dengan data seed.** Variabel `store_id`/`product_id`/`warehouse_id` masih bernilai `1`, padahal id 1–8 sudah dipakai toko milik seller seed — menjalankan koleksinya apa adanya menghasilkan `403` berulang. Body request-nya tetap sahih; yang salah hanya nilai variabelnya.
+
+**`application/config/routes.php` is the only authority on which endpoints exist** — `docs/03-api-documentation.md` is a design document and is ahead of the implementation. It was expanded on 14 September 2026 (and now covers the new home/campaign modules), but **the phantom endpoints below survived that update**, so do not read the refresh as a correction. It lists `/auth/otp/send` + `/auth/otp/verify` (never registered; the real pair is `/auth/verify-email` + `/auth/resend-verification`), `DELETE /cart/vouchers/{code}`, `/products/{id}/images`, `/bundles/{id}`, and `/products/{id}/subscriptions` — none of which are routed. Its base URL is also still `https://api.marketplace.id/api/v1`. Conversely the Postman collection carries whole folders the doc never mentions: **Wishlist**, **Media** (`/media/upload`), **Compliance** (Tax / Legal & Consent / Product Certification), and **Advanced Features** (Seller Tier, Shipping Insurance, Content Moderation, Restricted Products). Postman tracks routes.php closely; the doc does not.
 
 Three deviations from the generic plan below were forced by the API and are deliberate:
 
