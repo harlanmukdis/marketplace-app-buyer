@@ -52,17 +52,16 @@ Note: `build_runner` 2.15 **removed `--delete-conflicting-outputs`** — passing
 
 ## Architecture
 
-`dio` and `get_it` **are** wired now — `initialize()` runs before `runApp` and registers a named `"api"` Dio plus ten services and ten repositories. But only the auth domain actually talks to the current backend. Everything else splits three ways, and telling them apart is the single most important thing to get right before editing:
+`dio` and `get_it` **are** wired now — `initialize()` runs before `runApp` and registers a named `"api"` Dio plus the services and repositories that exist. The tree splits two ways, and telling them apart is the first thing to get right before editing:
 
 | tree | data source | safe to build on? |
 |---|---|---|
-| `lib/ui/main/auth/` | marketplace-api, live | **yes** |
-| the other `lib/ui/main/*` + the services/repositories/models behind them | the **old Markas backend** — endpoints that no longer exist | **no — see "The dead layer" in Part 2** |
+| `lib/ui/main/{auth,catalog}/` | marketplace-api, live | **yes** — `catalog` is the reference implementation |
 | `lib/features/` (the UI kit's sample tree) | hardcoded lists inside cubits (`HomePageCubit.productsTShirt`) | as sample UI only |
 
-The dead middle row compiles cleanly and fails only at runtime, so `flutter analyze` gives you no warning about it. Never copy a pattern from it or extend it.
+The third tree that used to sit between them — a complete data + UI stack written against the old Markas backend — **was deleted on 14 September 2026**. See "~~The dead layer~~" in Part 2 for what went and the endpoint translation table that survived it.
 
-The UI kit's own models (`lib/features/home/data/models/product_model.dart`) carry `fromJson` factories, but they were shaped for the kit's sample JSON, not for marketplace-api — treat them as sample data, not as a starting point for the real catalog models.
+The UI kit's own models (`lib/features/home/data/models/product_model.dart`) carry `fromJson` factories, but they were shaped for the kit's sample JSON, not for marketplace-api — treat them as sample data. The real one is `lib/core/domain/model/catalog/product_model.dart`.
 
 ### Feature-first layout
 
@@ -209,18 +208,19 @@ Current state: `en` and `ar` are complete (284 keys) and selectable. `fr` appear
 - `lib/core/data_state.dart` — `DataState<T>` union
 - `lib/core/services/` — `token_store.dart`, `auth_events.dart`
 - `lib/util/` — `format_helper.dart`, `json_converters.dart`
-- `lib/di/` — `injector.dart` (called from `main.dart` before `runApp`), `injector_service.dart`, `injector_repository.dart`. **These are not empty**: ten services and ten repositories are registered, but only `AuthService`/`AuthRepository` point at a backend that exists — see "The dead layer" below.
-- **Auth domain (step 2)** — `AuthSessionModel` + `UserModel` (freezed), `AuthService`, `AuthRepository`/`AuthRepositoryImpl`, `AuthCubit`/`AuthState`, and the API-wired `LoginScreen`/`RegisterScreen` under `lib/ui/main/auth/`
+- `lib/di/` — `injector.dart` (called from `main.dart` before `runApp`), `injector_service.dart`, `injector_repository.dart`. Berisi `AuthService`/`AuthRepository` dan `CatalogService`/`CatalogRepository`; keduanya menembak endpoint yang benar-benar ada.
+- **Auth domain** — `AuthSessionModel` + `UserModel` (freezed), `AuthService`, `AuthRepository`/`AuthRepositoryImpl`, `AuthCubit`/`AuthState`, and the API-wired `LoginScreen`/`RegisterScreen` under `lib/ui/main/auth/`
+- **Catalog domain** — model, service, repository, cubit, dan layar di bawah `lib/core/…/catalog/` + `lib/ui/main/catalog/`; lihat "Domain katalog" di bawah
 - `lib/util/error_message.dart` — maps `DataError.code` to localized copy; **never** shows `error.message` to users
-- Tests: `test/util/` (17, pure), `test/data/` (11, fake service+store), `test/ui/` (23, fake repository), `test/integration/` (17, needs the backend running) — 68 total, all passing
+- Tests: `test/util/` (17, murni), `test/data/` (32, fake service/store + parsing JSON asli), `test/ui/` (27, fake repository), `test/integration/` (32, butuh backend hidup) — **108 total, semuanya lulus**
 
-Still absent: Firebase and `lib/firebase_options.dart`; every feature domain other than auth.
+Still absent: Firebase and `lib/firebase_options.dart`; setiap domain fitur selain auth dan katalog — cart, checkout, order, payment, wallet, wishlist.
 
-### The dead layer
+### ~~The dead layer~~ — sudah dihapus (14 September 2026)
 
-`lib/core/data/`, plus `lib/ui/main/{cart,checkout,home,order,product,wallet}`, is a **complete data + UI stack written against the old Markas backend**. The 13 September migration commit (`45d5794`) rewrote auth and `/me` only; it did not delete the rest, and nothing in the build complains — `flutter analyze` reports 24 issues, all info-level `withOpacity` deprecations. It fails at runtime, not at compile time.
+**Lapisan mati warisan backend Markas sudah tidak ada lagi.** 97 berkas dibuang: 9 service, 3 repository impl + 3 antarmuka, 48 berkas model, dan 33 berkas layar di `lib/ui/main/{cart,checkout,home,order,product,wallet}`, beserta registrasi DI, rute, dan entri menu yang menunjuk ke sana. Yang tersisa dari lapisan lama hanya `RepositoryGuard` — ia agnostik backend dan menegakkan kontrak "repository tidak pernah throw".
 
-Of the 53 distinct paths those services call, **37 no longer exist** in marketplace-api's 188 registered routes. Alive: `/auth/*` (all 7), `/me`, `/categories`, `/orders`, `/orders/{id}`, `/orders/{id}/cancel`, `/vouchers/validate`, `/wallet`, `/wallet/topup`, `/wishlist`. Dead, with their replacements:
+Tabel di bawah **dipertahankan sebagai peta terjemahan**, bukan daftar utang: ia berguna saat menulis ulang domain berikutnya (cart, checkout, order, wallet) dan saat membaca commit lama. Dari 53 path yang dulu dipanggil, 37 sudah tidak ada di marketplace-api:
 
 | called by the app | marketplace-api equivalent |
 |---|---|
@@ -240,7 +240,31 @@ Of the 53 distinct paths those services call, **37 no longer exist** in marketpl
 
 No equivalent at all: `/brands`, `/zones`, `/fleet-types`, `/config/parameters`, `/categories/{id}`, `/chat/seller_response_rate`, `/payments/manual_transfer_proof`, `/shipments/{id}/complete`, `/vouchers`.
 
-The warnings in `injector_service.dart` about `GET /shipments` and `POST /vouchers/apply` describe **the old backend's** holes and no longer apply to anything; they survive only because that file was never revisited.
+### Domain katalog — implementasi rujukan
+
+Katalog adalah domain pertama yang ditulis ulang menembak marketplace-api, dan bentuknya yang ditiru domain berikutnya:
+
+```
+lib/core/domain/model/catalog/     product_model.dart (+ variant/image/courier/flash sale),
+                                   category_model.dart, product_facets.dart
+lib/core/data/datasources/…/       catalog_service.dart      — HTTP + cache detail per id
+lib/core/data/repositories/        catalog_repository_impl.dart — pakai RepositoryGuard
+lib/core/domain/repositories/      catalog_repository.dart   — antarmuka untuk cubit
+lib/ui/main/catalog/               cubit/, screens/, widgets/
+```
+
+Keputusan yang sengaja diambil dan sebaiknya dipertahankan:
+
+- **`ProductModel.stock` nullable, bukan `@Default(0)`.** `null` = "belum diketahui" (item listing), `0` = "benar-benar habis". Memberi default 0 akan menandai seluruh listing sebagai habis, karena `GET /products` memang tidak mengirim stok. `isOutOfStock` membedakan keduanya.
+- **Satu model untuk listing dan detail**, karena listing benar-benar subset detail — bukan dua bentuk berbeda.
+- **Aturan harga tinggal di model** (`effectivePrice`, `strikethroughPrice`, `discountPercent`), bukan di widget, supaya listing dan detail tidak pernah menampilkan harga berbeda untuk produk yang sama.
+- **`CatalogLoaded` membawa `isLoadingMore` dan `loadMoreError`** alih-alih memancarkan `loading()` saat menambah halaman — kalau tidak, layar yang sedang dibaca user akan kosong setiap kali ia menggulir.
+- **Kegagalan `GET /categories` tidak menggagalkan layar**; produk tetap tampil tanpa baris kategori.
+- **Pencarian memakai `GET /products?q=`, bukan `/search/products`** — lihat catatan Elasticsearch di atas. `CatalogService` sengaja tidak punya method untuk `/search/*`.
+
+Tesnya terbagi tiga, dan pembagian itu disengaja: `test/data/catalog_model_test.dart` (21, memakai potongan JSON yang disalin apa adanya dari server), `test/ui/catalog_home_cubit_test.dart` (16, repository palsu), `test/integration/catalog_service_test.dart` (15, server sungguhan — mematok kejanggalan bentuk data supaya perubahan diam-diam di backend menjadi test merah, bukan layar rusak).
+
+**Yang belum ada di layar katalog:** tombol "Tambah ke Keranjang" sengaja hanya menampilkan snackbar, karena domain cart belum ditulis ulang. Jangan menyambungkannya ke endpoint sebelum `CartService` ada.
 
 ### Kontrak sisi member (diverifikasi ke server, 14 September 2026)
 
@@ -391,8 +415,8 @@ Derived from the gap between Part 1 and Part 2. Steps 0-5 are done and the auth 
 3. ~~Create `lib/config/network/dio_client.dart` with the named `"api"` Dio singleton.~~ **Done**, plus auth/refresh/logging interceptors.
 4. ~~Add `lib/core/data_state.dart` with the `DataState<T>` union.~~ **Done** — see deviation 1 above.
 5. ~~Build `lib/di/{injector,injector_service,injector_repository}.dart` and call `initialize()` before `runApp`.~~ **Done**; both registries are populated, but nine of the ten service/repository pairs point at the dead backend.
-6. **Next, and it gates everything after it.** Clear out the dead layer — the nine Markas-era service/repository/model sets, the `lib/ui/main/*` screens on top of them, and their DI registrations. See "The dead layer" above for the full inventory. The earlier reason for waiting (server had no products, so shapes would be guesswork) **no longer applies**: the DB is seeded and the real shapes are recorded in "Kontrak sisi member".
-7. **After step 6.** Rebuild each feature domain against marketplace-api, one at a time, against "Kontrak sisi member" and live responses — never `docs/03-api-documentation.md`. Auth is the reference implementation of the target shape. Suggested order, following the buyer flow that was verified end to end: catalog (`/products`, `/categories`) → cart → address → checkout → order → payment → wallet/wishlist.
+6. ~~Bersihkan lapisan mati warisan Markas.~~ **Selesai** — 97 berkas dihapus; hanya `RepositoryGuard` yang dipertahankan.
+7. **In progress.** Tulis ulang tiap domain menembak marketplace-api, satu per satu, berpedoman pada "Kontrak sisi member" dan respons sungguhan — jangan `docs/03-api-documentation.md`. **Katalog selesai** dan menjadi implementasi rujukan (lihat bagian di atas). Urutan berikutnya mengikuti alur beli yang sudah diverifikasi ujung ke ujung: **cart** → address (`/me/addresses`, ingat `full_address`/`is_primary`) → checkout (id UUID, `shipping-options` berbentuk map) → order → payment → wallet/wishlist. Saat cart selesai, sambungkan tombol di `product_detail_screen.dart` dan kembalikan tab keranjang di `home_layout_cubit.dart` dari `MyCart` bawaan kit.
 8. **In progress** (auth done). Convert the UI kit's marker states to `@freezed` unions and switch its cubits from public mutable fields to emitted state data — for whatever of `lib/features/` survives step 10.
 9. Split [app_routes.dart](lib/core/utils/app_routes.dart) into per-domain route files under `lib/config/route/`.
 10. Decide the fate of `lib/features/` vs `lib/ui/` — the target names the presentation root `ui/`, which is a rename of the existing tree, not a second one.

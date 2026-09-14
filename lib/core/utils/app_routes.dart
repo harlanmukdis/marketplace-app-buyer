@@ -3,11 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:marketplace_app_member/ui/main/auth/screens/login_screen.dart';
-import 'package:marketplace_app_member/ui/main/checkout/screens/checkout_screen.dart';
-import 'package:marketplace_app_member/ui/main/order/screens/order_detail_screen.dart';
-import 'package:marketplace_app_member/ui/main/order/screens/order_list_screen.dart';
-import 'package:marketplace_app_member/ui/main/wallet/screens/wallet_screen.dart';
-import 'package:marketplace_app_member/ui/main/product/screens/product_detail_screen.dart';
+import 'package:marketplace_app_member/ui/main/catalog/screens/product_detail_screen.dart';
 import 'package:marketplace_app_member/ui/main/auth/screens/register_screen.dart';
 import '../../features/auth/presentation/views/reset_password_view.dart';
 import '../../features/auth/presentation/views/welcome_view.dart';
@@ -47,32 +43,21 @@ class AppRoutes {
   /// Memakai **path parameter**, bukan `state.extra` seperti route lain di
   /// file ini. Alasannya bukan selera: `extra` tidak ikut serta di URL, jadi
   /// di web sekali user me-refresh halaman detail, `extra`-nya hilang dan
-  /// `state.extra! as int` melempar. Dengan `/offer/:id` halaman ini tahan
+  /// `state.extra! as int` melempar. Dengan `/product/:id` halaman ini tahan
   /// refresh dan bisa dibagikan sebagai tautan.
   ///
   /// Route `productDetails` milik kit dibiarkan apa adanya karena masih
   /// dipakai layar favorites/trending yang belum dimigrasikan.
-  static const String offerDetail = '/offer';
+  static const String productDetail = '/product';
 
-  /// Membangun path detail untuk sebuah penawaran.
-  static String offerDetailPath(int offerId) => '/offer/$offerId';
+  /// Membangun path detail untuk sebuah produk.
+  static String productDetailPath(int productId) => '/product/$productId';
 
-  /// Checkout ber-API.
-  ///
-  /// Dinamai `checkoutOrder` karena `AppRoutes.checkout` milik kit sudah
-  /// terpakai oleh `CheckoutView` lama yang belum dimigrasikan.
-  static const String checkoutOrder = '/checkoutOrder';
+  // Route ber-API untuk checkout, daftar/detail pesanan, dan dompet dihapus
+  // bersama lapisan mati warisan backend Markas. Tambahkan kembali satu per
+  // satu saat domainnya ditulis ulang menembak marketplace-api — jangan
+  // menyisakan konstanta yang tidak menunjuk ke layar mana pun.
 
-  /// Daftar pesanan.
-  static const String orders = '/orders';
-
-  /// Dompet / saldo Markas.
-  static const String wallet = '/wallet';
-
-  /// Detail pesanan. Path parameter, bukan `extra`, agar tahan refresh di web.
-  static const String orderDetail = '/order';
-
-  static String orderDetailPath(int orderId) => '/order/$orderId';
   static const String homeLayout = '/homeLayout';
   static const String productDetails = '/productDetails';
   static const String allReview = '/allReview';
@@ -143,51 +128,14 @@ final GoRouter router = GoRouter(
       },
     ),
     GoRoute(
-      path: AppRoutes.checkoutOrder,
-      pageBuilder: (BuildContext context, GoRouterState state) {
-        return FadeThroughTransitionPageWrapper(
-          transitionKey: state.pageKey,
-          page: const CheckoutScreen(),
-        );
-      },
-    ),
-    GoRoute(
-      path: AppRoutes.wallet,
-      pageBuilder: (BuildContext context, GoRouterState state) {
-        return FadeThroughTransitionPageWrapper(
-          transitionKey: state.pageKey,
-          page: const WalletScreen(),
-        );
-      },
-    ),
-    GoRoute(
-      path: AppRoutes.orders,
-      pageBuilder: (BuildContext context, GoRouterState state) {
-        return FadeThroughTransitionPageWrapper(
-          transitionKey: state.pageKey,
-          page: const OrderListScreen(),
-        );
-      },
-    ),
-    GoRoute(
-      path: '${AppRoutes.orderDetail}/:id',
-      pageBuilder: (BuildContext context, GoRouterState state) {
-        final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
-        return FadeThroughTransitionPageWrapper(
-          transitionKey: state.pageKey,
-          page: OrderDetailScreen(orderId: id),
-        );
-      },
-    ),
-    GoRoute(
-      path: '${AppRoutes.offerDetail}/:id',
+      path: '${AppRoutes.productDetail}/:id',
       pageBuilder: (BuildContext context, GoRouterState state) {
         // Id yang tidak bisa dibaca diperlakukan sebagai 0 — layarnya lalu
         // menampilkan "Produk tidak ditemukan", bukan melempar.
         final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
         return FadeThroughTransitionPageWrapper(
           transitionKey: state.pageKey,
-          page: ProductDetailScreen(offerId: id),
+          page: ProductDetailScreen(productId: id),
         );
       },
     ),

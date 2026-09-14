@@ -1,110 +1,52 @@
+import 'package:marketplace_app_member/core/data/datasources/remote/service/catalog_service.dart';
 import 'package:marketplace_app_member/core/data_state.dart';
-import 'package:marketplace_app_member/core/data/datasources/remote/service/catalog_service.dart'
-    show OfferSort;
-import 'package:marketplace_app_member/core/domain/model/catalog/brand_model.dart';
 import 'package:marketplace_app_member/core/domain/model/catalog/category_model.dart';
-import 'package:marketplace_app_member/core/domain/model/catalog/offer_model.dart';
-import 'package:marketplace_app_member/core/domain/model/catalog/sku_model.dart';
-import 'package:marketplace_app_member/core/domain/model/review/review_model.dart';
+import 'package:marketplace_app_member/core/domain/model/catalog/product_model.dart';
 
-/// Katalog: kategori, SKU master, penawaran, pencarian.
-abstract interface class CatalogRepository {
-  Future<DataState<List<CategoryModel>>> categories({int? parentId});
-  Future<DataState<CategoryModel>> categoryDetail(int id);
-
-  /// Salah satu dari [q]/[categoryId] wajib diisi.
-  Future<DataState<List<SkuModel>>> skus({String? q, int? categoryId});
-
-  Future<DataState<SkuModel>> skuDetail(int id, {bool forceRefresh = false});
-
-  /// Nama & satuan dasar beberapa SKU sekaligus.
+/// Antarmuka katalog yang dikonsumsi cubit.
+///
+/// Seluruh method mengembalikan [DataState] dan **tidak pernah melempar** —
+/// cubit mencocokkan state, bukan membungkus panggilan dengan try/catch.
+///
+/// `meta` ikut dibawa `DataSuccess`/`DataEmpty` dan **tidak boleh dibuang**:
+/// di `GET /products` ia berisi `page`/`per_page`/`total` untuk paginasi
+/// sekaligus `facets` untuk sidebar filter. Pakai `ProductFacets.fromMeta`
+/// untuk membacanya.
+abstract class CatalogRepository {
+  /// Listing sekaligus pencarian produk.
   ///
-  /// Satu panggilan lewat `GET /sku-master?ids=`. Hasilnya [SkuBriefModel] —
-  /// **tanpa `units[]`**, karena respons bulk tidak membawanya. Untuk pemilih
-  /// satuan pakai [skuDetail].
-  Future<DataState<Map<int, SkuBriefModel>>> skusByIds(Iterable<int> ids);
-
-  /// Harga termurah beberapa penawaran sekaligus, ber-key `offer_id`.
-  Future<DataState<Map<int, int>>> prices(Iterable<int> offerIds);
-
-  /// Penawaran per SKU / toko / kategori.
+  /// Isi [query] untuk mencari — ini juga pengganti `/search/products`, yang
+  /// mati tanpa Elasticsearch. Hasilnya **tanpa gambar dan stok**; keduanya
+  /// hanya ada di [fetchProduct].
   ///
-  /// **Hasilnya tidak memuat `price_tiers`** (batasan backend, sudah
-  /// diverifikasi). Untuk menampilkan harga, lanjutkan dengan
-  /// [offersWithPrices] atau panggil [offerDetail].
-  Future<DataState<List<OfferModel>>> offers({
-    int? skuId,
-    int? sellerId,
+  /// List kosong dikembalikan sebagai `DataEmpty` (bukan `DataSuccess` berisi
+  /// list kosong) supaya layar bisa membedakan "tidak ada hasil" dari "gagal
+  /// memuat" tanpa memeriksa panjang list.
+  Future<DataState<List<ProductModel>>> fetchProducts({
+    String? query,
     int? categoryId,
-    int? brandId,
-    int? priceMin,
-    int? priceMax,
+    int? storeId,
+    double? minPrice,
+    double? maxPrice,
     int? minRating,
-    OfferSort? sort,
-    int? page,
-    int? perPage,
+    String? city,
+    String? province,
+    String? courier,
+    ProductSort sort,
+    int page,
+    int perPage,
   });
 
-  /// Sama seperti [offers], tapi harganya sudah dilengkapi lewat satu
-  /// panggilan `GET /offers/prices` sehingga langsung bisa dirender jadi
-  /// kartu produk berharga.
+  /// Detail satu produk — cukup untuk seluruh halaman detail.
   ///
-  /// `meta` pada [DataSuccess] membawa `{page, per_page, total, total_pages}`
-  /// — **selalu** periksa itu, jangan menganggap satu respons sudah lengkap.
-  Future<DataState<List<OfferModel>>> offersWithPrices({
-    int? skuId,
-    int? sellerId,
-    int? categoryId,
-    int? brandId,
-    int? priceMin,
-    int? priceMax,
-    int? minRating,
-    OfferSort? sort,
-    int? page,
-    int? perPage,
-  });
+  /// [forceRefresh] melewati cache service; pakai setelah aksi yang mengubah
+  /// stok.
+  Future<DataState<ProductModel>> fetchProduct(int id,
+      {bool forceRefresh = false});
 
-  /// Penawaran berharga coret terverifikasi.
-  Future<DataState<List<OfferModel>>> flashSale({int limit});
+  /// Pohon kategori lengkap.
+  Future<DataState<List<CategoryModel>>> fetchCategories();
 
-  /// Terlaris, membawa `qty_sold` nyata.
-  Future<DataState<List<OfferModel>>> bestSellers({int limit});
-
-  Future<DataState<List<BrandModel>>> brands();
-
-  /// Bahan sidebar filter untuk satu kategori.
-  Future<DataState<OfferFacetsModel>> facets({int? categoryId});
-
-  /// Rating untuk **banyak** penawaran sekaligus — dipakai grid/list produk.
-  ///
-  /// Satu panggilan untuk semua kartu; jangan panggil [reviews] per kartu.
-  Future<DataState<Map<int, ReviewSummaryModel>>> reviewsSummary(
-    Iterable<int> offerIds,
-  );
-
-  Future<DataState<ReviewPageModel>> reviews(
-    int offerId, {
-    int limit,
-    int offset,
-  });
-
-  /// [rating] harus 1..5.
-  Future<DataState<void>> postReview(
-    int offerId, {
-    required int rating,
-    String? comment,
-  });
-  Future<DataState<OfferModel>> offerDetail(int id);
-
-  /// Hasilnya penawaran + info toko + estimasi ongkir.
-  ///
-  /// `meta` pada [DataSuccess] membawa `count` dan `keyword`.
-  Future<DataState<List<OfferModel>>> search(
-    String q, {
-    int? zoneId,
-    bool? needsTaxInvoice,
-  });
-
-  /// Buang cache SKU — dipakai pull-to-refresh.
-  void clearCache();
+  /// Daftar kurir aktif se-platform.
+  Future<DataState<List<CourierModel>>> fetchCouriers();
 }

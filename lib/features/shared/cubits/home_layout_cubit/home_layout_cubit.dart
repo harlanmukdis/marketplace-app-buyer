@@ -3,8 +3,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/utils/local_network.dart';
 import '../../../favorites/favorites_view.dart';
-import 'package:marketplace_app_member/ui/main/home/screens/catalog_home_screen.dart';
-import 'package:marketplace_app_member/ui/main/cart/screens/cart_screen.dart';
+import 'package:marketplace_app_member/ui/main/catalog/screens/catalog_home_screen.dart';
+import '../../../my_cart/presentation/views/my_cart.dart';
 import '../../../profile/presentaion/views/profile_view.dart';
 import '../../../trending/trending_view.dart';
 
@@ -28,10 +28,11 @@ class HomeLayoutCubit extends Cubit<HomeLayoutState> {
     const CatalogHomeScreen(),
     const TrendingView(),
     const FavoritesView(),
-    // Keranjang versi API. `MyCart` kit tidak dipakai lagi: isinya daftar
-    // hardcoded dengan total dalam dolar, dan keranjang di sini harus
-    // dikelompokkan per toko.
-    const CartScreen(),
+    // Sementara kembali ke keranjang bawaan kit (data hardcoded, total dalam
+    // dolar) karena keranjang ber-API ikut terhapus bersama lapisan mati.
+    // Ganti begitu domain cart ditulis ulang: keranjang marketplace-api
+    // dikelompokkan per toko dan `cart_items` merujuk `product_variant_id`.
+    const MyCart(),
     const ProfileView(),
   ];
 

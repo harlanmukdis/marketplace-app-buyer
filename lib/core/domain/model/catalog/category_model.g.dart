@@ -10,18 +10,19 @@ _CategoryModel _$CategoryModelFromJson(Map<String, dynamic> json) =>
     _CategoryModel(
       id: const IntJson().fromJson(json['id']),
       parentId: const IntOrNullJson().fromJson(json['parent_id']),
-      name: const StringJson().fromJson(json['name']),
-      slug: const StringOrNullJson().fromJson(json['slug']),
-      level: const IntOrNullJson().fromJson(json['level']),
-      jalur: const StringJson().fromJson(json['jalur']),
-      isRisky: json['is_risky'] == null
-          ? false
-          : const BoolJson().fromJson(json['is_risky']),
-      createdDate: const ServerDateTimeJson().fromJson(json['created_date']),
-      attributes: (json['attributes'] as List<dynamic>?)
-              ?.map((e) => e as Map<String, dynamic>)
-              .toList() ??
-          const <Map<String, dynamic>>[],
+      name:
+          json['name'] == null ? '' : const StringJson().fromJson(json['name']),
+      slug:
+          json['slug'] == null ? '' : const StringJson().fromJson(json['slug']),
+      iconUrl: const StringOrNullJson().fromJson(json['icon_url']),
+      level:
+          json['level'] == null ? 0 : const IntJson().fromJson(json['level']),
+      sortOrder: json['sort_order'] == null
+          ? 0
+          : const IntJson().fromJson(json['sort_order']),
+      isActive: json['is_active'] == null
+          ? true
+          : const BoolJson().fromJson(json['is_active']),
       children: (json['children'] as List<dynamic>?)
               ?.map((e) => CategoryModel.fromJson(e as Map<String, dynamic>))
               .toList() ??
@@ -33,11 +34,10 @@ Map<String, dynamic> _$CategoryModelToJson(_CategoryModel instance) =>
       'id': const IntJson().toJson(instance.id),
       'parent_id': const IntOrNullJson().toJson(instance.parentId),
       'name': const StringJson().toJson(instance.name),
-      'slug': const StringOrNullJson().toJson(instance.slug),
-      'level': const IntOrNullJson().toJson(instance.level),
-      'jalur': const StringJson().toJson(instance.jalur),
-      'is_risky': const BoolJson().toJson(instance.isRisky),
-      'created_date': const ServerDateTimeJson().toJson(instance.createdDate),
-      'attributes': instance.attributes,
+      'slug': const StringJson().toJson(instance.slug),
+      'icon_url': const StringOrNullJson().toJson(instance.iconUrl),
+      'level': const IntJson().toJson(instance.level),
+      'sort_order': const IntJson().toJson(instance.sortOrder),
+      'is_active': const BoolJson().toJson(instance.isActive),
       'children': instance.children,
     };

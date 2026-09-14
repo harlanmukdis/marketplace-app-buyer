@@ -21,30 +21,19 @@ mixin _$CategoryModel {
   int? get parentId;
   @StringJson()
   String get name;
-  @StringOrNullJson()
-  String? get slug;
-  @IntOrNullJson()
-  int? get level;
-
-  /// `MASTER` (komoditas dengan SKU baku) atau `BEBAS` (long tail).
   @StringJson()
-  String get jalur;
-
-  /// Kategori berisiko — dikirim sebagai `"1"`/`"0"`, bukan boolean.
+  String get slug;
+  @StringOrNullJson()
+  @JsonKey(name: 'icon_url')
+  String? get iconUrl;
+  @IntJson()
+  int get level;
+  @IntJson()
+  @JsonKey(name: 'sort_order')
+  int get sortOrder;
   @BoolJson()
-  @JsonKey(name: 'is_risky')
-  bool get isRisky;
-  @ServerDateTimeJson()
-  @JsonKey(name: 'created_date')
-  DateTime? get createdDate;
-
-  /// Atribut untuk filter dinamis.
-  ///
-  /// Dibiarkan longgar sebagai `Map` karena backend belum punya data
-  /// atribut sama sekali (`attributes: []` di semua kategori), jadi
-  /// bentuknya belum bisa dipastikan. Modelkan dengan tepat begitu
-  /// datanya ada — menebak sekarang justru berisiko `CastError`.
-  List<Map<String, dynamic>> get attributes;
+  @JsonKey(name: 'is_active')
+  bool get isActive;
   List<CategoryModel> get children;
 
   /// Create a copy of CategoryModel
@@ -68,13 +57,12 @@ mixin _$CategoryModel {
                 other.parentId == parentId) &&
             (identical(other.name, name) || other.name == name) &&
             (identical(other.slug, slug) || other.slug == slug) &&
+            (identical(other.iconUrl, iconUrl) || other.iconUrl == iconUrl) &&
             (identical(other.level, level) || other.level == level) &&
-            (identical(other.jalur, jalur) || other.jalur == jalur) &&
-            (identical(other.isRisky, isRisky) || other.isRisky == isRisky) &&
-            (identical(other.createdDate, createdDate) ||
-                other.createdDate == createdDate) &&
-            const DeepCollectionEquality()
-                .equals(other.attributes, attributes) &&
+            (identical(other.sortOrder, sortOrder) ||
+                other.sortOrder == sortOrder) &&
+            (identical(other.isActive, isActive) ||
+                other.isActive == isActive) &&
             const DeepCollectionEquality().equals(other.children, children));
   }
 
@@ -86,16 +74,15 @@ mixin _$CategoryModel {
       parentId,
       name,
       slug,
+      iconUrl,
       level,
-      jalur,
-      isRisky,
-      createdDate,
-      const DeepCollectionEquality().hash(attributes),
+      sortOrder,
+      isActive,
       const DeepCollectionEquality().hash(children));
 
   @override
   String toString() {
-    return 'CategoryModel(id: $id, parentId: $parentId, name: $name, slug: $slug, level: $level, jalur: $jalur, isRisky: $isRisky, createdDate: $createdDate, attributes: $attributes, children: $children)';
+    return 'CategoryModel(id: $id, parentId: $parentId, name: $name, slug: $slug, iconUrl: $iconUrl, level: $level, sortOrder: $sortOrder, isActive: $isActive, children: $children)';
   }
 }
 
@@ -109,14 +96,11 @@ abstract mixin class $CategoryModelCopyWith<$Res> {
       {@IntJson() int id,
       @IntOrNullJson() @JsonKey(name: 'parent_id') int? parentId,
       @StringJson() String name,
-      @StringOrNullJson() String? slug,
-      @IntOrNullJson() int? level,
-      @StringJson() String jalur,
-      @BoolJson() @JsonKey(name: 'is_risky') bool isRisky,
-      @ServerDateTimeJson()
-      @JsonKey(name: 'created_date')
-      DateTime? createdDate,
-      List<Map<String, dynamic>> attributes,
+      @StringJson() String slug,
+      @StringOrNullJson() @JsonKey(name: 'icon_url') String? iconUrl,
+      @IntJson() int level,
+      @IntJson() @JsonKey(name: 'sort_order') int sortOrder,
+      @BoolJson() @JsonKey(name: 'is_active') bool isActive,
       List<CategoryModel> children});
 }
 
@@ -136,12 +120,11 @@ class _$CategoryModelCopyWithImpl<$Res>
     Object? id = null,
     Object? parentId = freezed,
     Object? name = null,
-    Object? slug = freezed,
-    Object? level = freezed,
-    Object? jalur = null,
-    Object? isRisky = null,
-    Object? createdDate = freezed,
-    Object? attributes = null,
+    Object? slug = null,
+    Object? iconUrl = freezed,
+    Object? level = null,
+    Object? sortOrder = null,
+    Object? isActive = null,
     Object? children = null,
   }) {
     return _then(_self.copyWith(
@@ -157,30 +140,26 @@ class _$CategoryModelCopyWithImpl<$Res>
           ? _self.name
           : name // ignore: cast_nullable_to_non_nullable
               as String,
-      slug: freezed == slug
+      slug: null == slug
           ? _self.slug
           : slug // ignore: cast_nullable_to_non_nullable
+              as String,
+      iconUrl: freezed == iconUrl
+          ? _self.iconUrl
+          : iconUrl // ignore: cast_nullable_to_non_nullable
               as String?,
-      level: freezed == level
+      level: null == level
           ? _self.level
           : level // ignore: cast_nullable_to_non_nullable
-              as int?,
-      jalur: null == jalur
-          ? _self.jalur
-          : jalur // ignore: cast_nullable_to_non_nullable
-              as String,
-      isRisky: null == isRisky
-          ? _self.isRisky
-          : isRisky // ignore: cast_nullable_to_non_nullable
+              as int,
+      sortOrder: null == sortOrder
+          ? _self.sortOrder
+          : sortOrder // ignore: cast_nullable_to_non_nullable
+              as int,
+      isActive: null == isActive
+          ? _self.isActive
+          : isActive // ignore: cast_nullable_to_non_nullable
               as bool,
-      createdDate: freezed == createdDate
-          ? _self.createdDate
-          : createdDate // ignore: cast_nullable_to_non_nullable
-              as DateTime?,
-      attributes: null == attributes
-          ? _self.attributes
-          : attributes // ignore: cast_nullable_to_non_nullable
-              as List<Map<String, dynamic>>,
       children: null == children
           ? _self.children
           : children // ignore: cast_nullable_to_non_nullable
@@ -286,14 +265,11 @@ extension CategoryModelPatterns on CategoryModel {
             @IntJson() int id,
             @IntOrNullJson() @JsonKey(name: 'parent_id') int? parentId,
             @StringJson() String name,
-            @StringOrNullJson() String? slug,
-            @IntOrNullJson() int? level,
-            @StringJson() String jalur,
-            @BoolJson() @JsonKey(name: 'is_risky') bool isRisky,
-            @ServerDateTimeJson()
-            @JsonKey(name: 'created_date')
-            DateTime? createdDate,
-            List<Map<String, dynamic>> attributes,
+            @StringJson() String slug,
+            @StringOrNullJson() @JsonKey(name: 'icon_url') String? iconUrl,
+            @IntJson() int level,
+            @IntJson() @JsonKey(name: 'sort_order') int sortOrder,
+            @BoolJson() @JsonKey(name: 'is_active') bool isActive,
             List<CategoryModel> children)?
         $default, {
     required TResult orElse(),
@@ -306,11 +282,10 @@ extension CategoryModelPatterns on CategoryModel {
             _that.parentId,
             _that.name,
             _that.slug,
+            _that.iconUrl,
             _that.level,
-            _that.jalur,
-            _that.isRisky,
-            _that.createdDate,
-            _that.attributes,
+            _that.sortOrder,
+            _that.isActive,
             _that.children);
       case _:
         return orElse();
@@ -336,14 +311,11 @@ extension CategoryModelPatterns on CategoryModel {
             @IntJson() int id,
             @IntOrNullJson() @JsonKey(name: 'parent_id') int? parentId,
             @StringJson() String name,
-            @StringOrNullJson() String? slug,
-            @IntOrNullJson() int? level,
-            @StringJson() String jalur,
-            @BoolJson() @JsonKey(name: 'is_risky') bool isRisky,
-            @ServerDateTimeJson()
-            @JsonKey(name: 'created_date')
-            DateTime? createdDate,
-            List<Map<String, dynamic>> attributes,
+            @StringJson() String slug,
+            @StringOrNullJson() @JsonKey(name: 'icon_url') String? iconUrl,
+            @IntJson() int level,
+            @IntJson() @JsonKey(name: 'sort_order') int sortOrder,
+            @BoolJson() @JsonKey(name: 'is_active') bool isActive,
             List<CategoryModel> children)
         $default,
   ) {
@@ -355,11 +327,10 @@ extension CategoryModelPatterns on CategoryModel {
             _that.parentId,
             _that.name,
             _that.slug,
+            _that.iconUrl,
             _that.level,
-            _that.jalur,
-            _that.isRisky,
-            _that.createdDate,
-            _that.attributes,
+            _that.sortOrder,
+            _that.isActive,
             _that.children);
       case _:
         throw StateError('Unexpected subclass');
@@ -384,14 +355,11 @@ extension CategoryModelPatterns on CategoryModel {
             @IntJson() int id,
             @IntOrNullJson() @JsonKey(name: 'parent_id') int? parentId,
             @StringJson() String name,
-            @StringOrNullJson() String? slug,
-            @IntOrNullJson() int? level,
-            @StringJson() String jalur,
-            @BoolJson() @JsonKey(name: 'is_risky') bool isRisky,
-            @ServerDateTimeJson()
-            @JsonKey(name: 'created_date')
-            DateTime? createdDate,
-            List<Map<String, dynamic>> attributes,
+            @StringJson() String slug,
+            @StringOrNullJson() @JsonKey(name: 'icon_url') String? iconUrl,
+            @IntJson() int level,
+            @IntJson() @JsonKey(name: 'sort_order') int sortOrder,
+            @BoolJson() @JsonKey(name: 'is_active') bool isActive,
             List<CategoryModel> children)?
         $default,
   ) {
@@ -403,11 +371,10 @@ extension CategoryModelPatterns on CategoryModel {
             _that.parentId,
             _that.name,
             _that.slug,
+            _that.iconUrl,
             _that.level,
-            _that.jalur,
-            _that.isRisky,
-            _that.createdDate,
-            _that.attributes,
+            _that.sortOrder,
+            _that.isActive,
             _that.children);
       case _:
         return null;
@@ -421,17 +388,14 @@ class _CategoryModel extends CategoryModel {
   const _CategoryModel(
       {@IntJson() required this.id,
       @IntOrNullJson() @JsonKey(name: 'parent_id') this.parentId,
-      @StringJson() required this.name,
-      @StringOrNullJson() this.slug,
-      @IntOrNullJson() this.level,
-      @StringJson() required this.jalur,
-      @BoolJson() @JsonKey(name: 'is_risky') this.isRisky = false,
-      @ServerDateTimeJson() @JsonKey(name: 'created_date') this.createdDate,
-      final List<Map<String, dynamic>> attributes =
-          const <Map<String, dynamic>>[],
+      @StringJson() this.name = '',
+      @StringJson() this.slug = '',
+      @StringOrNullJson() @JsonKey(name: 'icon_url') this.iconUrl,
+      @IntJson() this.level = 0,
+      @IntJson() @JsonKey(name: 'sort_order') this.sortOrder = 0,
+      @BoolJson() @JsonKey(name: 'is_active') this.isActive = true,
       final List<CategoryModel> children = const <CategoryModel>[]})
-      : _attributes = attributes,
-        _children = children,
+      : _children = children,
         super._();
   factory _CategoryModel.fromJson(Map<String, dynamic> json) =>
       _$CategoryModelFromJson(json);
@@ -444,52 +408,29 @@ class _CategoryModel extends CategoryModel {
   @JsonKey(name: 'parent_id')
   final int? parentId;
   @override
+  @JsonKey()
   @StringJson()
   final String name;
   @override
-  @StringOrNullJson()
-  final String? slug;
-  @override
-  @IntOrNullJson()
-  final int? level;
-
-  /// `MASTER` (komoditas dengan SKU baku) atau `BEBAS` (long tail).
-  @override
+  @JsonKey()
   @StringJson()
-  final String jalur;
-
-  /// Kategori berisiko — dikirim sebagai `"1"`/`"0"`, bukan boolean.
+  final String slug;
   @override
-  @BoolJson()
-  @JsonKey(name: 'is_risky')
-  final bool isRisky;
-  @override
-  @ServerDateTimeJson()
-  @JsonKey(name: 'created_date')
-  final DateTime? createdDate;
-
-  /// Atribut untuk filter dinamis.
-  ///
-  /// Dibiarkan longgar sebagai `Map` karena backend belum punya data
-  /// atribut sama sekali (`attributes: []` di semua kategori), jadi
-  /// bentuknya belum bisa dipastikan. Modelkan dengan tepat begitu
-  /// datanya ada — menebak sekarang justru berisiko `CastError`.
-  final List<Map<String, dynamic>> _attributes;
-
-  /// Atribut untuk filter dinamis.
-  ///
-  /// Dibiarkan longgar sebagai `Map` karena backend belum punya data
-  /// atribut sama sekali (`attributes: []` di semua kategori), jadi
-  /// bentuknya belum bisa dipastikan. Modelkan dengan tepat begitu
-  /// datanya ada — menebak sekarang justru berisiko `CastError`.
+  @StringOrNullJson()
+  @JsonKey(name: 'icon_url')
+  final String? iconUrl;
   @override
   @JsonKey()
-  List<Map<String, dynamic>> get attributes {
-    if (_attributes is EqualUnmodifiableListView) return _attributes;
-    // ignore: implicit_dynamic_type
-    return EqualUnmodifiableListView(_attributes);
-  }
-
+  @IntJson()
+  final int level;
+  @override
+  @IntJson()
+  @JsonKey(name: 'sort_order')
+  final int sortOrder;
+  @override
+  @BoolJson()
+  @JsonKey(name: 'is_active')
+  final bool isActive;
   final List<CategoryModel> _children;
   @override
   @JsonKey()
@@ -524,13 +465,12 @@ class _CategoryModel extends CategoryModel {
                 other.parentId == parentId) &&
             (identical(other.name, name) || other.name == name) &&
             (identical(other.slug, slug) || other.slug == slug) &&
+            (identical(other.iconUrl, iconUrl) || other.iconUrl == iconUrl) &&
             (identical(other.level, level) || other.level == level) &&
-            (identical(other.jalur, jalur) || other.jalur == jalur) &&
-            (identical(other.isRisky, isRisky) || other.isRisky == isRisky) &&
-            (identical(other.createdDate, createdDate) ||
-                other.createdDate == createdDate) &&
-            const DeepCollectionEquality()
-                .equals(other._attributes, _attributes) &&
+            (identical(other.sortOrder, sortOrder) ||
+                other.sortOrder == sortOrder) &&
+            (identical(other.isActive, isActive) ||
+                other.isActive == isActive) &&
             const DeepCollectionEquality().equals(other._children, _children));
   }
 
@@ -542,16 +482,15 @@ class _CategoryModel extends CategoryModel {
       parentId,
       name,
       slug,
+      iconUrl,
       level,
-      jalur,
-      isRisky,
-      createdDate,
-      const DeepCollectionEquality().hash(_attributes),
+      sortOrder,
+      isActive,
       const DeepCollectionEquality().hash(_children));
 
   @override
   String toString() {
-    return 'CategoryModel(id: $id, parentId: $parentId, name: $name, slug: $slug, level: $level, jalur: $jalur, isRisky: $isRisky, createdDate: $createdDate, attributes: $attributes, children: $children)';
+    return 'CategoryModel(id: $id, parentId: $parentId, name: $name, slug: $slug, iconUrl: $iconUrl, level: $level, sortOrder: $sortOrder, isActive: $isActive, children: $children)';
   }
 }
 
@@ -567,14 +506,11 @@ abstract mixin class _$CategoryModelCopyWith<$Res>
       {@IntJson() int id,
       @IntOrNullJson() @JsonKey(name: 'parent_id') int? parentId,
       @StringJson() String name,
-      @StringOrNullJson() String? slug,
-      @IntOrNullJson() int? level,
-      @StringJson() String jalur,
-      @BoolJson() @JsonKey(name: 'is_risky') bool isRisky,
-      @ServerDateTimeJson()
-      @JsonKey(name: 'created_date')
-      DateTime? createdDate,
-      List<Map<String, dynamic>> attributes,
+      @StringJson() String slug,
+      @StringOrNullJson() @JsonKey(name: 'icon_url') String? iconUrl,
+      @IntJson() int level,
+      @IntJson() @JsonKey(name: 'sort_order') int sortOrder,
+      @BoolJson() @JsonKey(name: 'is_active') bool isActive,
       List<CategoryModel> children});
 }
 
@@ -594,12 +530,11 @@ class __$CategoryModelCopyWithImpl<$Res>
     Object? id = null,
     Object? parentId = freezed,
     Object? name = null,
-    Object? slug = freezed,
-    Object? level = freezed,
-    Object? jalur = null,
-    Object? isRisky = null,
-    Object? createdDate = freezed,
-    Object? attributes = null,
+    Object? slug = null,
+    Object? iconUrl = freezed,
+    Object? level = null,
+    Object? sortOrder = null,
+    Object? isActive = null,
     Object? children = null,
   }) {
     return _then(_CategoryModel(
@@ -615,30 +550,26 @@ class __$CategoryModelCopyWithImpl<$Res>
           ? _self.name
           : name // ignore: cast_nullable_to_non_nullable
               as String,
-      slug: freezed == slug
+      slug: null == slug
           ? _self.slug
           : slug // ignore: cast_nullable_to_non_nullable
+              as String,
+      iconUrl: freezed == iconUrl
+          ? _self.iconUrl
+          : iconUrl // ignore: cast_nullable_to_non_nullable
               as String?,
-      level: freezed == level
+      level: null == level
           ? _self.level
           : level // ignore: cast_nullable_to_non_nullable
-              as int?,
-      jalur: null == jalur
-          ? _self.jalur
-          : jalur // ignore: cast_nullable_to_non_nullable
-              as String,
-      isRisky: null == isRisky
-          ? _self.isRisky
-          : isRisky // ignore: cast_nullable_to_non_nullable
+              as int,
+      sortOrder: null == sortOrder
+          ? _self.sortOrder
+          : sortOrder // ignore: cast_nullable_to_non_nullable
+              as int,
+      isActive: null == isActive
+          ? _self.isActive
+          : isActive // ignore: cast_nullable_to_non_nullable
               as bool,
-      createdDate: freezed == createdDate
-          ? _self.createdDate
-          : createdDate // ignore: cast_nullable_to_non_nullable
-              as DateTime?,
-      attributes: null == attributes
-          ? _self._attributes
-          : attributes // ignore: cast_nullable_to_non_nullable
-              as List<Map<String, dynamic>>,
       children: null == children
           ? _self._children
           : children // ignore: cast_nullable_to_non_nullable

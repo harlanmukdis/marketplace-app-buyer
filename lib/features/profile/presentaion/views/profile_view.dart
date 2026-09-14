@@ -102,21 +102,10 @@ class GeneralWidgets extends StatelessWidget {
       children: [
         Text(l.general, style: AppStyles.styleMedium16(context)),
         10.sbh,
-        // Dua tujuan yang sebelumnya hanya bisa dicapai dengan mengetik URL.
-        // Judulnya ditulis langsung karena kunci l10n-nya belum ada — dan
-        // seluruh layar tujuannya memang berbahasa Indonesia.
-        _customListTile(
-          context,
-          title: 'Pesanan Saya',
-          icon: Icons.receipt_long_outlined,
-          onTap: () => router.push(AppRoutes.orders),
-        ),
-        _customListTile(
-          context,
-          title: 'Saldo Markas',
-          icon: Icons.account_balance_wallet_outlined,
-          onTap: () => router.push(AppRoutes.wallet),
-        ),
+        // Entri "Pesanan Saya" dan "Saldo" dihapus bersama lapisan mati
+        // warisan backend Markas. Pasang kembali saat domain order dan wallet
+        // ditulis ulang menembak marketplace-api — menyisakan menu yang
+        // mengarah ke rute tak terdaftar hanya menghasilkan layar kosong.
         _customListTile(
           context,
           title: l.profileInformation,

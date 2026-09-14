@@ -1,20 +1,28 @@
+import 'dart:convert';
+
 import 'package:json_annotation/json_annotation.dart';
 
 import 'format_helper.dart';
 
 /// Parser JSON yang toleran tipe, untuk dipakai model `freezed`.
 ///
-/// **Kenapa ini wajib, bukan pemanis.** Backend Markas mengirim field numerik
-/// yang sama dengan tipe berbeda tergantung endpoint-nya: `POST /checkout`
-/// membalas `"grand_total": 6500000` (number), sedangkan `GET /orders/{id}`
-/// membalas `"grand_total": "6500000"` (string, karena nilainya lewat begitu
-/// saja dari driver MySQL). Hal yang sama terjadi pada boolean, yang bisa
-/// datang sebagai `false` atau `"0"`.
+/// **Kenapa ini wajib, bukan pemanis.** marketplace-api mengirim field numerik
+/// yang sama dengan tipe berbeda tergantung endpoint-nya. Sudah dibuktikan ke
+/// server: `POST /checkout/sessions` membalas `"grand_total": 150000` (number),
+/// sedangkan `GET /checkout/sessions/{id}` membalas `"grand_total": "150000.00"`
+/// (string berdesimal, karena nilainya lewat begitu saja dari driver MySQL).
+/// Hal yang sama terjadi pada boolean `tinyint`, yang datang sebagai
+/// `"0"`/`"1"`, dan string `"0"` itu **truthy** kalau diperiksa sembarangan.
 ///
-/// Kalau model memakai `int` telanjang, `GET /orders/{id}` melempar
-/// `CastError` saat halaman detail pesanan dibuka — persis di alur yang paling
-/// sering dipakai. Karena itu **setiap field numerik dan boolean di model
-/// wajib memakai converter di sini**, bukan hanya yang kelihatan berisiko.
+/// Arah sebaliknya juga ada dan sama menjebaknya: mayoritas field berupa string,
+/// tapi `stock` di `GET /products/{id}`, `subtotal`/`item_count` di
+/// `GET /cart/summary`, serta `cost`/`etd_*_days` di `shipping-options` justru
+/// datang sebagai angka asli.
+///
+/// Kalau model memakai `int` telanjang, halaman yang memanggil endpoint
+/// "sisi string" melempar `CastError` — persis di alur yang paling sering
+/// dipakai. Karena itu **setiap field numerik dan boolean di model wajib
+/// memakai converter di sini**, bukan hanya yang kelihatan berisiko.
 ///
 /// ```dart
 /// @freezed
@@ -170,4 +178,40 @@ class ServerDateTimeJson extends JsonConverter<DateTime?, Object?> {
   DateTime? fromJson(Object? json) => parseServerInstant(json?.toString());
   @override
   Object? toJson(DateTime? object) => formatForServer(object);
+}
+
+/// `Map<String, dynamic>?` dari objek JSON **atau dari string berisi JSON**.
+///
+/// Backend menyimpan sebagian kolom sebagai teks JSON dan meneruskannya apa
+/// adanya, sehingga field yang sama bisa sampai sebagai objek di satu endpoint
+/// dan sebagai string di endpoint lain. Yang sudah terbukti berbentuk string:
+/// `product_variants.variant_options` (`'{"warna":"Hitam"}'` dari
+/// `GET /products/{id}`), `checkout_sessions.cart_snapshot`, dan
+/// `orders.shipping_address_snapshot`.
+///
+/// String yang bukan JSON valid — atau JSON yang ternyata bukan objek —
+/// menghasilkan `null`, bukan lemparan: satu varian dengan data rusak tidak
+/// boleh menggagalkan seluruh halaman produk.
+class JsonMapJson extends JsonConverter<Map<String, dynamic>?, Object?> {
+  const JsonMapJson();
+
+  @override
+  Map<String, dynamic>? fromJson(Object? json) {
+    if (json == null) return null;
+    if (json is Map) return Map<String, dynamic>.from(json);
+    if (json is String) {
+      final text = json.trim();
+      if (text.isEmpty) return null;
+      try {
+        final decoded = jsonDecode(text);
+        return decoded is Map ? Map<String, dynamic>.from(decoded) : null;
+      } on FormatException {
+        return null;
+      }
+    }
+    return null;
+  }
+
+  @override
+  Object? toJson(Map<String, dynamic>? object) => object;
 }
