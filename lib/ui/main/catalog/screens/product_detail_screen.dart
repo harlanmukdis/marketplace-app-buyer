@@ -6,6 +6,7 @@ import 'package:marketplace_app_member/core/function/custom_app_bar.dart';
 import 'package:marketplace_app_member/core/utils/app_styles.dart';
 import 'package:marketplace_app_member/core/utils/constant.dart';
 import 'package:marketplace_app_member/core/utils/extensions.dart';
+import 'package:marketplace_app_member/ui/main/cart/cubit/cart_cubit.dart';
 import 'package:marketplace_app_member/ui/main/catalog/cubit/product_detail_cubit.dart';
 import 'package:marketplace_app_member/util/error_message.dart';
 import 'package:marketplace_app_member/util/format_helper.dart';
@@ -21,8 +22,15 @@ class ProductDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (_) => ProductDetailCubit(productId)..load(),
+    // Dua cubit: satu untuk isi halaman, satu lagi khusus aksi "tambah ke
+    // keranjang". Memakai CartCubit di sini — alih-alih menaruh logika
+    // keranjang di ProductDetailCubit — membuat pembatasan kuantitas dan
+    // aturan baca-ulang keranjang hanya ada di satu tempat.
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider(create: (_) => ProductDetailCubit(productId)..load()),
+        BlocProvider(create: (_) => CartCubit()),
+      ],
       child: const _ProductDetailBody(),
     );
   }
@@ -438,23 +446,63 @@ class _BuyBar extends StatelessWidget {
                 ),
               ),
             ),
-            FilledButton.icon(
-              // Keranjang ber-API belum ditulis ulang setelah pindah backend,
-              // jadi tombolnya sengaja memberi tahu apa adanya alih-alih
-              // memanggil endpoint yang belum ada.
-              onPressed: canBuy
-                  ? () => ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Keranjang belum tersedia'),
-                        ),
-                      )
-                  : null,
-              icon: const Icon(Icons.shopping_cart_outlined),
-              label: const Text('Tambah ke Keranjang'),
-            ),
+            _AddToCartButton(state: state),
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Tombol tambah ke keranjang.
+///
+/// Kuantitasnya selalu 1 per ketukan, dan varian yang dikirim adalah varian
+/// terpilih — bukan produknya: `cart_items` di API ini merujuk
+/// `product_variant_id`.
+///
+/// Stok dicek di sini karena **halaman inilah yang tahu stok**; `GET /cart`
+/// tidak mengirimnya, dan server tidak memvalidasi kuantitas sama sekali.
+class _AddToCartButton extends StatelessWidget {
+  const _AddToCartButton({required this.state});
+
+  final ProductDetailLoaded state;
+
+  @override
+  Widget build(BuildContext context) {
+    final variantId = state.selectedVariant?.id;
+    final canBuy = state.canAddToCart && variantId != null;
+
+    return BlocConsumer<CartCubit, CartState>(
+      listener: (context, cartState) {
+        final message = switch (cartState) {
+          CartReady(:final actionError?) => errorMessageFor(context, actionError),
+          CartReady() => 'Ditambahkan ke keranjang',
+          _ => null,
+        };
+        if (message == null) return;
+
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(SnackBar(content: Text(message)));
+        CartCubit.get(context).clearActionError();
+
+        // Stok berubah setelah barang masuk keranjang; muat ulang detail
+        // supaya label "tersisa N" tidak basi.
+        ProductDetailCubit.get(context).load(forceRefresh: true);
+      },
+      builder: (context, cartState) {
+        final busy = cartState is CartLoading;
+        return FilledButton.icon(
+          onPressed: canBuy && !busy
+              ? () => CartCubit.get(context).addItem(
+                    productVariantId: variantId,
+                    quantity: 1,
+                  )
+              : null,
+          icon: const Icon(Icons.shopping_cart_outlined),
+          label: const Text('Tambah ke Keranjang'),
+        );
+      },
     );
   }
 }

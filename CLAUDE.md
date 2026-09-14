@@ -56,7 +56,7 @@ Note: `build_runner` 2.15 **removed `--delete-conflicting-outputs`** — passing
 
 | tree | data source | safe to build on? |
 |---|---|---|
-| `lib/ui/main/{auth,catalog}/` | marketplace-api, live | **yes** — `catalog` is the reference implementation |
+| `lib/ui/main/{auth,catalog,cart}/` | marketplace-api, live | **yes** — `catalog` is the reference implementation |
 | `lib/features/` (the UI kit's sample tree) | hardcoded lists inside cubits (`HomePageCubit.productsTShirt`) | as sample UI only |
 
 The third tree that used to sit between them — a complete data + UI stack written against the old Markas backend — **was deleted on 14 September 2026**. See "~~The dead layer~~" in Part 2 for what went and the endpoint translation table that survived it.
@@ -211,10 +211,11 @@ Current state: `en` and `ar` are complete (284 keys) and selectable. `fr` appear
 - `lib/di/` — `injector.dart` (called from `main.dart` before `runApp`), `injector_service.dart`, `injector_repository.dart`. Berisi `AuthService`/`AuthRepository` dan `CatalogService`/`CatalogRepository`; keduanya menembak endpoint yang benar-benar ada.
 - **Auth domain** — `AuthSessionModel` + `UserModel` (freezed), `AuthService`, `AuthRepository`/`AuthRepositoryImpl`, `AuthCubit`/`AuthState`, and the API-wired `LoginScreen`/`RegisterScreen` under `lib/ui/main/auth/`
 - **Catalog domain** — model, service, repository, cubit, dan layar di bawah `lib/core/…/catalog/` + `lib/ui/main/catalog/`; lihat "Domain katalog" di bawah
+- **Cart domain** — `lib/core/…/cart/` + `lib/ui/main/cart/`; menegakkan pembatasan kuantitas yang tidak dilakukan server, lihat "Domain keranjang" di bawah
 - `lib/util/error_message.dart` — maps `DataError.code` to localized copy; **never** shows `error.message` to users
-- Tests: `test/util/` (17, murni), `test/data/` (32, fake service/store + parsing JSON asli), `test/ui/` (27, fake repository), `test/integration/` (32, butuh backend hidup) — **108 total, semuanya lulus**
+- Tests: `test/util/` (17, murni), `test/data/` (43, fake service/store + parsing JSON asli), `test/ui/` (39, fake repository), `test/integration/` (42, butuh backend hidup) — **141 total, semuanya lulus**
 
-Still absent: Firebase and `lib/firebase_options.dart`; setiap domain fitur selain auth dan katalog — cart, checkout, order, payment, wallet, wishlist.
+Still absent: Firebase and `lib/firebase_options.dart`; domain checkout, order, payment, wallet, dan wishlist.
 
 ### ~~The dead layer~~ — sudah dihapus (14 September 2026)
 
@@ -264,7 +265,30 @@ Keputusan yang sengaja diambil dan sebaiknya dipertahankan:
 
 Tesnya terbagi tiga, dan pembagian itu disengaja: `test/data/catalog_model_test.dart` (21, memakai potongan JSON yang disalin apa adanya dari server), `test/ui/catalog_home_cubit_test.dart` (16, repository palsu), `test/integration/catalog_service_test.dart` (15, server sungguhan — mematok kejanggalan bentuk data supaya perubahan diam-diam di backend menjadi test merah, bukan layar rusak).
 
-**Yang belum ada di layar katalog:** tombol "Tambah ke Keranjang" sengaja hanya menampilkan snackbar, karena domain cart belum ditulis ulang. Jangan menyambungkannya ke endpoint sebelum `CartService` ada.
+### Domain keranjang — dan lubang validasi di server
+
+Keranjang ditulis setelah katalog dan mengikuti bentuk yang sama, dengan dua perbedaan yang disengaja.
+
+**1. `CartRepository` mengembalikan `CartSnapshot`, bukan `void`, untuk setiap mutasi.** Ini dipaksa API: `PATCH` dan `DELETE` membalas `data: null`, **dan mutasi terhadap baris yang tidak ada pun dibalas `200`** (terverifikasi: `PATCH /cart/items/99999999` sukses). Artinya status sukses **bukan bukti** sesuatu berubah — satu-satunya cara tahu keadaan keranjang adalah membacanya ulang. Repository yang menanggung baca-ulang itu, supaya tidak ada layar yang lupa.
+
+**2. `CartCubit` adalah satu-satunya tempat kuantitas dibatasi.** 🔴 **Server tidak memvalidasi kuantitas sama sekali** — `quantity: 999999` untuk varian berstok 150 dibalas `200` dan benar-benar tersimpan; `0` juga diterima. Konsekuensinya:
+
+- Kuantitas dipotong ke `CartCubit.maxQuantityPerLine` (999) sebelum dikirim. Itu angka kewarasan, bukan aturan bisnis — **`GET /cart` tidak mengirim stok**, jadi layar keranjang memang tidak bisa tahu batas sesungguhnya. Batas terhadap stok ditegakkan di halaman detail produk, yang tahu `variant.stock`.
+- Kuantitas `< 1` **menghapus baris**, tidak dikirim sebagai `0`. Mengirim `0` diterima server dan menyisakan baris hantu berkuantitas nol yang tetap tampil dan tetap dihitung `item_count`.
+- Ketukan ganda pada baris yang sama diabaikan selagi permintaan pertama berjalan (`mutatingItemIds`), supaya dua permintaan tidak saling mendahului.
+
+Bentuk data yang mudah salah ditebak:
+
+- **Grup toko di `GET /cart` hanya membawa `store_name`, tanpa `store_id`.** Id-nya ada di tiap item; `CartStoreGroup.storeId` menurunkannya dari item pertama. Checkout membutuhkannya sebagai kunci pemilihan kurir per toko.
+- **`GET /cart/summary` hanya berisi `subtotal` dan `item_count`** — keduanya **angka asli**, bukan string. `docs/03` menyebut endpoint ini juga mengembalikan estimasi ongkir dan promo aktif; **tidak**. Ongkir baru muncul di `checkout/sessions/{id}/shipping-options`.
+- **Ringkasan hanya menghitung baris tercentang**, dan `item_count` menghitung **baris**, bukan unit — dua baris berisi 5 dan 1 unit tetap `2`. Karena itu layar menulis "N barang terpilih", bukan "N barang".
+- **`POST /cart/items` untuk varian yang sudah ada menggabungkan kuantitas** ke baris lama dan mengembalikan id baris itu — bukan membuat baris baru. Id balasannya kadang number, kadang string.
+- Baris keranjang membawa data produk terdenormalisasi (`product_name`, `sku`, `price`, `variant_options`), jadi layar keranjang **tidak perlu** menembak `/products/{id}` per baris. Yang tidak ada: gambar dan stok.
+- **Tidak ada endpoint untuk melepas voucher.** `docs/03` menyebut `DELETE /cart/vouchers/{code}`; rutenya tidak terdaftar. Jangan menyediakan tombol yang tidak punya endpoint.
+
+Satu-satunya validasi server yang benar-benar ada di endpoint ini: varian tidak dikenal dibalas `404 VARIANT_NOT_FOUND`.
+
+**Yang belum tersambung:** tombol "Checkout" di layar keranjang masih menampilkan snackbar, karena domain checkout belum ditulis. Jangan menyambungkannya sebelum `CheckoutService` ada.
 
 ### Kontrak sisi member (diverifikasi ke server, 14 September 2026)
 
@@ -416,7 +440,7 @@ Derived from the gap between Part 1 and Part 2. Steps 0-5 are done and the auth 
 4. ~~Add `lib/core/data_state.dart` with the `DataState<T>` union.~~ **Done** — see deviation 1 above.
 5. ~~Build `lib/di/{injector,injector_service,injector_repository}.dart` and call `initialize()` before `runApp`.~~ **Done**; both registries are populated, but nine of the ten service/repository pairs point at the dead backend.
 6. ~~Bersihkan lapisan mati warisan Markas.~~ **Selesai** — 97 berkas dihapus; hanya `RepositoryGuard` yang dipertahankan.
-7. **In progress.** Tulis ulang tiap domain menembak marketplace-api, satu per satu, berpedoman pada "Kontrak sisi member" dan respons sungguhan — jangan `docs/03-api-documentation.md`. **Katalog selesai** dan menjadi implementasi rujukan (lihat bagian di atas). Urutan berikutnya mengikuti alur beli yang sudah diverifikasi ujung ke ujung: **cart** → address (`/me/addresses`, ingat `full_address`/`is_primary`) → checkout (id UUID, `shipping-options` berbentuk map) → order → payment → wallet/wishlist. Saat cart selesai, sambungkan tombol di `product_detail_screen.dart` dan kembalikan tab keranjang di `home_layout_cubit.dart` dari `MyCart` bawaan kit.
+7. **In progress.** Tulis ulang tiap domain menembak marketplace-api, satu per satu, berpedoman pada "Kontrak sisi member" dan respons sungguhan — jangan `docs/03-api-documentation.md`. **Katalog dan keranjang selesai**; katalog jadi implementasi rujukan (lihat bagian di atas). Berikutnya, mengikuti alur beli yang sudah diverifikasi ujung ke ujung: **address** (`/me/addresses` — ingat `full_address`/`is_primary`, bukan `address_line`/`is_default`) → **checkout** (id UUID, `shipping-options` berbentuk map berkunci `store_id`, `cart_snapshot` berupa JSON ter-string) → **order** → **payment** → wallet/wishlist. Saat checkout selesai, sambungkan tombol di `cart_screen.dart`.
 8. **In progress** (auth done). Convert the UI kit's marker states to `@freezed` unions and switch its cubits from public mutable fields to emitted state data — for whatever of `lib/features/` survives step 10.
 9. Split [app_routes.dart](lib/core/utils/app_routes.dart) into per-domain route files under `lib/config/route/`.
 10. Decide the fate of `lib/features/` vs `lib/ui/` — the target names the presentation root `ui/`, which is a rename of the existing tree, not a second one.

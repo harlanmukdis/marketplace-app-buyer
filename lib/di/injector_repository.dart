@@ -1,5 +1,8 @@
 import 'package:marketplace_app_member/core/data/datasources/remote/service/auth_service.dart';
+import 'package:marketplace_app_member/core/data/datasources/remote/service/cart_service.dart';
 import 'package:marketplace_app_member/core/data/datasources/remote/service/catalog_service.dart';
+import 'package:marketplace_app_member/core/data/repositories/cart_repository_impl.dart';
+import 'package:marketplace_app_member/core/domain/repositories/cart_repository.dart';
 import 'package:marketplace_app_member/core/data/repositories/auth_repository_impl.dart';
 import 'package:marketplace_app_member/core/data/repositories/catalog_repository_impl.dart';
 import 'package:marketplace_app_member/core/domain/repositories/auth_repository.dart';
@@ -45,5 +48,9 @@ void initializeRepository() {
 
   injector.registerLazySingleton<CatalogRepository>(
     () => CatalogRepositoryImpl(injector<CatalogService>()),
+  );
+
+  injector.registerLazySingleton<CartRepository>(
+    () => CartRepositoryImpl(injector<CartService>()),
   );
 }

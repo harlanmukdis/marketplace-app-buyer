@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:marketplace_app_member/config/network/dio_client.dart';
 import 'package:marketplace_app_member/core/data/datasources/remote/service/auth_service.dart';
+import 'package:marketplace_app_member/core/data/datasources/remote/service/cart_service.dart';
 import 'package:marketplace_app_member/core/data/datasources/remote/service/catalog_service.dart';
 import 'package:marketplace_app_member/di/injector.dart';
 
@@ -40,4 +41,5 @@ void initializeService() {
 
   injector.registerLazySingleton<AuthService>(() => AuthService(api));
   injector.registerLazySingleton<CatalogService>(() => CatalogService(api));
+  injector.registerLazySingleton<CartService>(() => CartService(api));
 }
