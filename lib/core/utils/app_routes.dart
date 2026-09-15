@@ -6,6 +6,7 @@ import 'package:marketplace_app_member/ui/main/auth/screens/login_screen.dart';
 import 'package:marketplace_app_member/ui/main/catalog/screens/product_detail_screen.dart';
 import 'package:marketplace_app_member/ui/main/checkout/screens/checkout_screen.dart';
 import 'package:marketplace_app_member/ui/main/order/screens/order_detail_screen.dart';
+import 'package:marketplace_app_member/ui/main/notification/screens/notification_screen.dart';
 import 'package:marketplace_app_member/ui/main/order/screens/order_list_screen.dart';
 import 'package:marketplace_app_member/ui/main/payment/screens/payment_screen.dart';
 import 'package:marketplace_app_member/ui/main/wallet/screens/wallet_screen.dart';
@@ -18,7 +19,6 @@ import '../../features/home/presentation/views/product_details.dart';
 import '../../features/home/presentation/views/write_review_screen.dart';
 import '../../features/my_cart/presentation/views/checkout_view.dart';
 import '../../features/notifications&messages/presentation/views/chat_view.dart';
-import '../../features/notifications&messages/presentation/views/notifications_layout.dart';
 import '../../features/onboarding/presentation/views/onboarding_view.dart';
 import '../../features/profile/presentaion/views/about_app_view.dart';
 import '../../features/profile/presentaion/views/add_card_view.dart';
@@ -101,6 +101,14 @@ class AppRoutes {
   static const String forgotPassword = '/forgotPassword';
   static const String otpVerification = '/otpVerification';
   static const String createNewPassword = '/createNewPassword';
+  /// Kotak masuk notifikasi ber-API.
+  ///
+  /// Dulu mengarah ke `NotificationsLayout` milik kit — cangkang dua tab
+  /// (Notifikasi | Pesan) berisi data contoh. Sejak notifikasi disambungkan ke
+  /// API, rute ini mengarah ke layar sungguhan, dan tab "Pesan" **sengaja
+  /// tidak dibawa serta**: domain chat belum ditulis, dan tab palsu di sebelah
+  /// tab sungguhan lebih menyesatkan daripada tidak ada tab sama sekali.
+  /// Cangkang tab bisa dihidupkan lagi saat chat dikerjakan.
   static const String notifications = '/notifications';
   static const String chat = '/chat';
 }
@@ -389,7 +397,7 @@ final GoRouter router = GoRouter(
       pageBuilder: (BuildContext context, GoRouterState state) {
         return FadeThroughTransitionPageWrapper(
           transitionKey: state.pageKey,
-          page: const NotificationsLayout(),
+          page: const NotificationScreen(),
         );
       },
     ),

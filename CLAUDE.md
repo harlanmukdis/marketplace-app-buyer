@@ -27,7 +27,7 @@ Buyer app for a **multi-vendor marketplace**, built on a purchased Flutter UI ki
 flutter pub get                       # install dependencies
 flutter run                           # run on connected device/emulator
 flutter analyze                       # static analysis (flutter_lints 4.0.0 via analysis_options.yaml)
-flutter test                          # run all tests (304; all pass)
+flutter test                          # run all tests (348; all pass)
 flutter test test/integration --concurrency=1   # integrasi: butuh backend hidup, WAJIB serial
 flutter test test/data                # one directory
 flutter test test/data/auth_repository_impl_test.dart                       # single file
@@ -125,7 +125,7 @@ Current state: `en` and `ar` are complete (284 keys) and selectable. `fr` appear
 
 ## Known rough edges
 
-- The Flutter counter template `test/widget_test.dart` is **gone** — the suite is real (68 tests, all passing) and is a usable signal. `test/integration/` (17 of those) hits a live backend, so it fails with connection errors when `docker compose up` is not running in the API repo; that is the environment, not a regression.
+- The Flutter counter template `test/widget_test.dart` is **gone** — the suite is real (348 tests, all passing) and is a usable signal. `test/integration/` (100 of those) hits a live backend, so it fails with connection errors when the API is not running; that is the environment, not a regression. Note the API is started with `php -S`, **not** `docker compose` — see the note in Part 2 — and the integration suite must run `--concurrency=1`.
 - 14 stale `*.dart~` backup files litter `lib/` (and `android/`). They are not compiled but **do show up in grep results** — always confirm a hit isn't in a `~` file before editing.
 - `lib/features/my_cart/presentation/views/map_screen.dart` is 100% commented out, and the `com.google.android.geo.API_KEY` meta-data in `android/app/src/main/AndroidManifest.xml` is commented out too. Restoring the map needs both, plus an iOS key. Location permissions are already declared in the manifest.
 - **The app builds now, but every image is a placeholder.** The UI kit's asset folders were never copied into this repo, so all 67 files in `assets/images/` and `assets/icon/` are grey 64×64 stubs, and the `Hanimation` font declaration in `pubspec.yaml` stays **commented out** (a fake OTF crashes at start, so it could not be stubbed — all text falls back to the system font). What you see on screen is therefore not the kit's design. `assets/PLACEHOLDER-README.md` documents what was stubbed and how to restore the originals.
@@ -218,9 +218,10 @@ Current state: `en` and `ar` are complete (284 keys) and selectable. `fr` appear
 - **Wishlist + Review domain** — `lib/core/…/{wishlist,review}/` + `lib/ui/main/{wishlist,review}/`; lihat "Domain wishlist & ulasan" di bawah
 - **Wallet domain** — `lib/core/…/wallet/` + `lib/ui/main/wallet/`; lihat "Domain dompet" di bawah
 - `lib/util/error_message.dart` — maps `DataError.code` to localized copy; **never** shows `error.message` to users
-- Tests: `test/util/` (17, murni), `test/data/` (114, fake service/store + parsing JSON asli), `test/ui/` (84, fake repository), `test/integration/` (89, butuh backend hidup — **jalankan `--concurrency=1`**) — **304 total, semuanya lulus**
+- **Notification domain** — `lib/core/…/notification/` + `lib/ui/main/notification/`; lihat "Domain notifikasi" di bawah
+- Tests: `test/util/` (17, murni), `test/data/` (126, fake service/store + parsing JSON asli), `test/ui/` (105, fake repository), `test/integration/` (100, butuh backend hidup — **jalankan `--concurrency=1`**) — **348 total, semuanya lulus**
 
-Still absent: Firebase and `lib/firebase_options.dart`; domain chat dan notifikasi.
+Still absent: Firebase and `lib/firebase_options.dart`; domain chat dan modul reward.
 
 ### ~~The dead layer~~ — sudah dihapus (14 September 2026)
 
@@ -447,6 +448,88 @@ Test checkout dan order membuat pesanan sungguhan, jadi setiap kali suite dijala
 
 `test/integration/support/seeded_product.dart` sekarang mencari varian yang masih berstok, jadi suite hijau selama **ada** produk berstok, bukan selama produk tertentu berstok. Kalau seluruh katalog habis, helper itu melempar pesan yang menyuruh seed ulang — jauh lebih berguna daripada `STOCK_INSUFFICIENT` di tengah alur checkout.
 
+### Domain notifikasi
+
+Tiga endpoint: `GET /me/notifications`, `POST /me/notifications/{id}/read`, dan
+`POST /me/notifications/read-all`.
+
+#### 🔴 Kotak masuknya praktis SELALU kosong — dan itu bukan bug aplikasi
+
+Ditelusuri ke seluruh kode backend: **satu-satunya pemanggil
+`Notification_model->create()` adalah undangan staf toko**
+(`store_staff/controllers/Staff.php`). Tidak ada notifikasi yang terbit dari
+pesanan, pembayaran, pengiriman, chat, atau voucher — padahal
+`notification_templates.code` sendiri mencantumkan `order_paid`,
+`order_shipped`, `voucher_expiring`, dan `chat_new_message` sebagai niatnya,
+dan tabel `notification_queues` beserta `workers/notification_worker.php` sudah
+siap memprosesnya.
+
+Jadi seorang pembeli biasa **tidak akan pernah** menerima notifikasi sampai
+backend memasang pemanggilan itu di alur-alurnya. Layar tetap dibangun —
+endpointnya nyata dan bentuknya sudah dipatok test — tapi **keadaan kosong
+adalah kasus normalnya**, bukan sudut yang jarang. Karena itu `NotificationState`
+punya `empty()` tersendiri dengan penjelasan, bukan daftar hampa.
+
+Konsekuensi untuk pengujian: test integrasi harus **menerbitkan notifikasinya
+sendiri**, dengan login sebagai dua penjual seed lalu mengundang akun uji
+sebagai staf. Kalau suatu saat notifikasi terbit dari alur pesanan, test itu
+bisa disederhanakan jadi "beli lalu periksa kotak masuk".
+
+#### 🔴 Urutannya tidak stabil, dan paginasinya ikut terpengaruh
+
+`list_for_user` mengurutkan `ORDER BY created_at DESC` **tanpa pemecah seri**,
+sementara `created_at` bertipe `DATETIME` yang resolusinya satu detik. Diuji ke
+server: tiga notifikasi yang terbit dalam detik yang sama kembali dengan id 13,
+14, 15 — **menaik**, alias terlama dulu, kebalikan dari yang dijanjikan.
+
+Dua akibatnya, keduanya ditambal `NotificationCubit._merge`:
+
+- **urutan tampil salah** untuk notifikasi yang lahir berbarengan → daftar
+  diurutkan ulang menurut `(createdAt, id)` menurun. Untuk stempel waktu yang
+  berbeda hasilnya sama persis dengan urutan server;
+- **paginasi bisa menggandakan atau melewatkan baris**, karena `LIMIT`/`OFFSET`
+  di atas urutan tak deterministik tidak menjamin satu baris hanya muncul di
+  satu halaman → baris berulang dibuang menurut id saat halaman digabung.
+
+Saat menggabung, baris **lama yang dipertahankan**, bukan salinan dari halaman
+baru — kalau tidak, tanda "terbaca" yang baru disetel di aplikasi tertimpa
+kembali jadi belum terbaca.
+
+#### Tidak ada endpoint jumlah belum dibaca
+
+Tidak ada `unread-count`, dan responsnya **tanpa `meta`** sama sekali. Jumlah
+belum dibaca karena itu hanya bisa dihitung dari halaman yang sudah dimuat —
+sebuah **batas bawah**, bukan angka pasti. `NotificationLoaded.unreadLabel`
+menambahkan `+` selama `hasMore`, dan **tidak ada lencana di ikon lonceng
+beranda**: menampilkannya menuntut satu permintaan tiap aplikasi dibuka untuk
+daftar yang selalu kosong, dan angkanya tetap tidak bisa dipercaya.
+
+Seperti `/orders`, `?per_page=` diabaikan dan ukuran halaman dipatok **20** di
+server (`NotificationService.serverPageSize`); adanya halaman berikutnya
+disimpulkan dari "halaman terakhir terisi penuh".
+
+#### Bentuk data dan perilaku lain yang dipatok test
+
+- **`data` datang sebagai string berisi JSON**, bukan objek — jebakan yang sama
+  persis dengan `selected_couriers` di sesi checkout, jadi field-nya memakai
+  `@JsonMapJson()`. Nilai di dalamnya pun ikut aturan angka-sebagai-string
+  (`{"store_id":"1"}`), jadi `order_id` dibaca lewat `asIntOrNull`, bukan cast.
+- **Menandai terbaca dibalas `200` untuk id yang tidak ada maupun milik orang
+  lain** — pola "sukses bukan bukti sesuatu berubah" yang sama dengan mutasi
+  keranjang. Klausa `WHERE user_id` tetap melindungi datanya; hanya statusnya
+  yang menyesatkan. Karena itu `NotificationCubit` memperbarui tandanya
+  **optimistis lalu mengembalikannya kalau permintaannya gagal**, alih-alih
+  membaca ulang daftar (yang akan menghabiskan satu permintaan penuh dan
+  melompatkan posisi gulir setiap kali satu baris disentuh).
+- **`type` berupa `VARCHAR(80)` bebas, bukan `ENUM`**, jadi `NotificationKind`
+  memetakannya lewat **pencocokan kata kunci berurut**, bukan daftar tertutup.
+  Perhatikan `paid` terdaftar terpisah dari `pay`: kata "paid" tidak mengandung
+  "pay", jadi mengandalkan satu di antaranya meleset pada `order_paid`.
+- Rute `/notifications` sekarang mengarah ke layar ber-API. `NotificationsLayout`
+  milik kit — cangkang dua tab (Notifikasi | Pesan) berisi data contoh —
+  **tidak dibawa serta**: domain chat belum ditulis, dan tab palsu di sebelah
+  tab sungguhan lebih menyesatkan daripada tidak ada tab.
+
 ### Kontrak sisi member (diverifikasi ke server, 14 September 2026)
 
 Semua di bawah ini hasil menembak server dengan token buyer, bukan membaca dokumen. Ini yang dipakai saat menulis model — `docs/03-api-documentation.md` tidak memuat satu pun dari detail ini dan sebagian bertentangan.
@@ -603,7 +686,17 @@ Derived from the gap between Part 1 and Part 2. Steps 0-5 are done and the auth 
 4. ~~Add `lib/core/data_state.dart` with the `DataState<T>` union.~~ **Done** — see deviation 1 above.
 5. ~~Build `lib/di/{injector,injector_service,injector_repository}.dart` and call `initialize()` before `runApp`.~~ **Done**; both registries are populated, but nine of the ten service/repository pairs point at the dead backend.
 6. ~~Bersihkan lapisan mati warisan Markas.~~ **Selesai** — 97 berkas dihapus; hanya `RepositoryGuard` yang dipertahankan.
-7. **In progress.** Tulis ulang tiap domain menembak marketplace-api, satu per satu, berpedoman pada "Kontrak sisi member" dan respons sungguhan — jangan `docs/03-api-documentation.md`. **Alur beli selesai seluruhnya**: katalog → keranjang → alamat → checkout → pembayaran → pesanan. Katalog jadi rujukan bentuk domain; checkout jadi rujukan untuk domain yang menahan sumber daya di server. **Wishlist, ulasan, dan dompet juga selesai.** Sisa yang belum ditulis: **notifikasi** (`/me/notifications`), **chat** (`/chat/conversations`, ada polling di `/poll`), serta modul reward (`/me/points`, `/me/coins`, `/me/loyalty`).
+7. **In progress.** Tulis ulang tiap domain menembak marketplace-api, satu per satu, berpedoman pada "Kontrak sisi member" dan respons sungguhan — jangan `docs/03-api-documentation.md`. **Alur beli selesai seluruhnya**: katalog → keranjang → alamat → checkout → pembayaran → pesanan. Katalog jadi rujukan bentuk domain; checkout jadi rujukan untuk domain yang menahan sumber daya di server. **Wishlist, ulasan, dompet, dan notifikasi juga selesai.** Sisa yang belum ditulis: **chat** (`/chat/conversations`, ada polling di `/poll`) dan **modul reward**.
+
+   **Catatan awal untuk modul reward** (sudah ditembak ke server 15 September 2026, belum ditulis kodenya — supaya tidak perlu diprobe ulang):
+
+   - `GET /me/points`, `GET /me/coins` → `{id, user_id, balance, updated_at}`; barisnya **dibuat otomatis saat pertama dibaca**, seperti dompet, jadi akun baru dapat `balance: "0"`, bukan `404`.
+   - `GET /me/loyalty` → keanggotaan **beserta objek `tier` yang sudah disisipkan** (`{code, name, min_points, benefits}`), jadi tidak perlu memanggil `/loyalty/tiers` untuk merender status. `GET /loyalty/tiers` publik (bronze/silver/gold/platinum, `benefits` masih `null` semua).
+   - 🔴 **Pola dua zona waktu muncul lagi**: pada satu respons `GET /me/loyalty`, `updated_at` WIB sedangkan `tier_valid_until` **UTC** — `get_loyalty_status` memakai `date('Y-m-d H:i:s', strtotime('+1 year'))` dari PHP, sementara `updated_at` dari `CURRENT_TIMESTAMP` MySQL. Pakai `ServerUtcDateTimeJson` untuk `tier_valid_until`.
+   - 🔴 **Tidak ada endpoint riwayat poin.** Tabel `point_transactions` diisi `earn_points`/`redeem_points`, tapi tak satu pun rute membacanya — hanya saldonya yang bisa ditampilkan.
+   - `POST /me/points/redeem` menolak dengan `422 INSUFFICIENT_POINTS` yang rapi dan spesifik — berbeda dari `WITHDRAWAL_REJECTED` di dompet yang ambigu.
+   - ⚠️ `earn_points` memakai `$pointsPerIdr = 0.001` **hardcoded sebagai fallback**, dengan komentar bahwa nilai aktifnya semestinya dari `admin_settings` — pola yang sama dengan minimum penarikan.
+   - `GET /me/cashback` ada dan hidup (`[]` di dev), tapi **tidak tercantum** di daftar rute reward mana pun di dokumen.
 7b. **Backlog: endpoint backend yang sudah ada tapi belum dipakai aplikasi.** Dikerjakan **setelah** domain di langkah 7 selesai, bukan menyela. Backend bergerak lebih cepat dari aplikasi, jadi daftar ini akan bertambah — periksa `git log` repo API setiap kali melanjutkan.
 
    - **`GET /products/{id}/shipping-estimate?address_id=&variant_id=`** (commit `ea86e5d`, 15 Sep 2026). Menjawab "berapa ongkir ke alamat saya?" di halaman produk **tanpa membuat sesi checkout** — jadi tanpa mereservasi stok. Butuh login; `variant_id` opsional. Balasannya **list `ShippingOptionModel` yang sudah ada** (`cost` angka asli), sudah disaring `store_couriers`, urut termurah. Error yang perlu ditangani: `422 VALIDATION_ERROR` tanpa `address_id`, `404 ADDRESS_NOT_FOUND`, `404 VARIANT_NOT_FOUND`, `409 STOCK_INSUFFICIENT`. Sebagian nilainya sudah didapat lebih murah lewat `warehouse_city`/`warehouse_province` di varian, jadi ini peningkatan, bukan penambal lubang.
