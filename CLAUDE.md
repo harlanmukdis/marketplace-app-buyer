@@ -475,7 +475,11 @@ Jangan pula tertukar dengan `meta.rating_histogram` di `GET /products/{id}/revie
 
 **Endpoint privileged memang menolak buyer** (memperkuat deviation 3 di bawah): `/admin/users`, `/admin/settings`, `/stores/{id}/orders`, `/stores/{id}/wallet`, `POST /orders/{id}/accept` semuanya membalas **403 `PERMISSION_DENIED`** dengan pesan menyebut permission yang kurang (`admin.user.view`, `order.view`, `order.process`, …). Kalau kamu melihat kode itu muncul, artinya alur yang sedang dibangun salah sisi.
 
-**Login membawa `requires_reconsent`** (boolean) di samping `access_token`/`refresh_token`/`expires_in` — **belum dimodelkan di `AuthSessionModel`**, dan ia punya perilaku wajib: `true` berarti ada versi baru dokumen legal, FE harus menampilkan modal blocking lalu `GET /legal/documents/active` → `POST /legal/documents/{id}/accept`. `expires_in` = 900 detik terbukti berulang kali: token habis dua kali di tengah sesi eksplorasi ini, jadi refresh otomatis bukan kemewahan.
+**Login membawa `requires_reconsent`** (boolean) di samping `access_token`/`refresh_token`/`expires_in`. Field ini **sudah dimodelkan** `AuthSessionModel` sejak commit auth pertama (`45d5794`) dan dipatok `test/integration/auth_service_test.dart` — catatan sebelumnya di file ini yang menyebutnya belum dimodelkan salah.
+
+Yang **belum** ada adalah tindakannya: `true` berarti ada versi baru dokumen legal, dan panduan FE §2 menuntut modal blocking lalu `GET /legal/documents/active` → `POST /legal/documents/{id}/accept`. Masuk backlog langkah 7b, dengan catatan bahwa alurnya **belum bisa diuji**: `/legal/documents/active` membalas `404 LEGAL_DOCUMENT_NOT_FOUND` karena tabelnya belum di-seed.
+
+`expires_in` = 900 detik terbukti berulang kali: token habis dua kali di tengah sesi eksplorasi ini, jadi refresh otomatis bukan kemewahan.
 
 **Register `409` bisa karena email ATAU nomor telepon.** Bedakan lewat `error.code` — `EMAIL_TAKEN` vs `PHONE_TAKEN` — lalu sorot field yang tepat. Keduanya perlu entri di `lib/util/error_message.dart`.
 
@@ -567,6 +571,10 @@ Derived from the gap between Part 1 and Part 2. Steps 0-5 are done and the auth 
    - **`GET /products/{id}/shipping-estimate?address_id=&variant_id=`** (commit `ea86e5d`, 15 Sep 2026). Menjawab "berapa ongkir ke alamat saya?" di halaman produk **tanpa membuat sesi checkout** — jadi tanpa mereservasi stok. Butuh login; `variant_id` opsional. Balasannya **list `ShippingOptionModel` yang sudah ada** (`cost` angka asli), sudah disaring `store_couriers`, urut termurah. Error yang perlu ditangani: `422 VALIDATION_ERROR` tanpa `address_id`, `404 ADDRESS_NOT_FOUND`, `404 VARIANT_NOT_FOUND`, `409 STOCK_INSUFFICIENT`. Sebagian nilainya sudah didapat lebih murah lewat `warehouse_city`/`warehouse_province` di varian, jadi ini peningkatan, bukan penambal lubang.
    - **`GET /home/layout`** dan `GET /categories/{id}/layout` — home CMS. Masih `[]` di server karena tabelnya belum di-seed; tunggu ada isinya supaya modelnya tidak ditulis dari dokumen saja.
    - **`GET /me/favorite-categories`**, `GET /me/vouchers`, `POST /vouchers/claim` — sudah diverifikasi hidup, belum ada layarnya.
+   - **Alur consent ulang.** `requires_reconsent: true` pada respons login menuntut modal blocking → `GET /legal/documents/active` → `POST /legal/documents/{id}/accept` (panduan FE §2). Field-nya sudah dimodelkan, tindakannya belum. ⚠️ **Belum bisa diuji**: `/legal/documents/active` membalas `404 LEGAL_DOCUMENT_NOT_FOUND` karena tabel dokumen legal belum di-seed — jadi nilai `true` tidak pernah muncul di dev.
+   - **`POST /media/upload`** — multipart, nama field **`file`**, balasan `{url, file_name, file_size_kb, mime_type}`. Baru dibutuhkan saat ulasan berfoto atau ganti avatar dikerjakan. ⚠️ `url` dirakit dari `$config['base_url']` yang di repo masih `http://localhost:8080/marketplace-api/`, jadi URL hasil upload akan salah sampai backend menyetelnya.
+
+   **Sudah dicek cocok, tidak perlu pekerjaan:** seluruh 12 parameter `GET /products` di panduan §7 sudah dikirim `CatalogService`; jebakan §6 nomor 1, 2, 3, 5, dan 8 semuanya sudah ditangani dan dipatok test. Nomor 6 dan 7 khusus app seller.
 
 8. **In progress** (auth done). Convert the UI kit's marker states to `@freezed` unions and switch its cubits from public mutable fields to emitted state data — for whatever of `lib/features/` survives step 10.
 9. Split [app_routes.dart](lib/core/utils/app_routes.dart) into per-domain route files under `lib/config/route/`.
