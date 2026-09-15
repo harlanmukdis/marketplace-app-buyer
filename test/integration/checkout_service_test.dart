@@ -271,15 +271,26 @@ void main() {
       );
     });
 
-    test('🔴 keranjang TIDAK dikosongkan setelah checkout', () async {
-      // Layar keranjang membaca ulang saat kembali dari checkout; kalau
-      // backend mulai mengosongkannya, test ini merah dan perilaku itu bisa
-      // disederhanakan.
+    test('checkout menghapus baris TERCENTANG saja dari keranjang', () async {
+      // Baris yang tidak dicentang tidak ikut ke sesi checkout, jadi ia harus
+      // tetap ada sesudahnya. Inilah alasan layar keranjang membaca ulang saat
+      // kembali dari checkout, bukan sekadar menghapus semuanya sendiri.
       final addressId = await createAddress();
       await cart.addItem(productVariantId: variantId, quantity: 1);
+
+      // Tambahkan satu baris lagi lalu lepas centangnya.
+      final listing = await catalog.fetchProducts(perPage: 5);
+      final otherDetail = await catalog.fetchProduct(listing.data.last.id);
+      final otherVariantId = otherDetail.data.variants.first.id;
+      await cart.addItem(productVariantId: otherVariantId, quantity: 1);
+
+      final before = (await cart.fetchCart()).data.expand((g) => g.items);
+      final unselected =
+          before.firstWhere((i) => i.productVariantId == otherVariantId);
+      await cart.updateItem(unselected.id, isSelected: false);
+
       final created = await checkout.createSession(addressId: addressId);
       final sessionId = created.data.id;
-
       final options = await checkout.fetchShippingOptions(sessionId);
       await checkout.setShipping(sessionId, {
         for (final entry in options.data.entries)
@@ -291,9 +302,10 @@ void main() {
       });
       await checkout.confirm(sessionId, paymentMethod: 'qris');
 
-      final remaining = await cart.fetchCart();
-      expect(remaining.data, isNotEmpty,
-          reason: 'barang yang sudah dipesan masih tertinggal di keranjang');
+      final remaining =
+          (await cart.fetchCart()).data.expand((g) => g.items).toList();
+      expect(remaining.map((i) => i.id), [unselected.id],
+          reason: 'hanya baris tak tercentang yang boleh tersisa');
     });
   });
 }

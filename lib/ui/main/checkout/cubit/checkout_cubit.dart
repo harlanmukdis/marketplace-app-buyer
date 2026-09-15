@@ -5,7 +5,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:marketplace_app_member/core/data_state.dart';
 import 'package:marketplace_app_member/core/domain/model/checkout/checkout_models.dart';
+import 'package:marketplace_app_member/core/domain/model/payment/payment_models.dart';
 import 'package:marketplace_app_member/core/domain/repositories/checkout_repository.dart';
+import 'package:marketplace_app_member/core/domain/repositories/payment_repository.dart';
 import 'package:marketplace_app_member/di/injector.dart';
 
 part 'checkout_cubit.freezed.dart';
@@ -20,11 +22,18 @@ part 'checkout_state.dart';
 class CheckoutCubit extends Cubit<CheckoutState> {
   CheckoutCubit()
       : _repository = injector<CheckoutRepository>(),
+        _payments = injector<PaymentRepository>(),
         super(const CheckoutState.preparing());
 
   static CheckoutCubit get(BuildContext context) => BlocProvider.of(context);
 
   final CheckoutRepository _repository;
+  final PaymentRepository _payments;
+
+  /// Metode bayar dimuat sekali dan disimpan di cubit, bukan diambil ulang
+  /// setiap sesi dibuat — daftarnya tidak bergantung pada isi keranjang.
+  List<PaymentMethodModel> _paymentMethods = const [];
+  String _selectedPaymentMethod = '';
 
   /// Alamat yang dipakai sesi berjalan, disimpan supaya sesi bisa dibuat ulang
   /// saat alamatnya diganti.
@@ -40,12 +49,37 @@ class CheckoutCubit extends Cubit<CheckoutState> {
     _addressId = addressId;
     _voucherCode = voucherCode;
 
+    // Metode bayar ditembak paralel dengan pembuatan sesi; keduanya tidak
+    // saling bergantung. Kegagalan mengambil metode tidak menggagalkan
+    // checkout — layar menampilkan daftar kosong dan tombol bayar tetap mati
+    // sampai ada metode, yang lebih jelas daripada layar error penuh.
+    final methodsFuture = _paymentMethods.isEmpty
+        ? _payments.fetchMethods()
+        : Future.value(DataSuccess(_paymentMethods));
+
     final result = await _repository.startSession(
       addressId: addressId,
       voucherCode: voucherCode,
     );
+    final methods = await methodsFuture;
     if (isClosed) return;
+
+    if (methods is DataSuccess<List<PaymentMethodModel>>) {
+      _paymentMethods = methods.data;
+      if (_selectedPaymentMethod.isEmpty && methods.data.isNotEmpty) {
+        _selectedPaymentMethod = methods.data.first.code;
+      }
+    }
+
     _apply(result);
+  }
+
+  /// Mengganti metode pembayaran.
+  void selectPaymentMethod(String code) {
+    _selectedPaymentMethod = code;
+    final current = state;
+    if (current is! CheckoutReady) return;
+    emit(current.copyWith(selectedPaymentMethod: code));
   }
 
   /// Mengganti alamat tujuan.
@@ -111,11 +145,23 @@ class CheckoutCubit extends Cubit<CheckoutState> {
   /// ⚠️ **Tidak pernah diulang otomatis.** Backend belum menangani
   /// `Idempotency-Key`, jadi percobaan ulang berisiko membuat order ganda —
   /// user yang memutuskan menekan tombolnya lagi, bukan aplikasi.
-  Future<void> confirm({required String paymentMethod}) async {
+  Future<void> confirm() async {
     final current = state;
     if (current is! CheckoutReady || current.isSubmitting) return;
     final id = _openSessionId;
     if (id == null) return;
+
+    final paymentMethod = current.selectedPaymentMethod;
+    if (paymentMethod.isEmpty) {
+      emit(current.copyWith(
+        actionError: const DataError(
+          code: ApiErrorCode.validationError,
+          message: 'Pilih metode pembayaran dulu',
+          kind: DataErrorKind.api,
+        ),
+      ));
+      return;
+    }
 
     if (!current.snapshot.session.canConfirm) {
       emit(current.copyWith(
@@ -195,7 +241,11 @@ class CheckoutCubit extends Cubit<CheckoutState> {
       case DataSuccess(:final data):
         _openSessionId =
             data.session.isStockReserved ? data.session.id : null;
-        emit(CheckoutState.ready(snapshot: data));
+        emit(CheckoutState.ready(
+          snapshot: data,
+          paymentMethods: _paymentMethods,
+          selectedPaymentMethod: _selectedPaymentMethod,
+        ));
       case DataFailed(:final error):
         if (previous != null) {
           // Kegagalan memilih kurir tidak boleh membuang sesi yang sudah

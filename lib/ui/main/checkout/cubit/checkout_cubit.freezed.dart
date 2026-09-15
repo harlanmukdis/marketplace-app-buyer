@@ -153,7 +153,11 @@ extension CheckoutStatePatterns on CheckoutState {
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>({
     TResult Function()? preparing,
-    TResult Function(CheckoutSnapshot snapshot, bool isSubmitting,
+    TResult Function(
+            CheckoutSnapshot snapshot,
+            List<PaymentMethodModel> paymentMethods,
+            String selectedPaymentMethod,
+            bool isSubmitting,
             DataError? actionError)?
         ready,
     TResult Function(CheckoutConfirmResult result)? confirmed,
@@ -165,7 +169,8 @@ extension CheckoutStatePatterns on CheckoutState {
       case CheckoutPreparing() when preparing != null:
         return preparing();
       case CheckoutReady() when ready != null:
-        return ready(_that.snapshot, _that.isSubmitting, _that.actionError);
+        return ready(_that.snapshot, _that.paymentMethods,
+            _that.selectedPaymentMethod, _that.isSubmitting, _that.actionError);
       case CheckoutConfirmed() when confirmed != null:
         return confirmed(_that.result);
       case CheckoutError() when error != null:
@@ -191,7 +196,11 @@ extension CheckoutStatePatterns on CheckoutState {
   @optionalTypeArgs
   TResult when<TResult extends Object?>({
     required TResult Function() preparing,
-    required TResult Function(CheckoutSnapshot snapshot, bool isSubmitting,
+    required TResult Function(
+            CheckoutSnapshot snapshot,
+            List<PaymentMethodModel> paymentMethods,
+            String selectedPaymentMethod,
+            bool isSubmitting,
             DataError? actionError)
         ready,
     required TResult Function(CheckoutConfirmResult result) confirmed,
@@ -202,7 +211,8 @@ extension CheckoutStatePatterns on CheckoutState {
       case CheckoutPreparing():
         return preparing();
       case CheckoutReady():
-        return ready(_that.snapshot, _that.isSubmitting, _that.actionError);
+        return ready(_that.snapshot, _that.paymentMethods,
+            _that.selectedPaymentMethod, _that.isSubmitting, _that.actionError);
       case CheckoutConfirmed():
         return confirmed(_that.result);
       case CheckoutError():
@@ -225,7 +235,11 @@ extension CheckoutStatePatterns on CheckoutState {
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>({
     TResult? Function()? preparing,
-    TResult? Function(CheckoutSnapshot snapshot, bool isSubmitting,
+    TResult? Function(
+            CheckoutSnapshot snapshot,
+            List<PaymentMethodModel> paymentMethods,
+            String selectedPaymentMethod,
+            bool isSubmitting,
             DataError? actionError)?
         ready,
     TResult? Function(CheckoutConfirmResult result)? confirmed,
@@ -236,7 +250,8 @@ extension CheckoutStatePatterns on CheckoutState {
       case CheckoutPreparing() when preparing != null:
         return preparing();
       case CheckoutReady() when ready != null:
-        return ready(_that.snapshot, _that.isSubmitting, _that.actionError);
+        return ready(_that.snapshot, _that.paymentMethods,
+            _that.selectedPaymentMethod, _that.isSubmitting, _that.actionError);
       case CheckoutConfirmed() when confirmed != null:
         return confirmed(_that.result);
       case CheckoutError() when error != null:
@@ -271,10 +286,39 @@ class CheckoutPreparing extends CheckoutState {
 
 class CheckoutReady extends CheckoutState {
   const CheckoutReady(
-      {required this.snapshot, this.isSubmitting = false, this.actionError})
-      : super._();
+      {required this.snapshot,
+      final List<PaymentMethodModel> paymentMethods =
+          const <PaymentMethodModel>[],
+      this.selectedPaymentMethod = '',
+      this.isSubmitting = false,
+      this.actionError})
+      : _paymentMethods = paymentMethods,
+        super._();
 
   final CheckoutSnapshot snapshot;
+
+  /// Metode pembayaran yang tersedia, dari `GET /payment-methods`.
+  ///
+  /// Ada di layar checkout — **bukan** di layar pembayaran — karena metode
+  /// terikat pada transaksi saat konfirmasi; `POST /payments/{txId}/pay`
+  /// mengabaikan metode yang dikirim belakangan.
+  final List<PaymentMethodModel> _paymentMethods;
+
+  /// Metode pembayaran yang tersedia, dari `GET /payment-methods`.
+  ///
+  /// Ada di layar checkout — **bukan** di layar pembayaran — karena metode
+  /// terikat pada transaksi saat konfirmasi; `POST /payments/{txId}/pay`
+  /// mengabaikan metode yang dikirim belakangan.
+  @JsonKey()
+  List<PaymentMethodModel> get paymentMethods {
+    if (_paymentMethods is EqualUnmodifiableListView) return _paymentMethods;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_paymentMethods);
+  }
+
+  /// Kode metode terpilih. Kosong berarti belum memilih.
+  @JsonKey()
+  final String selectedPaymentMethod;
 
   /// Sedang mengirim pilihan kurir atau konfirmasi.
   @JsonKey()
@@ -295,6 +339,10 @@ class CheckoutReady extends CheckoutState {
             other is CheckoutReady &&
             (identical(other.snapshot, snapshot) ||
                 other.snapshot == snapshot) &&
+            const DeepCollectionEquality()
+                .equals(other._paymentMethods, _paymentMethods) &&
+            (identical(other.selectedPaymentMethod, selectedPaymentMethod) ||
+                other.selectedPaymentMethod == selectedPaymentMethod) &&
             (identical(other.isSubmitting, isSubmitting) ||
                 other.isSubmitting == isSubmitting) &&
             (identical(other.actionError, actionError) ||
@@ -302,12 +350,17 @@ class CheckoutReady extends CheckoutState {
   }
 
   @override
-  int get hashCode =>
-      Object.hash(runtimeType, snapshot, isSubmitting, actionError);
+  int get hashCode => Object.hash(
+      runtimeType,
+      snapshot,
+      const DeepCollectionEquality().hash(_paymentMethods),
+      selectedPaymentMethod,
+      isSubmitting,
+      actionError);
 
   @override
   String toString() {
-    return 'CheckoutState.ready(snapshot: $snapshot, isSubmitting: $isSubmitting, actionError: $actionError)';
+    return 'CheckoutState.ready(snapshot: $snapshot, paymentMethods: $paymentMethods, selectedPaymentMethod: $selectedPaymentMethod, isSubmitting: $isSubmitting, actionError: $actionError)';
   }
 }
 
@@ -319,7 +372,11 @@ abstract mixin class $CheckoutReadyCopyWith<$Res>
       _$CheckoutReadyCopyWithImpl;
   @useResult
   $Res call(
-      {CheckoutSnapshot snapshot, bool isSubmitting, DataError? actionError});
+      {CheckoutSnapshot snapshot,
+      List<PaymentMethodModel> paymentMethods,
+      String selectedPaymentMethod,
+      bool isSubmitting,
+      DataError? actionError});
 }
 
 /// @nodoc
@@ -335,6 +392,8 @@ class _$CheckoutReadyCopyWithImpl<$Res>
   @pragma('vm:prefer-inline')
   $Res call({
     Object? snapshot = null,
+    Object? paymentMethods = null,
+    Object? selectedPaymentMethod = null,
     Object? isSubmitting = null,
     Object? actionError = freezed,
   }) {
@@ -343,6 +402,14 @@ class _$CheckoutReadyCopyWithImpl<$Res>
           ? _self.snapshot
           : snapshot // ignore: cast_nullable_to_non_nullable
               as CheckoutSnapshot,
+      paymentMethods: null == paymentMethods
+          ? _self._paymentMethods
+          : paymentMethods // ignore: cast_nullable_to_non_nullable
+              as List<PaymentMethodModel>,
+      selectedPaymentMethod: null == selectedPaymentMethod
+          ? _self.selectedPaymentMethod
+          : selectedPaymentMethod // ignore: cast_nullable_to_non_nullable
+              as String,
       isSubmitting: null == isSubmitting
           ? _self.isSubmitting
           : isSubmitting // ignore: cast_nullable_to_non_nullable

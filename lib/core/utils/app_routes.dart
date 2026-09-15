@@ -5,6 +5,9 @@ import 'package:go_router/go_router.dart';
 import 'package:marketplace_app_member/ui/main/auth/screens/login_screen.dart';
 import 'package:marketplace_app_member/ui/main/catalog/screens/product_detail_screen.dart';
 import 'package:marketplace_app_member/ui/main/checkout/screens/checkout_screen.dart';
+import 'package:marketplace_app_member/ui/main/order/screens/order_detail_screen.dart';
+import 'package:marketplace_app_member/ui/main/order/screens/order_list_screen.dart';
+import 'package:marketplace_app_member/ui/main/payment/screens/payment_screen.dart';
 import 'package:marketplace_app_member/ui/main/auth/screens/register_screen.dart';
 import '../../features/auth/presentation/views/reset_password_view.dart';
 import '../../features/auth/presentation/views/welcome_view.dart';
@@ -61,9 +64,25 @@ class AppRoutes {
   /// **mereservasi stok 15 menit**, dan meninggalkannya membatalkan sesinya.
   static const String checkoutSession = '/checkoutSession';
 
-  // Route untuk daftar/detail pesanan dan dompet masih dihapus bersama lapisan
-  // mati warisan Markas. Tambahkan kembali saat domainnya ditulis ulang —
-  // jangan menyisakan konstanta yang tidak menunjuk ke layar mana pun.
+  /// Daftar pesanan pembeli.
+  static const String orders = '/orders';
+
+  /// Detail pesanan. Path parameter, bukan `extra`, agar tahan refresh di web.
+  static const String orderDetail = '/order';
+
+  static String orderDetailPath(int orderId) => '/order/$orderId';
+
+  /// Pembayaran satu transaksi.
+  ///
+  /// Ber-parameter **id transaksi**, bukan id order: satu transaksi menutup
+  /// semua order yang lahir dari satu sesi checkout.
+  static const String payment = '/payment';
+
+  static String paymentPath(int transactionId) => '/payment/$transactionId';
+
+  // Route dompet masih dihapus bersama lapisan mati warisan Markas.
+  // Tambahkan kembali saat domainnya ditulis ulang — jangan menyisakan
+  // konstanta yang tidak menunjuk ke layar mana pun.
 
   static const String homeLayout = '/homeLayout';
   static const String productDetails = '/productDetails';
@@ -131,6 +150,35 @@ final GoRouter router = GoRouter(
         return FadeThroughTransitionPageWrapper(
           transitionKey: state.pageKey,
           page: const ResetPasswordView(),
+        );
+      },
+    ),
+    GoRoute(
+      path: AppRoutes.orders,
+      pageBuilder: (BuildContext context, GoRouterState state) {
+        return FadeThroughTransitionPageWrapper(
+          transitionKey: state.pageKey,
+          page: const OrderListScreen(),
+        );
+      },
+    ),
+    GoRoute(
+      path: '${AppRoutes.orderDetail}/:id',
+      pageBuilder: (BuildContext context, GoRouterState state) {
+        final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
+        return FadeThroughTransitionPageWrapper(
+          transitionKey: state.pageKey,
+          page: OrderDetailScreen(orderId: id),
+        );
+      },
+    ),
+    GoRoute(
+      path: '${AppRoutes.payment}/:txId',
+      pageBuilder: (BuildContext context, GoRouterState state) {
+        final id = int.tryParse(state.pathParameters['txId'] ?? '') ?? 0;
+        return FadeThroughTransitionPageWrapper(
+          transitionKey: state.pageKey,
+          page: PaymentScreen(transactionId: id),
         );
       },
     ),

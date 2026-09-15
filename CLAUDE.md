@@ -27,7 +27,8 @@ Buyer app for a **multi-vendor marketplace**, built on a purchased Flutter UI ki
 flutter pub get                       # install dependencies
 flutter run                           # run on connected device/emulator
 flutter analyze                       # static analysis (flutter_lints 4.0.0 via analysis_options.yaml)
-flutter test                          # run all tests (68; all pass — integration needs the backend up)
+flutter test                          # run all tests (234; all pass)
+flutter test test/integration --concurrency=1   # integrasi: butuh backend hidup, WAJIB serial
 flutter test test/data                # one directory
 flutter test test/data/auth_repository_impl_test.dart                       # single file
 flutter test test/ui --plain-name 'token ditolak server berujung logout'    # single test case
@@ -56,7 +57,7 @@ Note: `build_runner` 2.15 **removed `--delete-conflicting-outputs`** — passing
 
 | tree | data source | safe to build on? |
 |---|---|---|
-| `lib/ui/main/{auth,catalog,cart,address,checkout}/` | marketplace-api, live | **yes** — `catalog` is the reference implementation |
+| `lib/ui/main/{auth,catalog,cart,address,checkout,order,payment}/` | marketplace-api, live | **yes** — `catalog` is the reference implementation |
 | `lib/features/` (the UI kit's sample tree) | hardcoded lists inside cubits (`HomePageCubit.productsTShirt`) | as sample UI only |
 
 The third tree that used to sit between them — a complete data + UI stack written against the old Markas backend — **was deleted on 14 September 2026**. See "~~The dead layer~~" in Part 2 for what went and the endpoint translation table that survived it.
@@ -213,10 +214,11 @@ Current state: `en` and `ar` are complete (284 keys) and selectable. `fr` appear
 - **Catalog domain** — model, service, repository, cubit, dan layar di bawah `lib/core/…/catalog/` + `lib/ui/main/catalog/`; lihat "Domain katalog" di bawah
 - **Cart domain** — `lib/core/…/cart/` + `lib/ui/main/cart/`; menegakkan pembatasan kuantitas yang tidak dilakukan server, lihat "Domain keranjang" di bawah
 - **Address + Checkout domain** — `lib/core/…/{address,checkout}/` + `lib/ui/main/{address,checkout}/`; memuat jalan memutar untuk tiga bug server, lihat "Domain alamat & checkout" di bawah
+- **Order + Payment domain** — `lib/core/…/{order,payment}/` + `lib/ui/main/{order,payment}/`; melengkapi alur beli, lihat "Domain pesanan & pembayaran" di bawah
 - `lib/util/error_message.dart` — maps `DataError.code` to localized copy; **never** shows `error.message` to users
-- Tests: `test/util/` (17, murni), `test/data/` (63, fake service/store + parsing JSON asli), `test/ui/` (50, fake repository), `test/integration/` (54, butuh backend hidup) — **184 total, semuanya lulus**
+- Tests: `test/util/` (17, murni), `test/data/` (82, fake service/store + parsing JSON asli), `test/ui/` (63, fake repository), `test/integration/` (72, butuh backend hidup — **jalankan `--concurrency=1`**) — **234 total, semuanya lulus**
 
-Still absent: Firebase and `lib/firebase_options.dart`; domain order, payment, wallet, dan wishlist.
+Still absent: Firebase and `lib/firebase_options.dart`; domain wallet, wishlist, review, chat, dan notifikasi.
 
 ### ~~The dead layer~~ — sudah dihapus (14 September 2026)
 
@@ -317,13 +319,52 @@ Yang paling menjebak, karena **balasan `PATCH .../shipping` mengirim field berna
 - **Sesi yang dibatalkan berstatus `expired`**, bukan `cancelled` — sama dengan sesi yang lewat tenggat.
 - **`order_ids` berupa array**: keranjang multi-toko pecah jadi satu order per toko, tapi tetap satu `payment_transaction_id`.
 - **Konfirmasi kedua dibalas `422 CHECKOUT_CONFIRM_FAILED`.** Itu satu-satunya perlindungan yang ada — `Idempotency-Key` belum diimplementasikan backend, jadi **jangan pernah mengulang `confirm` secara otomatis**. `CheckoutCubit` juga menolak panggilan kedua selagi yang pertama berjalan.
-- **Keranjang TIDAK dikosongkan setelah checkout.** Barang yang sudah dipesan tetap ada di keranjang, jadi layar keranjang membaca ulang saat kembali dari checkout.
+- **Checkout menghapus baris tercentang dari keranjang**, dan hanya itu — baris yang tidak dicentang tetap tinggal, karena memang tidak ikut ke sesi. Karena itu layar keranjang membaca ulang saat kembali dari checkout alih-alih mengosongkan sendiri. *(Catatan sebelumnya di file ini menyebut keranjang tidak dikosongkan sama sekali; itu salah baca dari percobaan yang keranjangnya masih menyisakan baris tak tercentang.)*
 
 #### Sesi checkout menahan sumber daya di server
 
 Membuat sesi mereservasi stok **15 menit**. Karena itu `CheckoutCubit.close()` membatalkan sesi yang belum dikonfirmasi — tanpa itu, stok tertahan sampai tenggat hanya karena user menutup layar. Sesi yang **sudah** dikonfirmasi sengaja tidak dibatalkan (reservasinya sudah jadi order).
 
-**Yang belum tersambung:** layar pembayaran. `POST /payments/{txId}/pay` sudah terverifikasi mengembalikan `qr_string`, tapi domainnya belum ditulis — tombol setelah konfirmasi hanya menutup layar.
+### Domain pesanan & pembayaran
+
+Domain terakhir dari alur beli. Alur pembeli kini lengkap di aplikasi: katalog → keranjang → checkout → **pembayaran** → **pesanan**.
+
+#### 🔴 `POST /orders/{id}/complete` membalas HTML dengan status 200
+
+Controllernya tidak punya `try/catch` seperti `confirm_delivery_post` yang bersebelahan, jadi `RuntimeException` untuk transisi tidak sah lolos dan dirender sebagai **halaman HTML berstatus `200`**. Dio tidak menganggapnya error (status 2xx), dan `parseEnvelope` menolaknya sebagai `CLIENT_BAD_RESPONSE` — pesan yang tidak bisa dijelaskan ke user.
+
+Dua lapis penjagaan: `OrderService.complete` menerjemahkan `badResponse` jadi `INVALID_TRANSITION`, dan `OrderDetailCubit` **memeriksa status lebih dulu** (`OrderModel.canComplete`) sehingga tombolnya tidak pernah muncul di status yang salah. Bandingkan `/confirm-delivery`, yang membungkus kondisi yang sama jadi `422 VALIDATION_ERROR` dengan rapi.
+
+#### 🔴 `GET /orders` hanya membaca `page`
+
+Controllernya memanggil `list_for_buyer($userId, $page)` — persis satu parameter. Akibatnya:
+
+- **`?status=` diabaikan.** Meminta `completed` tetap mengembalikan `pending` dan `cancelled`. Karena itu `OrderService.fetchOrders` **tidak punya parameter status** dan layar daftar tidak menawarkan filter: filter yang terlihat bekerja tapi tidak menyaring lebih buruk daripada tidak ada. Menyaring di sisi klien juga salah — hanya berlaku pada halaman yang sudah dimuat, sehingga pesanan di halaman berikutnya seolah hilang. (Sisi penjual, `list_for_store`, memang mendukung filter ini.)
+- **`?per_page=` diabaikan**; ukuran halaman dipatok **20** di server (`OrderService.serverPageSize`).
+- **`meta` tidak dikirim sama sekali** — tidak ada `total`. `OrderListCubit` menyimpulkan adanya halaman berikutnya dari "halaman terakhir terisi penuh", yang berarti satu permintaan sia-sia kalau jumlah pesanan kebetulan kelipatan 20. Itu disengaja — lebih baik daripada diam-diam menyembunyikan pesanan.
+
+#### ⚠️ Metode pembayaran dipilih saat CHECKOUT, bukan saat membayar
+
+Field `payment_method` di body `POST /payments/{txId}/pay` **diabaikan server** — diuji untuk lima metode: transaksi yang dibuat dengan `virtual_account` tetap membalas instruksi VA walau diminta `qris`. Metodenya terikat saat `POST /checkout/sessions/{id}/confirm`. Karena itu pemilihan metode ada di layar checkout, dan `PaymentService.pay` sengaja **tidak punya parameter metode**.
+
+**Bentuk instruksinya berbeda per metode, tanpa field penanda jenis**: `qris` → `{qr_string, expires_at}`, selebihnya → `{va_number, bank, expires_at}`. `PaymentInstructionModel.kind` menyimpulkannya dari field mana yang terisi.
+
+#### Bentuk data lain yang dipatok test
+
+- **Pola zona waktu yang sama berulang**: `payment_deadline` (order) dan `expired_at` (payment) **UTC**, sementara `created_at` di respons yang sama **WIB**. Keduanya memakai `ServerUtcDateTimeJson`.
+- **`shipping_address_snapshot` hanya berisi `{"address_id": "59"}`** — bukan alamat lengkap, dan berupa string JSON. Menampilkan alamat tujuan butuh `GET /me/addresses`.
+- **`payments.order_id` selalu `null`.** Transaksi menempel pada `checkout_session_id`: satu pembayaran menutup **semua** order dari sesi itu. Jangan memakainya untuk mencari order.
+- Item order memakai **snapshot** nama, harga, dan opsi varian saat order dibuat — pesanan lama tetap benar walau produknya berubah.
+- `GET /orders/{id}` untuk pesanan orang lain dibalas **403 `PERMISSION_DENIED`**, bukan 404.
+- `GET /orders/{id}/tracking` membalas `data: null` selama belum dikirim. Itu normal, bukan error.
+
+#### ⚠️ Test integrasi harus dijalankan serial
+
+`php -S` **single-threaded**, sedangkan `flutter test` menjalankan berkas secara paralel. Empat berkas integrasi yang masing-masing mendaftar user, mengisi keranjang, dan membuat order sekaligus membuat server kewalahan — gejalanya kegagalan yang berpindah-pindah, termasuk `/products` yang sesaat mengembalikan daftar kosong. Jalankan dengan:
+
+```bash
+flutter test test/integration --concurrency=1
+```
 
 ### Kontrak sisi member (diverifikasi ke server, 14 September 2026)
 
@@ -475,7 +516,7 @@ Derived from the gap between Part 1 and Part 2. Steps 0-5 are done and the auth 
 4. ~~Add `lib/core/data_state.dart` with the `DataState<T>` union.~~ **Done** — see deviation 1 above.
 5. ~~Build `lib/di/{injector,injector_service,injector_repository}.dart` and call `initialize()` before `runApp`.~~ **Done**; both registries are populated, but nine of the ten service/repository pairs point at the dead backend.
 6. ~~Bersihkan lapisan mati warisan Markas.~~ **Selesai** — 97 berkas dihapus; hanya `RepositoryGuard` yang dipertahankan.
-7. **In progress.** Tulis ulang tiap domain menembak marketplace-api, satu per satu, berpedoman pada "Kontrak sisi member" dan respons sungguhan — jangan `docs/03-api-documentation.md`. **Katalog, keranjang, alamat, dan checkout selesai**; katalog jadi implementasi rujukan bentuknya, checkout jadi rujukan untuk domain yang menahan sumber daya di server. Alur beli kini tersambung penuh di aplikasi, dari katalog sampai order terbentuk. Berikutnya: **payment** (`POST /payments/{txId}/pay` sudah terverifikasi mengembalikan `qr_string`) → **order** (`/orders`, `/orders/{id}`, `/orders/{id}/tracking`) → wallet/wishlist.
+7. **In progress.** Tulis ulang tiap domain menembak marketplace-api, satu per satu, berpedoman pada "Kontrak sisi member" dan respons sungguhan — jangan `docs/03-api-documentation.md`. **Alur beli selesai seluruhnya**: katalog → keranjang → alamat → checkout → pembayaran → pesanan. Katalog jadi rujukan bentuk domain; checkout jadi rujukan untuk domain yang menahan sumber daya di server. Sisa yang belum ditulis, seluruhnya di luar alur beli: **wishlist** (`/wishlist/items`), **review** (`POST /order-items/{id}/review`, `/products/{id}/reviews`), **wallet** (`/wallet`, `/wallet/topup`), **notifikasi** (`/me/notifications`), dan **chat** (`/chat/conversations`).
 8. **In progress** (auth done). Convert the UI kit's marker states to `@freezed` unions and switch its cubits from public mutable fields to emitted state data — for whatever of `lib/features/` survives step 10.
 9. Split [app_routes.dart](lib/core/utils/app_routes.dart) into per-domain route files under `lib/config/route/`.
 10. Decide the fate of `lib/features/` vs `lib/ui/` — the target names the presentation root `ui/`, which is a rename of the existing tree, not a second one.

@@ -2,10 +2,12 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:marketplace_app_member/core/domain/model/address/address_model.dart';
 import 'package:marketplace_app_member/core/domain/model/checkout/checkout_models.dart';
 import 'package:marketplace_app_member/core/function/components.dart';
 import 'package:marketplace_app_member/core/function/custom_app_bar.dart';
+import 'package:marketplace_app_member/core/utils/app_routes.dart';
 import 'package:marketplace_app_member/core/utils/app_styles.dart';
 import 'package:marketplace_app_member/core/utils/constant.dart';
 import 'package:marketplace_app_member/core/utils/extensions.dart';
@@ -184,6 +186,64 @@ class _CheckoutForm extends StatelessWidget {
           ),
           16.sbh,
         ],
+        _PaymentMethodPicker(state: state),
+        24.sbh,
+      ],
+    );
+  }
+}
+
+/// Pemilihan metode pembayaran.
+///
+/// Ada di **checkout**, bukan di layar pembayaran: metode terikat pada
+/// transaksi saat `confirm`, dan `POST /payments/{txId}/pay` mengabaikan
+/// metode yang dikirim belakangan (sudah diuji untuk lima metode).
+class _PaymentMethodPicker extends StatelessWidget {
+  const _PaymentMethodPicker({required this.state});
+
+  final CheckoutReady state;
+
+  @override
+  Widget build(BuildContext context) {
+    final dark = isAppDarkMode();
+
+    if (state.paymentMethods.isEmpty) {
+      return Text(
+        'Metode pembayaran belum bisa dimuat. Muat ulang halaman ini.',
+        style:
+            AppStyles.styleRegular12(context).copyWith(color: kWarningColor),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Metode Pembayaran',
+          style: AppStyles.styleSemiBold16(context).copyWith(
+            color: dark ? kDarkSecondColor : kLightSecondColor,
+          ),
+        ),
+        8.sbh,
+        RadioGroup<String>(
+          groupValue: state.selectedPaymentMethod.isEmpty
+              ? null
+              : state.selectedPaymentMethod,
+          onChanged: (value) {
+            if (!state.canInteract || value == null) return;
+            CheckoutCubit.get(context).selectPaymentMethod(value);
+          },
+          child: Column(
+            children: [
+              for (final method in state.paymentMethods)
+                RadioListTile<String>(
+                  contentPadding: EdgeInsets.zero,
+                  value: method.code,
+                  title: Text(method.name),
+                ),
+            ],
+          ),
+        ),
       ],
     );
   }
@@ -479,9 +539,8 @@ class _ConfirmBar extends StatelessWidget {
             FilledButton(
               // Tidak pernah diulang otomatis: backend belum menangani
               // Idempotency-Key, jadi pengulangan bisa membuat order ganda.
-              onPressed: state.canInteract && snapshot.session.canConfirm
-                  ? () => CheckoutCubit.get(context)
-                      .confirm(paymentMethod: 'qris')
+              onPressed: state.canPay
+                  ? () => CheckoutCubit.get(context).confirm()
                   : null,
               child: Text(state.isSubmitting ? 'Memproses…' : 'Bayar'),
             ),
@@ -532,11 +591,25 @@ class _ConfirmedView extends StatelessWidget {
               ),
             ),
             24.sbh,
-            // Layar pembayaran belum ditulis ulang; tombolnya jujur
-            // daripada mengarah ke rute yang belum ada.
-            FilledButton(
-              onPressed: () => Navigator.of(context).maybePop(),
-              child: const Text('Kembali'),
+            if (result.paymentTransactionId != null)
+              FilledButton(
+                // `pushReplacement`: checkout sudah selesai dan sesinya tidak
+                // bisa dipakai lagi, jadi tombol kembali tidak boleh
+                // mengembalikan user ke layar yang sudah mati.
+                onPressed: () => context.pushReplacement(
+                  AppRoutes.paymentPath(result.paymentTransactionId!),
+                ),
+                child: const Text('Lanjut ke pembayaran'),
+              )
+            else
+              FilledButton(
+                onPressed: () => Navigator.of(context).maybePop(),
+                child: const Text('Kembali'),
+              ),
+            8.sbh,
+            TextButton(
+              onPressed: () => context.go(AppRoutes.orders),
+              child: const Text('Lihat pesanan saya'),
             ),
           ],
         ),

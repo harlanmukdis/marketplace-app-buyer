@@ -4,6 +4,8 @@ import 'package:marketplace_app_member/core/data/datasources/remote/service/auth
 import 'package:marketplace_app_member/core/data/datasources/remote/service/address_service.dart';
 import 'package:marketplace_app_member/core/data/datasources/remote/service/cart_service.dart';
 import 'package:marketplace_app_member/core/data/datasources/remote/service/checkout_service.dart';
+import 'package:marketplace_app_member/core/data/datasources/remote/service/order_service.dart';
+import 'package:marketplace_app_member/core/data/datasources/remote/service/payment_service.dart';
 import 'package:marketplace_app_member/core/data/datasources/remote/service/catalog_service.dart';
 import 'package:marketplace_app_member/di/injector.dart';
 
@@ -46,4 +48,6 @@ void initializeService() {
   injector.registerLazySingleton<CartService>(() => CartService(api));
   injector.registerLazySingleton<AddressService>(() => AddressService(api));
   injector.registerLazySingleton<CheckoutService>(() => CheckoutService(api));
+  injector.registerLazySingleton<OrderService>(() => OrderService(api));
+  injector.registerLazySingleton<PaymentService>(() => PaymentService(api));
 }

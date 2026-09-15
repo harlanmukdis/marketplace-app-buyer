@@ -8,7 +8,9 @@ library;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:marketplace_app_member/core/data_state.dart';
 import 'package:marketplace_app_member/core/domain/model/checkout/checkout_models.dart';
+import 'package:marketplace_app_member/core/domain/model/payment/payment_models.dart';
 import 'package:marketplace_app_member/core/domain/repositories/checkout_repository.dart';
+import 'package:marketplace_app_member/core/domain/repositories/payment_repository.dart';
 import 'package:marketplace_app_member/di/injector.dart';
 import 'package:marketplace_app_member/ui/main/checkout/cubit/checkout_cubit.dart';
 
@@ -100,12 +102,35 @@ class _FakeCheckoutRepository implements CheckoutRepository {
   }
 }
 
+/// Metode bayar dimuat cubit bersamaan dengan sesi, jadi fake-nya harus ada
+/// walau bukan fokus test ini.
+class _FakePaymentRepository implements PaymentRepository {
+  DataState<List<PaymentMethodModel>> methods = const DataSuccess([
+    PaymentMethodModel(code: 'qris', name: 'QRIS'),
+    PaymentMethodModel(code: 'virtual_account', name: 'Virtual Account'),
+  ]);
+
+  @override
+  Future<DataState<List<PaymentMethodModel>>> fetchMethods() async => methods;
+
+  @override
+  Future<DataState<PaymentSnapshot>> load(int txId) async =>
+      throw UnimplementedError();
+
+  @override
+  Future<DataState<PaymentSnapshot>> refreshStatus(int txId) async =>
+      throw UnimplementedError();
+}
+
 void main() {
   late _FakeCheckoutRepository repository;
+  late _FakePaymentRepository payments;
 
   setUp(() {
     repository = _FakeCheckoutRepository();
+    payments = _FakePaymentRepository();
     injector.registerSingleton<CheckoutRepository>(repository);
+    injector.registerSingleton<PaymentRepository>(payments);
   });
 
   tearDown(() async {
@@ -146,7 +171,7 @@ void main() {
         '2': {'courier_code': 'jne', 'service_code': 'reg'},
       }));
       await cubit.refresh();
-      await cubit.confirm(paymentMethod: 'qris');
+      await cubit.confirm();
       repository.calls.clear();
 
       await cubit.close();
@@ -224,7 +249,7 @@ void main() {
       await cubit.start(addressId: 5);
       repository.calls.clear();
 
-      await cubit.confirm(paymentMethod: 'qris');
+      await cubit.confirm();
 
       expect(repository.calls, isEmpty, reason: 'tidak menyentuh jaringan');
       expect((cubit.state as CheckoutReady).actionError?.code,
@@ -240,7 +265,7 @@ void main() {
       final cubit = CheckoutCubit();
       await cubit.start(addressId: 5);
 
-      await cubit.confirm(paymentMethod: 'qris');
+      await cubit.confirm();
 
       final state = cubit.state as CheckoutConfirmed;
       expect(state.result.orderIds, [1, 2]);
@@ -259,8 +284,8 @@ void main() {
       await cubit.start(addressId: 5);
       repository.calls.clear();
 
-      final first = cubit.confirm(paymentMethod: 'qris');
-      final second = cubit.confirm(paymentMethod: 'qris');
+      final first = cubit.confirm();
+      final second = cubit.confirm();
       await Future.wait([first, second]);
 
       expect(repository.calls.where((c) => c.startsWith('confirm:')).length, 1);
@@ -278,7 +303,7 @@ void main() {
       repository.confirmResult =
           DataFailed(_error(ApiErrorCode.stockInsufficient));
 
-      await cubit.confirm(paymentMethod: 'qris');
+      await cubit.confirm();
 
       final state = cubit.state as CheckoutReady;
       expect(state.actionError?.code, ApiErrorCode.stockInsufficient);

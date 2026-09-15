@@ -102,10 +102,18 @@ class GeneralWidgets extends StatelessWidget {
       children: [
         Text(l.general, style: AppStyles.styleMedium16(context)),
         10.sbh,
-        // Entri "Pesanan Saya" dan "Saldo" dihapus bersama lapisan mati
-        // warisan backend Markas. Pasang kembali saat domain order dan wallet
-        // ditulis ulang menembak marketplace-api — menyisakan menu yang
-        // mengarah ke rute tak terdaftar hanya menghasilkan layar kosong.
+        // Judulnya ditulis langsung karena kunci l10n-nya belum ada — dan
+        // seluruh layar tujuannya memang berbahasa Indonesia.
+        //
+        // Entri "Saldo" masih belum dipasang: domain wallet belum ditulis
+        // ulang, dan menu yang mengarah ke rute tak terdaftar hanya
+        // menghasilkan layar kosong.
+        _customListTile(
+          context,
+          title: 'Pesanan Saya',
+          icon: Icons.receipt_long_outlined,
+          onTap: () => router.push(AppRoutes.orders),
+        ),
         _customListTile(
           context,
           title: l.profileInformation,
