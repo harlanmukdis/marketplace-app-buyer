@@ -5,7 +5,10 @@ import 'package:marketplace_app_member/core/data/datasources/remote/service/chec
 import 'package:marketplace_app_member/core/data/datasources/remote/service/order_service.dart';
 import 'package:marketplace_app_member/core/data/datasources/remote/service/payment_service.dart';
 import 'package:marketplace_app_member/core/data/datasources/remote/service/review_service.dart';
+import 'package:marketplace_app_member/core/data/datasources/remote/service/wallet_service.dart';
 import 'package:marketplace_app_member/core/data/datasources/remote/service/wishlist_service.dart';
+import 'package:marketplace_app_member/core/data/repositories/wallet_repository_impl.dart';
+import 'package:marketplace_app_member/core/domain/repositories/wallet_repository.dart';
 import 'package:marketplace_app_member/core/data/repositories/review_repository_impl.dart';
 import 'package:marketplace_app_member/core/data/repositories/wishlist_repository_impl.dart';
 import 'package:marketplace_app_member/core/domain/repositories/review_repository.dart';
@@ -94,5 +97,9 @@ void initializeRepository() {
 
   injector.registerLazySingleton<ReviewRepository>(
     () => ReviewRepositoryImpl(injector<ReviewService>()),
+  );
+
+  injector.registerLazySingleton<WalletRepository>(
+    () => WalletRepositoryImpl(injector<WalletService>()),
   );
 }

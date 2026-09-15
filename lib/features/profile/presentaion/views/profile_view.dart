@@ -104,15 +104,17 @@ class GeneralWidgets extends StatelessWidget {
         10.sbh,
         // Judulnya ditulis langsung karena kunci l10n-nya belum ada — dan
         // seluruh layar tujuannya memang berbahasa Indonesia.
-        //
-        // Entri "Saldo" masih belum dipasang: domain wallet belum ditulis
-        // ulang, dan menu yang mengarah ke rute tak terdaftar hanya
-        // menghasilkan layar kosong.
         _customListTile(
           context,
           title: 'Pesanan Saya',
           icon: Icons.receipt_long_outlined,
           onTap: () => router.push(AppRoutes.orders),
+        ),
+        _customListTile(
+          context,
+          title: 'Saldo Saya',
+          icon: Icons.account_balance_wallet_outlined,
+          onTap: () => router.push(AppRoutes.wallet),
         ),
         _customListTile(
           context,

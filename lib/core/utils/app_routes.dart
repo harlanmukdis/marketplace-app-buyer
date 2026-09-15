@@ -8,6 +8,7 @@ import 'package:marketplace_app_member/ui/main/checkout/screens/checkout_screen.
 import 'package:marketplace_app_member/ui/main/order/screens/order_detail_screen.dart';
 import 'package:marketplace_app_member/ui/main/order/screens/order_list_screen.dart';
 import 'package:marketplace_app_member/ui/main/payment/screens/payment_screen.dart';
+import 'package:marketplace_app_member/ui/main/wallet/screens/wallet_screen.dart';
 import 'package:marketplace_app_member/ui/main/auth/screens/register_screen.dart';
 import '../../features/auth/presentation/views/reset_password_view.dart';
 import '../../features/auth/presentation/views/welcome_view.dart';
@@ -80,9 +81,8 @@ class AppRoutes {
 
   static String paymentPath(int transactionId) => '/payment/$transactionId';
 
-  // Route dompet masih dihapus bersama lapisan mati warisan Markas.
-  // Tambahkan kembali saat domainnya ditulis ulang — jangan menyisakan
-  // konstanta yang tidak menunjuk ke layar mana pun.
+  /// Dompet: saldo, riwayat mutasi, topup, penarikan.
+  static const String wallet = '/wallet';
 
   static const String homeLayout = '/homeLayout';
   static const String productDetails = '/productDetails';
@@ -159,6 +159,15 @@ final GoRouter router = GoRouter(
         return FadeThroughTransitionPageWrapper(
           transitionKey: state.pageKey,
           page: const OrderListScreen(),
+        );
+      },
+    ),
+    GoRoute(
+      path: AppRoutes.wallet,
+      pageBuilder: (BuildContext context, GoRouterState state) {
+        return FadeThroughTransitionPageWrapper(
+          transitionKey: state.pageKey,
+          page: const WalletScreen(),
         );
       },
     ),

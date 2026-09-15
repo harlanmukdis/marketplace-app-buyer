@@ -27,7 +27,7 @@ Buyer app for a **multi-vendor marketplace**, built on a purchased Flutter UI ki
 flutter pub get                       # install dependencies
 flutter run                           # run on connected device/emulator
 flutter analyze                       # static analysis (flutter_lints 4.0.0 via analysis_options.yaml)
-flutter test                          # run all tests (275; all pass)
+flutter test                          # run all tests (304; all pass)
 flutter test test/integration --concurrency=1   # integrasi: butuh backend hidup, WAJIB serial
 flutter test test/data                # one directory
 flutter test test/data/auth_repository_impl_test.dart                       # single file
@@ -57,7 +57,7 @@ Note: `build_runner` 2.15 **removed `--delete-conflicting-outputs`** — passing
 
 | tree | data source | safe to build on? |
 |---|---|---|
-| `lib/ui/main/{auth,catalog,cart,address,checkout,order,payment,wishlist,review}/` | marketplace-api, live | **yes** — `catalog` is the reference implementation |
+| `lib/ui/main/{auth,catalog,cart,address,checkout,order,payment,wishlist,review,wallet}/` | marketplace-api, live | **yes** — `catalog` is the reference implementation |
 | `lib/features/` (the UI kit's sample tree) | hardcoded lists inside cubits (`HomePageCubit.productsTShirt`) | as sample UI only |
 
 The third tree that used to sit between them — a complete data + UI stack written against the old Markas backend — **was deleted on 14 September 2026**. See "~~The dead layer~~" in Part 2 for what went and the endpoint translation table that survived it.
@@ -216,10 +216,11 @@ Current state: `en` and `ar` are complete (284 keys) and selectable. `fr` appear
 - **Address + Checkout domain** — `lib/core/…/{address,checkout}/` + `lib/ui/main/{address,checkout}/`; memuat jalan memutar untuk tiga bug server, lihat "Domain alamat & checkout" di bawah
 - **Order + Payment domain** — `lib/core/…/{order,payment}/` + `lib/ui/main/{order,payment}/`; melengkapi alur beli, lihat "Domain pesanan & pembayaran" di bawah
 - **Wishlist + Review domain** — `lib/core/…/{wishlist,review}/` + `lib/ui/main/{wishlist,review}/`; lihat "Domain wishlist & ulasan" di bawah
+- **Wallet domain** — `lib/core/…/wallet/` + `lib/ui/main/wallet/`; lihat "Domain dompet" di bawah
 - `lib/util/error_message.dart` — maps `DataError.code` to localized copy; **never** shows `error.message` to users
-- Tests: `test/util/` (17, murni), `test/data/` (100, fake service/store + parsing JSON asli), `test/ui/` (75, fake repository), `test/integration/` (83, butuh backend hidup — **jalankan `--concurrency=1`**) — **275 total, semuanya lulus**
+- Tests: `test/util/` (17, murni), `test/data/` (114, fake service/store + parsing JSON asli), `test/ui/` (84, fake repository), `test/integration/` (89, butuh backend hidup — **jalankan `--concurrency=1`**) — **304 total, semuanya lulus**
 
-Still absent: Firebase and `lib/firebase_options.dart`; domain wallet, chat, dan notifikasi.
+Still absent: Firebase and `lib/firebase_options.dart`; domain chat dan notifikasi.
 
 ### ~~The dead layer~~ — sudah dihapus (14 September 2026)
 
@@ -401,6 +402,37 @@ Berbeda dari `/orders`, endpoint ulasan **mengirim `meta` lengkap** (`page`/`per
 
 Jangan tertukar: `meta.rating_histogram` menghitung **ulasan per bintang persis**; `meta.facets.rating` di `GET /products` menghitung **produk per ambang rating** dan bersifat kumulatif.
 
+### Domain dompet
+
+Saldo, riwayat mutasi, topup, dan penarikan.
+
+#### 🔴 Dua penolakan penarikan memakai kode error yang SAMA
+
+`POST /wallet/withdraw` membalas `422 WITHDRAWAL_REJECTED` baik untuk "di bawah minimum" maupun "saldo tidak mencukupi" — yang berbeda hanya `error.message`, sementara panduan FE melarang mencocokkan `message`. Dua situasi yang tindakannya bertolak belakang ("kecilkan nominal" vs "isi saldo dulu") jadi tidak bisa dibedakan.
+
+Karena itu `WalletCubit` **memvalidasi minimum dan kecukupan saldo sendiri sebelum menyentuh jaringan**. Sisanya — `WITHDRAWAL_REJECTED` yang benar-benar sampai dari server — praktis hanya berarti saldo kurang, sehingga pesannya bisa tepat.
+
+⚠️ Minimumnya (`Rp50.000`) **hardcoded di server sebagai fallback**, dengan komentar bahwa nilai aktifnya semestinya dari `admin_settings.min_withdrawal_amount`. Konstanta di aplikasi bisa melenceng kalau admin mengubahnya; server tetap penjaga terakhirnya.
+
+#### Arah mutasi dari `type`, bukan tanda `amount`
+
+Kolom `wallet_transactions.amount` dikomentari "**selalu positif**; arah ditentukan oleh `type`". Menampilkan `amount` apa adanya akan membuat penarikan terlihat seperti pemasukan. `WalletTxType` memetakan sepuluh jenis ke arahnya; jenis tak dikenal sengaja dianggap **kredit**, karena salah tanda pada uang lebih merugikan daripada label yang kurang spesifik — dan `balance_after` tetap menunjukkan kebenarannya.
+
+#### Topup memakai ulang alur pembayaran
+
+`POST /wallet/topup` **tidak menambah saldo**; ia membuat `payment_transactions` berstatus `pending` dan mengembalikan `payment_transaction_id`. Saldo baru dikredit callback penyedia setelah dibayar. Id itu bisa langsung dibuka `PaymentScreen` yang sudah ada — tidak ada layar pembayaran kedua.
+
+#### Yang sengaja tidak dibuat
+
+- **`POST /wallet/transfer`** ada dan berfungsi, tapi menuntut `to_user_id` — **id internal numerik** penerima. Satu-satunya endpoint yang bisa menukar email/nama jadi id adalah `/admin/users*`, yang ditolak `403` untuk token buyer. Jadi tidak ada cara sah bagi app member menemukan id tujuan, dan method-nya tidak dibuat sampai backend menyediakan pencarian penerima.
+- **`/stores/{id}/wallet`** — dompet toko, butuh permission `wallet.view`.
+
+#### ⚠️ Mutasi saldo tidak bisa diuji di dev
+
+Satu-satunya jalan menambah saldo adalah callback penyedia pembayaran, yang menuntut HMAC dengan `WEBHOOK_SIGNING_SECRET` yang **tidak ada di repo**. Jadi bentuk baris mutasi diturunkan dari skema (`get_user_wallet` melakukan `SELECT *`, jadi kolom = field) dan diuji di `test/data/`; test integrasi hanya memastikan dompet kosong, bentuk hasil topup, dan penolakan penarikan.
+
+Catatan sampingan: jalur **penolakan** signature callback itu sendiri rusak — ia mencatat `payment_transaction_id: null` yang melanggar foreign key, sehingga signature salah dibalas **500 HTML**, bukan `400 INVALID_SIGNATURE`. Tidak berdampak ke app member (aplikasi tidak pernah memanggil callback).
+
 #### ⚠️ Test integrasi harus dijalankan serial
 
 `php -S` **single-threaded**, sedangkan `flutter test` menjalankan berkas secara paralel. Empat berkas integrasi yang masing-masing mendaftar user, mengisi keranjang, dan membuat order sekaligus membuat server kewalahan — gejalanya kegagalan yang berpindah-pindah, termasuk `/products` yang sesaat mengembalikan daftar kosong. Jalankan dengan:
@@ -408,6 +440,12 @@ Jangan tertukar: `meta.rating_histogram` menghitung **ulasan per bintang persis*
 ```bash
 flutter test test/integration --concurrency=1
 ```
+
+#### ⚠️ Test integrasi MENGHABISKAN stok
+
+Test checkout dan order membuat pesanan sungguhan, jadi setiap kali suite dijalankan stok berkurang. Versi awalnya selalu memakai `products[0]`, sehingga suite perlahan menghabiskan stok produk itu lalu **gagal sendiri** dengan `409 STOCK_INSUFFICIENT` — dan benar terjadi setelah beberapa hari.
+
+`test/integration/support/seeded_product.dart` sekarang mencari varian yang masih berstok, jadi suite hijau selama **ada** produk berstok, bukan selama produk tertentu berstok. Kalau seluruh katalog habis, helper itu melempar pesan yang menyuruh seed ulang — jauh lebih berguna daripada `STOCK_INSUFFICIENT` di tengah alur checkout.
 
 ### Kontrak sisi member (diverifikasi ke server, 14 September 2026)
 
@@ -565,7 +603,7 @@ Derived from the gap between Part 1 and Part 2. Steps 0-5 are done and the auth 
 4. ~~Add `lib/core/data_state.dart` with the `DataState<T>` union.~~ **Done** — see deviation 1 above.
 5. ~~Build `lib/di/{injector,injector_service,injector_repository}.dart` and call `initialize()` before `runApp`.~~ **Done**; both registries are populated, but nine of the ten service/repository pairs point at the dead backend.
 6. ~~Bersihkan lapisan mati warisan Markas.~~ **Selesai** — 97 berkas dihapus; hanya `RepositoryGuard` yang dipertahankan.
-7. **In progress.** Tulis ulang tiap domain menembak marketplace-api, satu per satu, berpedoman pada "Kontrak sisi member" dan respons sungguhan — jangan `docs/03-api-documentation.md`. **Alur beli selesai seluruhnya**: katalog → keranjang → alamat → checkout → pembayaran → pesanan. Katalog jadi rujukan bentuk domain; checkout jadi rujukan untuk domain yang menahan sumber daya di server. **Wishlist dan ulasan juga selesai.** Sisa yang belum ditulis: **wallet** (`/wallet`, `/wallet/topup`, `/wallet/withdraw`), **notifikasi** (`/me/notifications`), **chat** (`/chat/conversations`, ada polling di `/poll`), serta modul reward (`/me/points`, `/me/coins`, `/me/loyalty`) dan home CMS (`/home/layout`, masih kosong di server).
+7. **In progress.** Tulis ulang tiap domain menembak marketplace-api, satu per satu, berpedoman pada "Kontrak sisi member" dan respons sungguhan — jangan `docs/03-api-documentation.md`. **Alur beli selesai seluruhnya**: katalog → keranjang → alamat → checkout → pembayaran → pesanan. Katalog jadi rujukan bentuk domain; checkout jadi rujukan untuk domain yang menahan sumber daya di server. **Wishlist, ulasan, dan dompet juga selesai.** Sisa yang belum ditulis: **notifikasi** (`/me/notifications`), **chat** (`/chat/conversations`, ada polling di `/poll`), serta modul reward (`/me/points`, `/me/coins`, `/me/loyalty`).
 7b. **Backlog: endpoint backend yang sudah ada tapi belum dipakai aplikasi.** Dikerjakan **setelah** domain di langkah 7 selesai, bukan menyela. Backend bergerak lebih cepat dari aplikasi, jadi daftar ini akan bertambah — periksa `git log` repo API setiap kali melanjutkan.
 
    - **`GET /products/{id}/shipping-estimate?address_id=&variant_id=`** (commit `ea86e5d`, 15 Sep 2026). Menjawab "berapa ongkir ke alamat saya?" di halaman produk **tanpa membuat sesi checkout** — jadi tanpa mereservasi stok. Butuh login; `variant_id` opsional. Balasannya **list `ShippingOptionModel` yang sudah ada** (`cost` angka asli), sudah disaring `store_couriers`, urut termurah. Error yang perlu ditangani: `422 VALIDATION_ERROR` tanpa `address_id`, `404 ADDRESS_NOT_FOUND`, `404 VARIANT_NOT_FOUND`, `409 STOCK_INSUFFICIENT`. Sebagian nilainya sudah didapat lebih murah lewat `warehouse_city`/`warehouse_province` di varian, jadi ini peningkatan, bukan penambal lubang.

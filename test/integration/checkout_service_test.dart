@@ -27,6 +27,8 @@ import 'package:marketplace_app_member/core/data/datasources/remote/service/cata
 import 'package:marketplace_app_member/core/data/datasources/remote/service/checkout_service.dart';
 import 'package:marketplace_app_member/core/domain/repositories/checkout_repository.dart';
 
+import 'support/seeded_product.dart';
+
 void main() {
   late Dio dio;
   late AddressService addresses;
@@ -60,9 +62,9 @@ void main() {
     dio.options.headers['Authorization'] =
         'Bearer ${session.data.accessToken}';
 
-    final listing = await catalog.fetchProducts(perPage: 1);
-    final detail = await catalog.fetchProduct(listing.data.first.id);
-    variantId = detail.data.variants.first.id;
+    // Bukan produk pertama: test ini mengonsumsi stok setiap kali dijalankan,
+    // jadi harus mencari varian yang masih tersedia.
+    variantId = (await findVariantWithStock(catalog)).variantId;
   });
 
   tearDown(() => dio.close(force: true));

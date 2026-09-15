@@ -21,6 +21,8 @@ import 'package:marketplace_app_member/core/data/datasources/remote/service/cata
 import 'package:marketplace_app_member/core/domain/model/catalog/product_facets.dart';
 import 'package:marketplace_app_member/core/domain/model/catalog/product_model.dart';
 
+import 'support/seeded_product.dart';
+
 void main() {
   late CatalogService catalog;
   late Dio dio;
@@ -127,13 +129,20 @@ void main() {
       expect(detail.variants.first.stock, isA<int>());
     });
 
-    test('varian membawa lokasi gudang pengirim', () async {
+    test('varian BERSTOK membawa lokasi gudang pengirim', () async {
       // Ditambahkan backend bersama endpoint shipping-estimate. Dipakai
       // menampilkan "Dikirim dari …" tanpa memanggil endpoint apa pun.
-      final withOrigin =
-          detail.variants.where((v) => v.shippingOrigin.isNotEmpty);
-      expect(withOrigin, isNotEmpty,
-          reason: 'produk berstok harus punya gudang asal');
+      //
+      // Harus memakai varian berstok: gudang asal diturunkan dari gudang yang
+      // menyimpan varian itu, jadi varian yang stoknya habis di semua gudang
+      // memang tidak punya asal kirim — perilaku yang dipatok di
+      // `test/data/catalog_model_test.dart`.
+      final seeded = await findVariantWithStock(catalog);
+      final stocked = (await catalog.fetchProduct(seeded.productId)).data;
+      final variant =
+          stocked.variants.firstWhere((v) => v.id == seeded.variantId);
+
+      expect(variant.shippingOrigin, isNotEmpty);
     });
 
     test('cukup untuk merender halaman detail tanpa panggilan susulan',

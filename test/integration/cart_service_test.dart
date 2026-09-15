@@ -23,12 +23,14 @@ import 'package:marketplace_app_member/core/data/datasources/remote/service/auth
 import 'package:marketplace_app_member/core/data/datasources/remote/service/cart_service.dart';
 import 'package:marketplace_app_member/core/data/datasources/remote/service/catalog_service.dart';
 
+import 'support/seeded_product.dart';
+
 void main() {
   late Dio dio;
   late CartService cart;
   late CatalogService catalog;
 
-  /// Varian yang dipakai seluruh test; diambil dari produk pertama.
+  /// Varian yang dipakai seluruh test; dicari yang masih berstok.
   late int variantId;
 
   setUp(() async {
@@ -53,9 +55,9 @@ void main() {
     dio.options.headers['Authorization'] =
         'Bearer ${session.data.accessToken}';
 
-    final listing = await catalog.fetchProducts(perPage: 1);
-    final detail = await catalog.fetchProduct(listing.data.first.id);
-    variantId = detail.data.variants.first.id;
+    // Bukan produk pertama: test ini mengonsumsi stok setiap kali dijalankan,
+    // jadi harus mencari varian yang masih tersedia.
+    variantId = (await findVariantWithStock(catalog)).variantId;
   });
 
   tearDown(() => dio.close(force: true));
