@@ -27,7 +27,7 @@ Buyer app for a **multi-vendor marketplace**, built on a purchased Flutter UI ki
 flutter pub get                       # install dependencies
 flutter run                           # run on connected device/emulator
 flutter analyze                       # static analysis (flutter_lints 4.0.0 via analysis_options.yaml)
-flutter test                          # run all tests (271; all pass)
+flutter test                          # run all tests (275; all pass)
 flutter test test/integration --concurrency=1   # integrasi: butuh backend hidup, WAJIB serial
 flutter test test/data                # one directory
 flutter test test/data/auth_repository_impl_test.dart                       # single file
@@ -217,7 +217,7 @@ Current state: `en` and `ar` are complete (284 keys) and selectable. `fr` appear
 - **Order + Payment domain** — `lib/core/…/{order,payment}/` + `lib/ui/main/{order,payment}/`; melengkapi alur beli, lihat "Domain pesanan & pembayaran" di bawah
 - **Wishlist + Review domain** — `lib/core/…/{wishlist,review}/` + `lib/ui/main/{wishlist,review}/`; lihat "Domain wishlist & ulasan" di bawah
 - `lib/util/error_message.dart` — maps `DataError.code` to localized copy; **never** shows `error.message` to users
-- Tests: `test/util/` (17, murni), `test/data/` (97, fake service/store + parsing JSON asli), `test/ui/` (75, fake repository), `test/integration/` (82, butuh backend hidup — **jalankan `--concurrency=1`**) — **271 total, semuanya lulus**
+- Tests: `test/util/` (17, murni), `test/data/` (100, fake service/store + parsing JSON asli), `test/ui/` (75, fake repository), `test/integration/` (83, butuh backend hidup — **jalankan `--concurrency=1`**) — **275 total, semuanya lulus**
 
 Still absent: Firebase and `lib/firebase_options.dart`; domain wallet, chat, dan notifikasi.
 
@@ -324,6 +324,14 @@ Yang paling menjebak, karena **balasan `PATCH .../shipping` mengirim field berna
 
   Ini **perilaku baru sejak 15 September 2026** (commit backend `08ae0e7`, "Clear checked-out cart items after checkout confirm"). Sebelum itu barang yang sudah dipesan benar-benar tertinggal di keranjang dan bisa di-checkout ulang — double order sungguhan, seperti ditulis sendiri di pesan commit-nya. Catatan di file ini sempat menyebut temuan lama itu sebagai salah baca; **bukan** — temuannya benar, backend-nya yang berubah di antara dua kali pengujian.
 
+#### ⚠️ Opsi kurir kini disaring per toko — nol opsi jadi mungkin
+
+Sejak 15 September 2026 (commit backend `ea86e5d`), `Shipping_model::compute_options()` menyaring kurir menurut `store_couriers` milik toko. **Bentuk responsnya tidak berubah** — yang berubah hanya isinya bisa lebih sedikit.
+
+Rancangannya "default-terbuka": toko yang belum pernah mengatur `store_couriers` tetap mendapat semua tarif aktif, jadi tidak ada toko lama yang mendadak nol opsi. Dan karena tabel itu **belum punya seed sama sekali**, penyaringannya belum bisa diamati di lingkungan dev — test untuk itu akan hampa, jadi sengaja tidak dibuat.
+
+Yang tetap berubah untuk aplikasi: **daftar opsi kosong bukan lagi kasus mustahil.** Tanpa penanganan, user terjebak — tombol Bayar mati selamanya karena konfirmasi menuntut setiap toko punya kurir, sementara barang toko itu tidak bisa dilepas dari dalam layar checkout. Karena itu `_StoreShipping` menampilkan jalan keluar: batalkan sesi lalu kembali ke keranjang.
+
 #### Sesi checkout menahan sumber daya di server
 
 Membuat sesi mereservasi stok **15 menit**. Karena itu `CheckoutCubit.close()` membatalkan sesi yang belum dikonfirmasi — tanpa itu, stok tertahan sampai tenggat hanya karena user menutup layar. Sesi yang **sudah** dikonfirmasi sengaja tidak dibatalkan (reservasinya sudah jadi order).
@@ -429,6 +437,8 @@ Semua di bawah ini hasil menembak server dengan token buyer, bukan membaca dokum
 **Produk tanpa varian tetap punya satu default variant.** `cart_items` dan `order_items` selalu merujuk `product_variant_id`, **tidak pernah** `product_id`.
 
 **Parameter `GET /products`:** `q` (LIKE nama+deskripsi), `category_id`, `store_id`, `min_price`, `max_price`, `min_rating`, `city`, `province`, `courier`, `sort_by` (`latest` default, `popular`, `trending`, `price_asc`, `price_desc`, `rating` — nilai asing diabaikan jadi `latest`), `page`, `per_page` (maks 100).
+
+**Varian membawa `warehouse_city` / `warehouse_province`** (ditambahkan backend 15 September 2026). Dipakai menampilkan "Dikirim dari …" di halaman detail **tanpa memanggil endpoint apa pun**. `null` untuk varian yang tidak punya stok di gudang mana pun. ⚠️ Belum terdokumentasi di panduan FE §8 walau servernya sudah mengirimkannya.
 
 **Dua facet di `meta.facets` berbeda bentuk — jangan satu parser untuk keduanya:**
 
@@ -552,6 +562,12 @@ Derived from the gap between Part 1 and Part 2. Steps 0-5 are done and the auth 
 5. ~~Build `lib/di/{injector,injector_service,injector_repository}.dart` and call `initialize()` before `runApp`.~~ **Done**; both registries are populated, but nine of the ten service/repository pairs point at the dead backend.
 6. ~~Bersihkan lapisan mati warisan Markas.~~ **Selesai** — 97 berkas dihapus; hanya `RepositoryGuard` yang dipertahankan.
 7. **In progress.** Tulis ulang tiap domain menembak marketplace-api, satu per satu, berpedoman pada "Kontrak sisi member" dan respons sungguhan — jangan `docs/03-api-documentation.md`. **Alur beli selesai seluruhnya**: katalog → keranjang → alamat → checkout → pembayaran → pesanan. Katalog jadi rujukan bentuk domain; checkout jadi rujukan untuk domain yang menahan sumber daya di server. **Wishlist dan ulasan juga selesai.** Sisa yang belum ditulis: **wallet** (`/wallet`, `/wallet/topup`, `/wallet/withdraw`), **notifikasi** (`/me/notifications`), **chat** (`/chat/conversations`, ada polling di `/poll`), serta modul reward (`/me/points`, `/me/coins`, `/me/loyalty`) dan home CMS (`/home/layout`, masih kosong di server).
+7b. **Backlog: endpoint backend yang sudah ada tapi belum dipakai aplikasi.** Dikerjakan **setelah** domain di langkah 7 selesai, bukan menyela. Backend bergerak lebih cepat dari aplikasi, jadi daftar ini akan bertambah — periksa `git log` repo API setiap kali melanjutkan.
+
+   - **`GET /products/{id}/shipping-estimate?address_id=&variant_id=`** (commit `ea86e5d`, 15 Sep 2026). Menjawab "berapa ongkir ke alamat saya?" di halaman produk **tanpa membuat sesi checkout** — jadi tanpa mereservasi stok. Butuh login; `variant_id` opsional. Balasannya **list `ShippingOptionModel` yang sudah ada** (`cost` angka asli), sudah disaring `store_couriers`, urut termurah. Error yang perlu ditangani: `422 VALIDATION_ERROR` tanpa `address_id`, `404 ADDRESS_NOT_FOUND`, `404 VARIANT_NOT_FOUND`, `409 STOCK_INSUFFICIENT`. Sebagian nilainya sudah didapat lebih murah lewat `warehouse_city`/`warehouse_province` di varian, jadi ini peningkatan, bukan penambal lubang.
+   - **`GET /home/layout`** dan `GET /categories/{id}/layout` — home CMS. Masih `[]` di server karena tabelnya belum di-seed; tunggu ada isinya supaya modelnya tidak ditulis dari dokumen saja.
+   - **`GET /me/favorite-categories`**, `GET /me/vouchers`, `POST /vouchers/claim` — sudah diverifikasi hidup, belum ada layarnya.
+
 8. **In progress** (auth done). Convert the UI kit's marker states to `@freezed` unions and switch its cubits from public mutable fields to emitted state data — for whatever of `lib/features/` survives step 10.
 9. Split [app_routes.dart](lib/core/utils/app_routes.dart) into per-domain route files under `lib/config/route/`.
 10. Decide the fate of `lib/features/` vs `lib/ui/` — the target names the presentation root `ui/`, which is a rename of the existing tree, not a second one.

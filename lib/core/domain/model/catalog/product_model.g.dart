@@ -104,6 +104,9 @@ _ProductVariantModel _$ProductVariantModelFromJson(Map<String, dynamic> json) =>
           ? true
           : const BoolJson().fromJson(json['is_active']),
       stock: const IntOrNullJson().fromJson(json['stock']),
+      warehouseCity: const StringOrNullJson().fromJson(json['warehouse_city']),
+      warehouseProvince:
+          const StringOrNullJson().fromJson(json['warehouse_province']),
     );
 
 Map<String, dynamic> _$ProductVariantModelToJson(
@@ -118,6 +121,9 @@ Map<String, dynamic> _$ProductVariantModelToJson(
       'image_url': const StringOrNullJson().toJson(instance.imageUrl),
       'is_active': const BoolJson().toJson(instance.isActive),
       'stock': const IntOrNullJson().toJson(instance.stock),
+      'warehouse_city': const StringOrNullJson().toJson(instance.warehouseCity),
+      'warehouse_province':
+          const StringOrNullJson().toJson(instance.warehouseProvince),
     };
 
 _ProductImageModel _$ProductImageModelFromJson(Map<String, dynamic> json) =>

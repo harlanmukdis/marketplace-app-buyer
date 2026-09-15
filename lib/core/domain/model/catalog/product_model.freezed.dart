@@ -1044,6 +1044,22 @@ mixin _$ProductVariantModel {
   @IntOrNullJson()
   int? get stock;
 
+  /// Lokasi gudang yang akan mengirim varian ini — ditambahkan backend pada
+  /// 15 September 2026 bersama endpoint `shipping-estimate`.
+  ///
+  /// Dipakai menampilkan "Dikirim dari …" di halaman detail tanpa memanggil
+  /// endpoint apa pun. `null` untuk varian yang tidak punya stok di gudang
+  /// mana pun.
+  ///
+  /// ⚠️ Belum terdokumentasi di `docs/18-frontend-integration-guide.md` §8
+  /// walau servernya sudah mengirimkannya.
+  @StringOrNullJson()
+  @JsonKey(name: 'warehouse_city')
+  String? get warehouseCity;
+  @StringOrNullJson()
+  @JsonKey(name: 'warehouse_province')
+  String? get warehouseProvince;
+
   /// Create a copy of ProductVariantModel
   /// with the given fields replaced by the non-null parameter values.
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -1073,7 +1089,11 @@ mixin _$ProductVariantModel {
                 other.imageUrl == imageUrl) &&
             (identical(other.isActive, isActive) ||
                 other.isActive == isActive) &&
-            (identical(other.stock, stock) || other.stock == stock));
+            (identical(other.stock, stock) || other.stock == stock) &&
+            (identical(other.warehouseCity, warehouseCity) ||
+                other.warehouseCity == warehouseCity) &&
+            (identical(other.warehouseProvince, warehouseProvince) ||
+                other.warehouseProvince == warehouseProvince));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -1088,11 +1108,13 @@ mixin _$ProductVariantModel {
       weightGrams,
       imageUrl,
       isActive,
-      stock);
+      stock,
+      warehouseCity,
+      warehouseProvince);
 
   @override
   String toString() {
-    return 'ProductVariantModel(id: $id, productId: $productId, sku: $sku, variantOptions: $variantOptions, price: $price, weightGrams: $weightGrams, imageUrl: $imageUrl, isActive: $isActive, stock: $stock)';
+    return 'ProductVariantModel(id: $id, productId: $productId, sku: $sku, variantOptions: $variantOptions, price: $price, weightGrams: $weightGrams, imageUrl: $imageUrl, isActive: $isActive, stock: $stock, warehouseCity: $warehouseCity, warehouseProvince: $warehouseProvince)';
   }
 }
 
@@ -1113,7 +1135,13 @@ abstract mixin class $ProductVariantModelCopyWith<$Res> {
       @IntOrNullJson() @JsonKey(name: 'weight_grams') int? weightGrams,
       @StringOrNullJson() @JsonKey(name: 'image_url') String? imageUrl,
       @BoolJson() @JsonKey(name: 'is_active') bool isActive,
-      @IntOrNullJson() int? stock});
+      @IntOrNullJson() int? stock,
+      @StringOrNullJson()
+      @JsonKey(name: 'warehouse_city')
+      String? warehouseCity,
+      @StringOrNullJson()
+      @JsonKey(name: 'warehouse_province')
+      String? warehouseProvince});
 }
 
 /// @nodoc
@@ -1138,6 +1166,8 @@ class _$ProductVariantModelCopyWithImpl<$Res>
     Object? imageUrl = freezed,
     Object? isActive = null,
     Object? stock = freezed,
+    Object? warehouseCity = freezed,
+    Object? warehouseProvince = freezed,
   }) {
     return _then(_self.copyWith(
       id: null == id
@@ -1176,6 +1206,14 @@ class _$ProductVariantModelCopyWithImpl<$Res>
           ? _self.stock
           : stock // ignore: cast_nullable_to_non_nullable
               as int?,
+      warehouseCity: freezed == warehouseCity
+          ? _self.warehouseCity
+          : warehouseCity // ignore: cast_nullable_to_non_nullable
+              as String?,
+      warehouseProvince: freezed == warehouseProvince
+          ? _self.warehouseProvince
+          : warehouseProvince // ignore: cast_nullable_to_non_nullable
+              as String?,
     ));
   }
 }
@@ -1284,7 +1322,13 @@ extension ProductVariantModelPatterns on ProductVariantModel {
             @IntOrNullJson() @JsonKey(name: 'weight_grams') int? weightGrams,
             @StringOrNullJson() @JsonKey(name: 'image_url') String? imageUrl,
             @BoolJson() @JsonKey(name: 'is_active') bool isActive,
-            @IntOrNullJson() int? stock)?
+            @IntOrNullJson() int? stock,
+            @StringOrNullJson()
+            @JsonKey(name: 'warehouse_city')
+            String? warehouseCity,
+            @StringOrNullJson()
+            @JsonKey(name: 'warehouse_province')
+            String? warehouseProvince)?
         $default, {
     required TResult orElse(),
   }) {
@@ -1300,7 +1344,9 @@ extension ProductVariantModelPatterns on ProductVariantModel {
             _that.weightGrams,
             _that.imageUrl,
             _that.isActive,
-            _that.stock);
+            _that.stock,
+            _that.warehouseCity,
+            _that.warehouseProvince);
       case _:
         return orElse();
     }
@@ -1332,7 +1378,13 @@ extension ProductVariantModelPatterns on ProductVariantModel {
             @IntOrNullJson() @JsonKey(name: 'weight_grams') int? weightGrams,
             @StringOrNullJson() @JsonKey(name: 'image_url') String? imageUrl,
             @BoolJson() @JsonKey(name: 'is_active') bool isActive,
-            @IntOrNullJson() int? stock)
+            @IntOrNullJson() int? stock,
+            @StringOrNullJson()
+            @JsonKey(name: 'warehouse_city')
+            String? warehouseCity,
+            @StringOrNullJson()
+            @JsonKey(name: 'warehouse_province')
+            String? warehouseProvince)
         $default,
   ) {
     final _that = this;
@@ -1347,7 +1399,9 @@ extension ProductVariantModelPatterns on ProductVariantModel {
             _that.weightGrams,
             _that.imageUrl,
             _that.isActive,
-            _that.stock);
+            _that.stock,
+            _that.warehouseCity,
+            _that.warehouseProvince);
       case _:
         throw StateError('Unexpected subclass');
     }
@@ -1378,7 +1432,13 @@ extension ProductVariantModelPatterns on ProductVariantModel {
             @IntOrNullJson() @JsonKey(name: 'weight_grams') int? weightGrams,
             @StringOrNullJson() @JsonKey(name: 'image_url') String? imageUrl,
             @BoolJson() @JsonKey(name: 'is_active') bool isActive,
-            @IntOrNullJson() int? stock)?
+            @IntOrNullJson() int? stock,
+            @StringOrNullJson()
+            @JsonKey(name: 'warehouse_city')
+            String? warehouseCity,
+            @StringOrNullJson()
+            @JsonKey(name: 'warehouse_province')
+            String? warehouseProvince)?
         $default,
   ) {
     final _that = this;
@@ -1393,7 +1453,9 @@ extension ProductVariantModelPatterns on ProductVariantModel {
             _that.weightGrams,
             _that.imageUrl,
             _that.isActive,
-            _that.stock);
+            _that.stock,
+            _that.warehouseCity,
+            _that.warehouseProvince);
       case _:
         return null;
     }
@@ -1414,7 +1476,11 @@ class _ProductVariantModel extends ProductVariantModel {
       @IntOrNullJson() @JsonKey(name: 'weight_grams') this.weightGrams,
       @StringOrNullJson() @JsonKey(name: 'image_url') this.imageUrl,
       @BoolJson() @JsonKey(name: 'is_active') this.isActive = true,
-      @IntOrNullJson() this.stock})
+      @IntOrNullJson() this.stock,
+      @StringOrNullJson() @JsonKey(name: 'warehouse_city') this.warehouseCity,
+      @StringOrNullJson()
+      @JsonKey(name: 'warehouse_province')
+      this.warehouseProvince})
       : _variantOptions = variantOptions,
         super._();
   factory _ProductVariantModel.fromJson(Map<String, dynamic> json) =>
@@ -1475,6 +1541,24 @@ class _ProductVariantModel extends ProductVariantModel {
   @IntOrNullJson()
   final int? stock;
 
+  /// Lokasi gudang yang akan mengirim varian ini — ditambahkan backend pada
+  /// 15 September 2026 bersama endpoint `shipping-estimate`.
+  ///
+  /// Dipakai menampilkan "Dikirim dari …" di halaman detail tanpa memanggil
+  /// endpoint apa pun. `null` untuk varian yang tidak punya stok di gudang
+  /// mana pun.
+  ///
+  /// ⚠️ Belum terdokumentasi di `docs/18-frontend-integration-guide.md` §8
+  /// walau servernya sudah mengirimkannya.
+  @override
+  @StringOrNullJson()
+  @JsonKey(name: 'warehouse_city')
+  final String? warehouseCity;
+  @override
+  @StringOrNullJson()
+  @JsonKey(name: 'warehouse_province')
+  final String? warehouseProvince;
+
   /// Create a copy of ProductVariantModel
   /// with the given fields replaced by the non-null parameter values.
   @override
@@ -1509,7 +1593,11 @@ class _ProductVariantModel extends ProductVariantModel {
                 other.imageUrl == imageUrl) &&
             (identical(other.isActive, isActive) ||
                 other.isActive == isActive) &&
-            (identical(other.stock, stock) || other.stock == stock));
+            (identical(other.stock, stock) || other.stock == stock) &&
+            (identical(other.warehouseCity, warehouseCity) ||
+                other.warehouseCity == warehouseCity) &&
+            (identical(other.warehouseProvince, warehouseProvince) ||
+                other.warehouseProvince == warehouseProvince));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -1524,11 +1612,13 @@ class _ProductVariantModel extends ProductVariantModel {
       weightGrams,
       imageUrl,
       isActive,
-      stock);
+      stock,
+      warehouseCity,
+      warehouseProvince);
 
   @override
   String toString() {
-    return 'ProductVariantModel(id: $id, productId: $productId, sku: $sku, variantOptions: $variantOptions, price: $price, weightGrams: $weightGrams, imageUrl: $imageUrl, isActive: $isActive, stock: $stock)';
+    return 'ProductVariantModel(id: $id, productId: $productId, sku: $sku, variantOptions: $variantOptions, price: $price, weightGrams: $weightGrams, imageUrl: $imageUrl, isActive: $isActive, stock: $stock, warehouseCity: $warehouseCity, warehouseProvince: $warehouseProvince)';
   }
 }
 
@@ -1551,7 +1641,13 @@ abstract mixin class _$ProductVariantModelCopyWith<$Res>
       @IntOrNullJson() @JsonKey(name: 'weight_grams') int? weightGrams,
       @StringOrNullJson() @JsonKey(name: 'image_url') String? imageUrl,
       @BoolJson() @JsonKey(name: 'is_active') bool isActive,
-      @IntOrNullJson() int? stock});
+      @IntOrNullJson() int? stock,
+      @StringOrNullJson()
+      @JsonKey(name: 'warehouse_city')
+      String? warehouseCity,
+      @StringOrNullJson()
+      @JsonKey(name: 'warehouse_province')
+      String? warehouseProvince});
 }
 
 /// @nodoc
@@ -1576,6 +1672,8 @@ class __$ProductVariantModelCopyWithImpl<$Res>
     Object? imageUrl = freezed,
     Object? isActive = null,
     Object? stock = freezed,
+    Object? warehouseCity = freezed,
+    Object? warehouseProvince = freezed,
   }) {
     return _then(_ProductVariantModel(
       id: null == id
@@ -1614,6 +1712,14 @@ class __$ProductVariantModelCopyWithImpl<$Res>
           ? _self.stock
           : stock // ignore: cast_nullable_to_non_nullable
               as int?,
+      warehouseCity: freezed == warehouseCity
+          ? _self.warehouseCity
+          : warehouseCity // ignore: cast_nullable_to_non_nullable
+              as String?,
+      warehouseProvince: freezed == warehouseProvince
+          ? _self.warehouseProvince
+          : warehouseProvince // ignore: cast_nullable_to_non_nullable
+              as String?,
     ));
   }
 }

@@ -137,7 +137,9 @@ class _Loaded extends StatelessWidget {
                     ),
                   ),
                 ],
-                if (product.couriers.isNotEmpty) ...[
+                if (product.couriers.isNotEmpty ||
+                    (state.selectedVariant?.shippingOrigin ?? '')
+                        .isNotEmpty) ...[
                   24.sbh,
                   Text(
                     'Pengiriman',
@@ -146,6 +148,28 @@ class _Loaded extends StatelessWidget {
                     ),
                   ),
                   8.sbh,
+                  if ((state.selectedVariant?.shippingOrigin ?? '')
+                      .isNotEmpty) ...[
+                    Row(
+                      children: [
+                        Icon(Icons.local_shipping_outlined,
+                            size: 16,
+                            color: dark ? kDarkThirdColor : kLightThirdColor),
+                        6.sbw,
+                        Expanded(
+                          child: Text(
+                            // Lokasi gudang datang langsung di detail produk,
+                            // jadi tidak perlu memanggil endpoint estimasi.
+                            'Dikirim dari ${state.selectedVariant!.shippingOrigin}',
+                            style: AppStyles.styleRegular12(context).copyWith(
+                              color: dark ? kDarkThirdColor : kLightThirdColor,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    8.sbh,
+                  ],
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,

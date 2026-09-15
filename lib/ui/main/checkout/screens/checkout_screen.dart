@@ -458,10 +458,40 @@ class _StoreShipping extends StatelessWidget {
         ),
         8.sbh,
         if (options.isEmpty)
-          Text(
-            'Tidak ada opsi pengiriman untuk toko ini.',
-            style: AppStyles.styleRegular12(context)
-                .copyWith(color: kErrorColor),
+          // Sejak 15 September 2026 opsi kurir disaring menurut `store_couriers`
+          // milik toko, jadi daftar kosong bukan lagi kasus mustahil. Tanpa
+          // jalan keluar, user terjebak: tombol Bayar mati selamanya karena
+          // konfirmasi menuntut setiap toko punya kurir, sementara barang toko
+          // itu tidak bisa dilepas dari dalam layar checkout.
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Toko ini tidak melayani pengiriman ke alamat tujuan.',
+                style: AppStyles.styleRegular12(context)
+                    .copyWith(color: kErrorColor),
+              ),
+              4.sbh,
+              Text(
+                'Batalkan checkout, lalu hapus atau lepas centang barang toko '
+                'ini di keranjang.',
+                style: AppStyles.styleRegular12(context).copyWith(
+                  color: dark ? kDarkThirdColor : kLightThirdColor,
+                ),
+              ),
+              4.sbh,
+              Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: TextButton.icon(
+                  onPressed: () async {
+                    await CheckoutCubit.get(context).cancel();
+                    if (context.mounted) Navigator.of(context).maybePop();
+                  },
+                  icon: const Icon(Icons.arrow_back),
+                  label: const Text('Kembali ke keranjang'),
+                ),
+              ),
+            ],
           )
         else
           RadioGroup<String>(

@@ -145,12 +145,33 @@ abstract class ProductVariantModel with _$ProductVariantModel {
     /// Stok varian ini lintas gudang — **integer asli**, seperti
     /// `ProductModel.stock`.
     @IntOrNullJson() int? stock,
+
+    /// Lokasi gudang yang akan mengirim varian ini — ditambahkan backend pada
+    /// 15 September 2026 bersama endpoint `shipping-estimate`.
+    ///
+    /// Dipakai menampilkan "Dikirim dari …" di halaman detail tanpa memanggil
+    /// endpoint apa pun. `null` untuk varian yang tidak punya stok di gudang
+    /// mana pun.
+    ///
+    /// ⚠️ Belum terdokumentasi di `docs/18-frontend-integration-guide.md` §8
+    /// walau servernya sudah mengirimkannya.
+    @StringOrNullJson() @JsonKey(name: 'warehouse_city') String? warehouseCity,
+    @StringOrNullJson() @JsonKey(name: 'warehouse_province')
+    String? warehouseProvince,
   }) = _ProductVariantModel;
 
   factory ProductVariantModel.fromJson(Map<String, dynamic> json) =>
       _$ProductVariantModelFromJson(json);
 
   bool get isOutOfStock => stock != null && stock! <= 0;
+
+  /// "Banda Aceh, Aceh" — kosong kalau server tidak mengirim lokasinya.
+  String get shippingOrigin {
+    final parts = [warehouseCity, warehouseProvince]
+        .whereType<String>()
+        .where((value) => value.trim().isNotEmpty);
+    return parts.join(', ');
+  }
 
   /// Label opsi yang layak ditampilkan, mis. "Hitam" atau "Hitam · L".
   ///

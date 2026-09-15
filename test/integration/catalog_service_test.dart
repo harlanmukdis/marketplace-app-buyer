@@ -127,6 +127,15 @@ void main() {
       expect(detail.variants.first.stock, isA<int>());
     });
 
+    test('varian membawa lokasi gudang pengirim', () async {
+      // Ditambahkan backend bersama endpoint shipping-estimate. Dipakai
+      // menampilkan "Dikirim dari …" tanpa memanggil endpoint apa pun.
+      final withOrigin =
+          detail.variants.where((v) => v.shippingOrigin.isNotEmpty);
+      expect(withOrigin, isNotEmpty,
+          reason: 'produk berstok harus punya gudang asal');
+    });
+
     test('cukup untuk merender halaman detail tanpa panggilan susulan',
         () async {
       expect(detail.name, isNotEmpty);

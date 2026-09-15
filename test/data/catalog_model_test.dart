@@ -198,6 +198,30 @@ void main() {
     });
   });
 
+  group('ProductVariantModel.shippingOrigin', () {
+    test('lokasi gudang digabung jadi satu baris', () {
+      // Field ditambahkan backend 15 September 2026; belum terdokumentasi di
+      // panduan FE walau servernya sudah mengirimkannya.
+      final variant = ProductVariantModel.fromJson(const {
+        'id': '1',
+        'warehouse_city': 'Banda Aceh',
+        'warehouse_province': 'Aceh',
+      });
+      expect(variant.shippingOrigin, 'Banda Aceh, Aceh');
+    });
+
+    test('varian tanpa stok di gudang mana pun tidak punya asal kirim', () {
+      final variant = ProductVariantModel.fromJson(const {'id': '1'});
+      expect(variant.shippingOrigin, isEmpty);
+    });
+
+    test('hanya kota yang terisi tetap menghasilkan baris yang wajar', () {
+      final variant = ProductVariantModel.fromJson(
+          const {'id': '1', 'warehouse_city': 'Bandung'});
+      expect(variant.shippingOrigin, 'Bandung');
+    });
+  });
+
   group('ProductFacets', () {
     test('rating memakai `count` integer, category memakai `cnt` string', () {
       // Dua bentuk berbeda dalam satu blok meta — ini yang bikin satu parser
