@@ -81,6 +81,15 @@ String? _shoppingMessage(String code) {
 
     case ApiErrorCode.orderNotFound:
       return 'Pesanan tidak ditemukan.';
+    case ApiErrorCode.productNotFound:
+      return 'Produk tidak ditemukan.';
+
+    // Server memakai kode yang sama untuk "order item tidak ada" dan "pesanan
+    // belum selesai". Penyebab yang jauh lebih sering adalah yang kedua, jadi
+    // itu yang disebut — menulis "tidak ditemukan" saja akan membuat user
+    // mengira pesanannya hilang.
+    case ApiErrorCode.orderItemNotFound:
+      return 'Ulasan hanya bisa dikirim untuk pesanan yang sudah selesai.';
     case ApiErrorCode.paymentNotFound:
       return 'Transaksi pembayaran tidak ditemukan.';
     case ApiErrorCode.searchUnavailable:

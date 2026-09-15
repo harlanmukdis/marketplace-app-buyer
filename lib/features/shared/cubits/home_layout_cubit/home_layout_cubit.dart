@@ -2,9 +2,9 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/utils/local_network.dart';
-import '../../../favorites/favorites_view.dart';
 import 'package:marketplace_app_member/ui/main/catalog/screens/catalog_home_screen.dart';
 import 'package:marketplace_app_member/ui/main/cart/screens/cart_screen.dart';
+import 'package:marketplace_app_member/ui/main/wishlist/screens/wishlist_screen.dart';
 import '../../../profile/presentaion/views/profile_view.dart';
 import '../../../trending/trending_view.dart';
 
@@ -27,7 +27,9 @@ class HomeLayoutCubit extends Cubit<HomeLayoutState> {
     // di HomePageCubit, tanpa menyentuh backend.
     const CatalogHomeScreen(),
     const TrendingView(),
-    const FavoritesView(),
+    // Wishlist versi API. `FavoritesView` kit tidak dipakai: isinya daftar
+    // produk hardcoded, sementara wishlist di sini tersimpan di server.
+    const WishlistScreen(),
     // Keranjang versi API. `MyCart` milik kit tidak dipakai: isinya daftar
     // hardcoded bertotal dolar, sedangkan keranjang di sini dikelompokkan per
     // toko dan tiap baris merujuk `product_variant_id`.

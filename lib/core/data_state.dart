@@ -252,6 +252,13 @@ abstract final class ApiErrorCode {
   static const orderNotFound = 'ORDER_NOT_FOUND';
   static const paymentNotFound = 'PAYMENT_NOT_FOUND';
   static const categoryNotFound = 'CATEGORY_NOT_FOUND';
+  static const productNotFound = 'PRODUCT_NOT_FOUND';
+
+  /// Dibalas `POST /order-items/{id}/review` saat pesanannya **belum
+  /// `completed`** — bukan hanya saat order item-nya benar-benar tidak ada.
+  /// Server tidak membedakan keduanya, jadi pesannya harus menyebut syarat
+  /// itu; "tidak ditemukan" akan terbaca user sebagai pesanannya hilang.
+  static const orderItemNotFound = 'ORDER_ITEM_NOT_FOUND';
 
   /// `/search/*` mati karena Elasticsearch tidak jalan. Keadaan normal di
   /// dev — layar seharusnya beralih ke `GET /products?q=`.

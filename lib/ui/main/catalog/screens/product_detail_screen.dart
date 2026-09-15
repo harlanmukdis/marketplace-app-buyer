@@ -8,6 +8,8 @@ import 'package:marketplace_app_member/core/utils/constant.dart';
 import 'package:marketplace_app_member/core/utils/extensions.dart';
 import 'package:marketplace_app_member/ui/main/cart/cubit/cart_cubit.dart';
 import 'package:marketplace_app_member/ui/main/catalog/cubit/product_detail_cubit.dart';
+import 'package:marketplace_app_member/ui/main/review/widgets/product_reviews_section.dart';
+import 'package:marketplace_app_member/ui/main/wishlist/cubit/wishlist_cubit.dart';
 import 'package:marketplace_app_member/util/error_message.dart';
 import 'package:marketplace_app_member/util/format_helper.dart';
 
@@ -30,14 +32,19 @@ class ProductDetailScreen extends StatelessWidget {
       providers: [
         BlocProvider(create: (_) => ProductDetailCubit(productId)..load()),
         BlocProvider(create: (_) => CartCubit()),
+        // Wishlist dimuat penuh supaya tombol hati tahu produk ini sudah
+        // tersimpan atau belum — tidak ada endpoint "cek satu produk".
+        BlocProvider(create: (_) => WishlistCubit()..load()),
       ],
-      child: const _ProductDetailBody(),
+      child: _ProductDetailBody(productId: productId),
     );
   }
 }
 
 class _ProductDetailBody extends StatelessWidget {
-  const _ProductDetailBody();
+  const _ProductDetailBody({required this.productId});
+
+  final int productId;
 
   @override
   Widget build(BuildContext context) {
@@ -45,7 +52,11 @@ class _ProductDetailBody extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: dark ? kDarkColor : kWhiteColor,
-      appBar: customAppBar(context, 'Detail Produk'),
+      appBar: customAppBar(
+        context,
+        'Detail Produk',
+        action: _WishlistButton(productId: productId),
+      ),
       body: BlocBuilder<ProductDetailCubit, ProductDetailState>(
         builder: (context, state) {
           return switch (state) {
@@ -144,6 +155,8 @@ class _Loaded extends StatelessWidget {
                     ],
                   ),
                 ],
+                24.sbh,
+                ProductReviewsSection(productId: product.id),
                 32.sbh,
               ],
             ),
@@ -450,6 +463,51 @@ class _BuyBar extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Tombol simpan ke wishlist.
+///
+/// Tidak ada endpoint "apakah produk ini di wishlist", jadi statusnya dibaca
+/// dari daftar penuh yang dimuat saat halaman dibuka. Selama daftar itu belum
+/// siap, tombolnya ditampilkan non-aktif alih-alih menebak.
+class _WishlistButton extends StatelessWidget {
+  const _WishlistButton({required this.productId});
+
+  final int productId;
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocConsumer<WishlistCubit, WishlistState>(
+      listenWhen: (previous, current) =>
+          current is WishlistReady && current.actionError != null,
+      listener: (context, state) {
+        final error = (state as WishlistReady).actionError!;
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            SnackBar(content: Text(errorMessageFor(context, error))),
+          );
+        WishlistCubit.get(context).clearActionError();
+      },
+      builder: (context, state) {
+        final ready = state is WishlistReady;
+        final saved = state.contains(productId);
+        final busy =
+            ready && state.mutatingProductIds.contains(productId);
+
+        return IconButton(
+          tooltip: saved ? 'Hapus dari wishlist' : 'Simpan ke wishlist',
+          onPressed: !ready || busy
+              ? null
+              : () => WishlistCubit.get(context).toggle(productId),
+          icon: Icon(
+            saved ? Icons.favorite : Icons.favorite_border,
+            color: saved ? kDeleteColor : null,
+          ),
+        );
+      },
     );
   }
 }

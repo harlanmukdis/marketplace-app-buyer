@@ -27,7 +27,7 @@ Buyer app for a **multi-vendor marketplace**, built on a purchased Flutter UI ki
 flutter pub get                       # install dependencies
 flutter run                           # run on connected device/emulator
 flutter analyze                       # static analysis (flutter_lints 4.0.0 via analysis_options.yaml)
-flutter test                          # run all tests (234; all pass)
+flutter test                          # run all tests (271; all pass)
 flutter test test/integration --concurrency=1   # integrasi: butuh backend hidup, WAJIB serial
 flutter test test/data                # one directory
 flutter test test/data/auth_repository_impl_test.dart                       # single file
@@ -57,7 +57,7 @@ Note: `build_runner` 2.15 **removed `--delete-conflicting-outputs`** — passing
 
 | tree | data source | safe to build on? |
 |---|---|---|
-| `lib/ui/main/{auth,catalog,cart,address,checkout,order,payment}/` | marketplace-api, live | **yes** — `catalog` is the reference implementation |
+| `lib/ui/main/{auth,catalog,cart,address,checkout,order,payment,wishlist,review}/` | marketplace-api, live | **yes** — `catalog` is the reference implementation |
 | `lib/features/` (the UI kit's sample tree) | hardcoded lists inside cubits (`HomePageCubit.productsTShirt`) | as sample UI only |
 
 The third tree that used to sit between them — a complete data + UI stack written against the old Markas backend — **was deleted on 14 September 2026**. See "~~The dead layer~~" in Part 2 for what went and the endpoint translation table that survived it.
@@ -215,10 +215,11 @@ Current state: `en` and `ar` are complete (284 keys) and selectable. `fr` appear
 - **Cart domain** — `lib/core/…/cart/` + `lib/ui/main/cart/`; menegakkan pembatasan kuantitas yang tidak dilakukan server, lihat "Domain keranjang" di bawah
 - **Address + Checkout domain** — `lib/core/…/{address,checkout}/` + `lib/ui/main/{address,checkout}/`; memuat jalan memutar untuk tiga bug server, lihat "Domain alamat & checkout" di bawah
 - **Order + Payment domain** — `lib/core/…/{order,payment}/` + `lib/ui/main/{order,payment}/`; melengkapi alur beli, lihat "Domain pesanan & pembayaran" di bawah
+- **Wishlist + Review domain** — `lib/core/…/{wishlist,review}/` + `lib/ui/main/{wishlist,review}/`; lihat "Domain wishlist & ulasan" di bawah
 - `lib/util/error_message.dart` — maps `DataError.code` to localized copy; **never** shows `error.message` to users
-- Tests: `test/util/` (17, murni), `test/data/` (82, fake service/store + parsing JSON asli), `test/ui/` (63, fake repository), `test/integration/` (72, butuh backend hidup — **jalankan `--concurrency=1`**) — **234 total, semuanya lulus**
+- Tests: `test/util/` (17, murni), `test/data/` (97, fake service/store + parsing JSON asli), `test/ui/` (75, fake repository), `test/integration/` (82, butuh backend hidup — **jalankan `--concurrency=1`**) — **271 total, semuanya lulus**
 
-Still absent: Firebase and `lib/firebase_options.dart`; domain wallet, wishlist, review, chat, dan notifikasi.
+Still absent: Firebase and `lib/firebase_options.dart`; domain wallet, chat, dan notifikasi.
 
 ### ~~The dead layer~~ — sudah dihapus (14 September 2026)
 
@@ -319,7 +320,9 @@ Yang paling menjebak, karena **balasan `PATCH .../shipping` mengirim field berna
 - **Sesi yang dibatalkan berstatus `expired`**, bukan `cancelled` — sama dengan sesi yang lewat tenggat.
 - **`order_ids` berupa array**: keranjang multi-toko pecah jadi satu order per toko, tapi tetap satu `payment_transaction_id`.
 - **Konfirmasi kedua dibalas `422 CHECKOUT_CONFIRM_FAILED`.** Itu satu-satunya perlindungan yang ada — `Idempotency-Key` belum diimplementasikan backend, jadi **jangan pernah mengulang `confirm` secara otomatis**. `CheckoutCubit` juga menolak panggilan kedua selagi yang pertama berjalan.
-- **Checkout menghapus baris tercentang dari keranjang**, dan hanya itu — baris yang tidak dicentang tetap tinggal, karena memang tidak ikut ke sesi. Karena itu layar keranjang membaca ulang saat kembali dari checkout alih-alih mengosongkan sendiri. *(Catatan sebelumnya di file ini menyebut keranjang tidak dikosongkan sama sekali; itu salah baca dari percobaan yang keranjangnya masih menyisakan baris tak tercentang.)*
+- **Checkout menghapus baris tercentang dari keranjang**, dan hanya itu — baris yang tidak dicentang tetap tinggal, karena memang tidak ikut ke sesi. Karena itu layar keranjang membaca ulang saat kembali dari checkout alih-alih mengosongkan sendiri.
+
+  Ini **perilaku baru sejak 15 September 2026** (commit backend `08ae0e7`, "Clear checked-out cart items after checkout confirm"). Sebelum itu barang yang sudah dipesan benar-benar tertinggal di keranjang dan bisa di-checkout ulang — double order sungguhan, seperti ditulis sendiri di pesan commit-nya. Catatan di file ini sempat menyebut temuan lama itu sebagai salah baca; **bukan** — temuannya benar, backend-nya yang berubah di antara dua kali pengujian.
 
 #### Sesi checkout menahan sumber daya di server
 
@@ -357,6 +360,38 @@ Field `payment_method` di body `POST /payments/{txId}/pay` **diabaikan server** 
 - Item order memakai **snapshot** nama, harga, dan opsi varian saat order dibuat — pesanan lama tetap benar walau produknya berubah.
 - `GET /orders/{id}` untuk pesanan orang lain dibalas **403 `PERMISSION_DENIED`**, bukan 404.
 - `GET /orders/{id}/tracking` membalas `data: null` selama belum dikirim. Itu normal, bukan error.
+
+### Domain wishlist & ulasan
+
+Dua domain di luar alur beli, ditulis setelahnya. Keduanya kecil, tapi masing-masing membawa satu jebakan.
+
+#### 🔴 `DELETE /wishlist/items/{id}` memakai **product_id**, bukan `wishlist_item_id`
+
+Baris wishlist membawa **dua id sekaligus** (`wishlist_item_id` dan `product_id`), dan yang diterima endpoint hapus adalah yang kedua. Diuji dengan keduanya sengaja dibuat berbeda. Mengirim id yang salah **tetap dibalas `200`** — jadi kesalahannya tidak terlihat sampai user sadar produk lain yang hilang.
+
+Perilaku lain: menambah produk yang sudah ada **tidak menggandakan** barisnya (tombol simpan aman ditekan berkali-kali), menghapus produk yang tidak ada tetap `200`, dan satu-satunya validasi sungguhan adalah `404 PRODUCT_NOT_FOUND`.
+
+Catatan kecil yang berguna: **wishlist membawa `image_url`**, padahal `GET /products` tidak membawa gambar sama sekali.
+
+#### 🔴 Ulasan hanya bisa dikirim untuk pesanan berstatus `completed`
+
+`POST /order-items/{id}/review` mencari order item lewat `orders.status = 'completed'`. Status lain dibalas **`404 ORDER_ITEM_NOT_FOUND`**, kode yang sama dengan order item yang benar-benar tidak ada. Karena itu `error_message.dart` menerjemahkannya jadi "Ulasan hanya bisa dikirim untuk pesanan yang sudah selesai" — menulis "tidak ditemukan" akan terbaca user sebagai pesanannya hilang.
+
+Konsekuensi untuk pengujian: **alur ulas tidak bisa dijalankan ujung ke ujung dari app member saja**, karena `pending → … → delivered` butuh aksi penjual. Test integrasi hanya memastikan penolakannya, bukan pembuatannya.
+
+#### Yang TIDAK dikirim daftar ulasan, walau tabelnya ada
+
+`list_for_product` hanya `SELECT *` dari tabel `reviews`, jadi responsnya **tidak membawa**:
+
+- **nama pengulas** — hanya `user_id`, dan tidak ada endpoint publik untuk menukarnya jadi nama. `ReviewModel.displayName` karena itu selalu `'Pembeli'`, dan `is_anonymous` praktis tidak berpengaruh apa pun.
+- **foto/video** — tabel `review_media` ada dan `POST` menerimanya, tapi tidak ikut di daftar.
+- **balasan penjual** — tabel `review_replies` dan endpoint `reply` ada, isinya juga tidak ikut.
+
+#### Hal-hal yang di sini justru berjalan benar
+
+Berbeda dari `/orders`, endpoint ulasan **mengirim `meta` lengkap** (`page`/`per_page`/`total`) sehingga paginasi bisa **dihitung**, bukan ditebak — dan **filter `?rating=` benar-benar bekerja**. Histogramnya dihitung server untuk **seluruh produk**, bukan untuk hasil yang tersaring, jadi barnya tetap tampil saat filter menghasilkan nol ulasan.
+
+Jangan tertukar: `meta.rating_histogram` menghitung **ulasan per bintang persis**; `meta.facets.rating` di `GET /products` menghitung **produk per ambang rating** dan bersifat kumulatif.
 
 #### ⚠️ Test integrasi harus dijalankan serial
 
@@ -516,7 +551,7 @@ Derived from the gap between Part 1 and Part 2. Steps 0-5 are done and the auth 
 4. ~~Add `lib/core/data_state.dart` with the `DataState<T>` union.~~ **Done** — see deviation 1 above.
 5. ~~Build `lib/di/{injector,injector_service,injector_repository}.dart` and call `initialize()` before `runApp`.~~ **Done**; both registries are populated, but nine of the ten service/repository pairs point at the dead backend.
 6. ~~Bersihkan lapisan mati warisan Markas.~~ **Selesai** — 97 berkas dihapus; hanya `RepositoryGuard` yang dipertahankan.
-7. **In progress.** Tulis ulang tiap domain menembak marketplace-api, satu per satu, berpedoman pada "Kontrak sisi member" dan respons sungguhan — jangan `docs/03-api-documentation.md`. **Alur beli selesai seluruhnya**: katalog → keranjang → alamat → checkout → pembayaran → pesanan. Katalog jadi rujukan bentuk domain; checkout jadi rujukan untuk domain yang menahan sumber daya di server. Sisa yang belum ditulis, seluruhnya di luar alur beli: **wishlist** (`/wishlist/items`), **review** (`POST /order-items/{id}/review`, `/products/{id}/reviews`), **wallet** (`/wallet`, `/wallet/topup`), **notifikasi** (`/me/notifications`), dan **chat** (`/chat/conversations`).
+7. **In progress.** Tulis ulang tiap domain menembak marketplace-api, satu per satu, berpedoman pada "Kontrak sisi member" dan respons sungguhan — jangan `docs/03-api-documentation.md`. **Alur beli selesai seluruhnya**: katalog → keranjang → alamat → checkout → pembayaran → pesanan. Katalog jadi rujukan bentuk domain; checkout jadi rujukan untuk domain yang menahan sumber daya di server. **Wishlist dan ulasan juga selesai.** Sisa yang belum ditulis: **wallet** (`/wallet`, `/wallet/topup`, `/wallet/withdraw`), **notifikasi** (`/me/notifications`), **chat** (`/chat/conversations`, ada polling di `/poll`), serta modul reward (`/me/points`, `/me/coins`, `/me/loyalty`) dan home CMS (`/home/layout`, masih kosong di server).
 8. **In progress** (auth done). Convert the UI kit's marker states to `@freezed` unions and switch its cubits from public mutable fields to emitted state data — for whatever of `lib/features/` survives step 10.
 9. Split [app_routes.dart](lib/core/utils/app_routes.dart) into per-domain route files under `lib/config/route/`.
 10. Decide the fate of `lib/features/` vs `lib/ui/` — the target names the presentation root `ui/`, which is a rename of the existing tree, not a second one.
