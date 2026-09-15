@@ -39,14 +39,56 @@ String errorMessageFor(BuildContext context, DataError error) {
     case ApiErrorCode.refreshRevoked:
       return l.sessionExpired;
 
-    // Bukan konstanta di ApiErrorCode karena hanya dipakai endpoint register.
-    case 'PHONE_TAKEN':
+    case ApiErrorCode.phoneTaken:
       return l.phoneAlreadyRegistered;
-    case 'EMAIL_TAKEN':
+    case ApiErrorCode.emailTaken:
       return l.emailAlreadyRegistered;
   }
 
+  // --- belanja ---
+  //
+  // Ditulis langsung dalam bahasa Indonesia, bukan lewat `S.of(context)`,
+  // karena kunci l10n untuk kode-kode ini belum ada dan seluruh layar yang
+  // menampilkannya (katalog, keranjang, checkout) memang berbahasa Indonesia.
+  // Pindahkan ke `.arb` begitu layar-layar itu ikut dilokalisasi — jangan
+  // menambah kunci baru hanya untuk file ini.
+  //
+  // Yang tidak boleh dilakukan tetap sama: **jangan** menampilkan
+  // `error.message` dari server, yang isinya teks untuk developer.
+  final shopping = _shoppingMessage(error.code);
+  if (shopping != null) return shopping;
+
   return l.somethingWentWrong;
+}
+
+String? _shoppingMessage(String code) {
+  switch (code) {
+    case ApiErrorCode.variantNotFound:
+      return 'Varian produk ini sudah tidak tersedia.';
+    case ApiErrorCode.stockInsufficient:
+      return 'Stok tidak mencukupi. Kurangi jumlahnya lalu coba lagi.';
+    case ApiErrorCode.voucherInvalid:
+      return 'Kode voucher tidak berlaku.';
+    case ApiErrorCode.sessionNotFound:
+      return 'Sesi checkout sudah tidak berlaku. Ulangi dari keranjang.';
+
+    // Penyebab tersering: tenggat reservasi 15 menit terlewat, atau sesi
+    // sudah dikonfirmasi sebelumnya. Keduanya berujung pada tindakan yang
+    // sama, jadi pesannya digabung.
+    case ApiErrorCode.checkoutConfirmFailed:
+      return 'Checkout tidak bisa dilanjutkan — sesinya mungkin sudah '
+          'kedaluwarsa atau sudah diproses. Ulangi dari keranjang.';
+
+    case ApiErrorCode.orderNotFound:
+      return 'Pesanan tidak ditemukan.';
+    case ApiErrorCode.paymentNotFound:
+      return 'Transaksi pembayaran tidak ditemukan.';
+    case ApiErrorCode.searchUnavailable:
+      return 'Pencarian sedang tidak tersedia. Coba jelajahi lewat kategori.';
+    case ApiErrorCode.insufficientBalance:
+      return 'Saldo tidak mencukupi.';
+  }
+  return null;
 }
 
 /// Detail teknis untuk log dan laporan bug — **jangan** ditampilkan ke user.

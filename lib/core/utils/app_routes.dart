@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:marketplace_app_member/ui/main/auth/screens/login_screen.dart';
 import 'package:marketplace_app_member/ui/main/catalog/screens/product_detail_screen.dart';
+import 'package:marketplace_app_member/ui/main/checkout/screens/checkout_screen.dart';
 import 'package:marketplace_app_member/ui/main/auth/screens/register_screen.dart';
 import '../../features/auth/presentation/views/reset_password_view.dart';
 import '../../features/auth/presentation/views/welcome_view.dart';
@@ -53,10 +54,16 @@ class AppRoutes {
   /// Membangun path detail untuk sebuah produk.
   static String productDetailPath(int productId) => '/product/$productId';
 
-  // Route ber-API untuk checkout, daftar/detail pesanan, dan dompet dihapus
-  // bersama lapisan mati warisan backend Markas. Tambahkan kembali satu per
-  // satu saat domainnya ditulis ulang menembak marketplace-api — jangan
-  // menyisakan konstanta yang tidak menunjuk ke layar mana pun.
+  /// Checkout ber-API.
+  ///
+  /// Dinamai `checkoutSession` karena `AppRoutes.checkout` milik kit sudah
+  /// terpakai `CheckoutView` lama yang belum dimigrasikan. Membuka rute ini
+  /// **mereservasi stok 15 menit**, dan meninggalkannya membatalkan sesinya.
+  static const String checkoutSession = '/checkoutSession';
+
+  // Route untuk daftar/detail pesanan dan dompet masih dihapus bersama lapisan
+  // mati warisan Markas. Tambahkan kembali saat domainnya ditulis ulang —
+  // jangan menyisakan konstanta yang tidak menunjuk ke layar mana pun.
 
   static const String homeLayout = '/homeLayout';
   static const String productDetails = '/productDetails';
@@ -124,6 +131,15 @@ final GoRouter router = GoRouter(
         return FadeThroughTransitionPageWrapper(
           transitionKey: state.pageKey,
           page: const ResetPasswordView(),
+        );
+      },
+    ),
+    GoRoute(
+      path: AppRoutes.checkoutSession,
+      pageBuilder: (BuildContext context, GoRouterState state) {
+        return FadeThroughTransitionPageWrapper(
+          transitionKey: state.pageKey,
+          page: const CheckoutScreen(),
         );
       },
     ),

@@ -212,32 +212,50 @@ abstract final class ApiErrorCode {
   static const invalidTransition = 'INVALID_TRANSITION';
   static const validationError = 'VALIDATION_ERROR';
 
-  /// Qty melebihi batas penawaran sampel (ORD-16): maksimal 2 pcs per
-  /// transaksi, berlaku juga untuk pembeli B2B.
-  static const sampleQtyExceeded = 'SAMPLE_QTY_EXCEEDED';
-
-  /// Berat total melebihi kapasitas armada (OPS-01). Muncul di sisi toko,
-  /// tapi ditangani di sini supaya pesannya konsisten.
-  static const fleetPayloadExceeded = 'FLEET_PAYLOAD_EXCEEDED';
-
-  /// Armada terlalu besar untuk akses lokasi (FLD-02).
-  static const fleetAccessBlocked = 'FLEET_ACCESS_BLOCKED';
-
-  /// Saldo dompet kurang untuk membayar order. `details` membawa `balance`
-  /// dan `required`; selisihnya wajib ditampilkan, bukan cuma "saldo kurang".
+  /// Saldo dompet kurang. `details` membawa `balance` dan `required`;
+  /// selisihnya wajib ditampilkan, bukan cuma "saldo kurang".
   static const insufficientBalance = 'INSUFFICIENT_BALANCE';
-
-  /// Voucher: keranjang kosong, atau tokonya tidak ada di keranjang.
-  static const emptyCart = 'EMPTY_CART';
-  static const sellerNotInCart = 'SELLER_NOT_IN_CART';
-
-  /// Voucher sudah menempel di keranjang. **Tidak ada di daftar error brief**
-  /// — ditemukan saat menempel kode yang sama dua kali. Perlu ditangani
-  /// karena `POST /cart/clear` **tidak melepas voucher**: keranjang yang
-  /// sudah dikosongkan tetap membawa vouchernya, jadi kasus ini akan sering
-  /// terjadi, bukan kasus tepi.
-  static const alreadyAttached = 'ALREADY_ATTACHED';
   static const dbError = 'DB_ERROR';
+
+  // --- Kode yang benar-benar diterima dari marketplace-api ---
+  //
+  // Seluruh kode di bawah sudah dilihat langsung di respons server, bukan
+  // disalin dari dokumen. Kode khas backend Markas (SAMPLE_QTY_EXCEEDED,
+  // FLEET_*, ALREADY_ATTACHED, EMPTY_CART, SELLER_NOT_IN_CART) sudah dihapus
+  // bersama lapisan matinya — endpointnya tidak ada lagi.
+
+  /// Registrasi: email atau nomor sudah dipakai. Dibedakan supaya formulir
+  /// bisa menyorot field yang tepat.
+  static const emailTaken = 'EMAIL_TAKEN';
+  static const phoneTaken = 'PHONE_TAKEN';
+
+  /// Token verifikasi email sudah terpakai atau tidak sah.
+  static const invalidToken = 'INVALID_TOKEN';
+
+  /// Varian produk tidak ada — satu-satunya validasi `POST /cart/items`.
+  static const variantNotFound = 'VARIANT_NOT_FOUND';
+
+  /// Voucher tidak berlaku, dari `/vouchers/validate`, `/vouchers/claim`,
+  /// maupun `/cart/apply-voucher`.
+  static const voucherInvalid = 'VOUCHER_INVALID';
+
+  /// Sesi checkout tidak ada atau bukan milik user ini.
+  static const sessionNotFound = 'SESSION_NOT_FOUND';
+
+  /// Sesi checkout tidak dalam keadaan yang bisa dikonfirmasi — mis. sudah
+  /// dikonfirmasi sebelumnya, dibatalkan, atau lewat tenggat reservasi.
+  static const checkoutConfirmFailed = 'CHECKOUT_CONFIRM_FAILED';
+
+  /// Stok tidak mencukupi saat reservasi checkout.
+  static const stockInsufficient = 'STOCK_INSUFFICIENT';
+
+  static const orderNotFound = 'ORDER_NOT_FOUND';
+  static const paymentNotFound = 'PAYMENT_NOT_FOUND';
+  static const categoryNotFound = 'CATEGORY_NOT_FOUND';
+
+  /// `/search/*` mati karena Elasticsearch tidak jalan. Keadaan normal di
+  /// dev — layar seharusnya beralih ke `GET /products?q=`.
+  static const searchUnavailable = 'SEARCH_UNAVAILABLE';
 }
 
 /// Kode yang dibuat app sendiri, untuk kegagalan yang tidak pernah datang dari

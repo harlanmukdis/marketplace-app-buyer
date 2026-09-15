@@ -1,5 +1,11 @@
 import 'package:marketplace_app_member/core/data/datasources/remote/service/auth_service.dart';
+import 'package:marketplace_app_member/core/data/datasources/remote/service/address_service.dart';
 import 'package:marketplace_app_member/core/data/datasources/remote/service/cart_service.dart';
+import 'package:marketplace_app_member/core/data/datasources/remote/service/checkout_service.dart';
+import 'package:marketplace_app_member/core/data/repositories/address_repository_impl.dart';
+import 'package:marketplace_app_member/core/data/repositories/checkout_repository_impl.dart';
+import 'package:marketplace_app_member/core/domain/repositories/address_repository.dart';
+import 'package:marketplace_app_member/core/domain/repositories/checkout_repository.dart';
 import 'package:marketplace_app_member/core/data/datasources/remote/service/catalog_service.dart';
 import 'package:marketplace_app_member/core/data/repositories/cart_repository_impl.dart';
 import 'package:marketplace_app_member/core/domain/repositories/cart_repository.dart';
@@ -52,5 +58,13 @@ void initializeRepository() {
 
   injector.registerLazySingleton<CartRepository>(
     () => CartRepositoryImpl(injector<CartService>()),
+  );
+
+  injector.registerLazySingleton<AddressRepository>(
+    () => AddressRepositoryImpl(injector<AddressService>()),
+  );
+
+  injector.registerLazySingleton<CheckoutRepository>(
+    () => CheckoutRepositoryImpl(injector<CheckoutService>()),
   );
 }

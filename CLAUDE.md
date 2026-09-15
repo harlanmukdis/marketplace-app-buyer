@@ -56,7 +56,7 @@ Note: `build_runner` 2.15 **removed `--delete-conflicting-outputs`** — passing
 
 | tree | data source | safe to build on? |
 |---|---|---|
-| `lib/ui/main/{auth,catalog,cart}/` | marketplace-api, live | **yes** — `catalog` is the reference implementation |
+| `lib/ui/main/{auth,catalog,cart,address,checkout}/` | marketplace-api, live | **yes** — `catalog` is the reference implementation |
 | `lib/features/` (the UI kit's sample tree) | hardcoded lists inside cubits (`HomePageCubit.productsTShirt`) | as sample UI only |
 
 The third tree that used to sit between them — a complete data + UI stack written against the old Markas backend — **was deleted on 14 September 2026**. See "~~The dead layer~~" in Part 2 for what went and the endpoint translation table that survived it.
@@ -212,10 +212,11 @@ Current state: `en` and `ar` are complete (284 keys) and selectable. `fr` appear
 - **Auth domain** — `AuthSessionModel` + `UserModel` (freezed), `AuthService`, `AuthRepository`/`AuthRepositoryImpl`, `AuthCubit`/`AuthState`, and the API-wired `LoginScreen`/`RegisterScreen` under `lib/ui/main/auth/`
 - **Catalog domain** — model, service, repository, cubit, dan layar di bawah `lib/core/…/catalog/` + `lib/ui/main/catalog/`; lihat "Domain katalog" di bawah
 - **Cart domain** — `lib/core/…/cart/` + `lib/ui/main/cart/`; menegakkan pembatasan kuantitas yang tidak dilakukan server, lihat "Domain keranjang" di bawah
+- **Address + Checkout domain** — `lib/core/…/{address,checkout}/` + `lib/ui/main/{address,checkout}/`; memuat jalan memutar untuk tiga bug server, lihat "Domain alamat & checkout" di bawah
 - `lib/util/error_message.dart` — maps `DataError.code` to localized copy; **never** shows `error.message` to users
-- Tests: `test/util/` (17, murni), `test/data/` (43, fake service/store + parsing JSON asli), `test/ui/` (39, fake repository), `test/integration/` (42, butuh backend hidup) — **141 total, semuanya lulus**
+- Tests: `test/util/` (17, murni), `test/data/` (63, fake service/store + parsing JSON asli), `test/ui/` (50, fake repository), `test/integration/` (54, butuh backend hidup) — **184 total, semuanya lulus**
 
-Still absent: Firebase and `lib/firebase_options.dart`; domain checkout, order, payment, wallet, dan wishlist.
+Still absent: Firebase and `lib/firebase_options.dart`; domain order, payment, wallet, dan wishlist.
 
 ### ~~The dead layer~~ — sudah dihapus (14 September 2026)
 
@@ -288,7 +289,41 @@ Bentuk data yang mudah salah ditebak:
 
 Satu-satunya validasi server yang benar-benar ada di endpoint ini: varian tidak dikenal dibalas `404 VARIANT_NOT_FOUND`.
 
-**Yang belum tersambung:** tombol "Checkout" di layar keranjang masih menampilkan snackbar, karena domain checkout belum ditulis. Jangan menyambungkannya sebelum `CheckoutService` ada.
+### Domain alamat & checkout — dan tiga bug server
+
+Ditulis setelah keranjang, dan paling banyak menabrak keanehan server dari semua domain sejauh ini.
+
+#### 🔴 Satu respons checkout memakai DUA zona waktu
+
+Terbukti dua kali ke server: pada sesi yang sama, `created_at: "2026-09-15 07:52:59"` adalah waktu dinding **WIB**, sedangkan `expires_at: "2026-09-15 01:07:59"` adalah **UTC**. Selisihnya tepat 15 menit hanya kalau `expires_at` digeser +7 jam lebih dulu.
+
+`ServerDateTimeJson` memperlakukan semua timestamp sebagai WIB — benar untuk `created_at`, **salah 7 jam untuk `expires_at`**. Memakainya di sana membuat hitung mundur reservasi langsung menampilkan "kedaluwarsa" pada sesi yang baru dibuat. Karena itu ada `ServerUtcDateTimeJson`, dipakai **hanya** untuk tenggat yang dihitung server (`expires_at`, dan nanti `payment_deadline` di order). Jangan menyeragamkannya.
+
+#### 🔴 `PATCH /checkout/sessions/{id}/address` selalu 500
+
+Controllernya membaca body dengan `$this->post('address_id')` pada rute PATCH, sehingga nilainya selalu `null`, server menjalankan `UPDATE … SET shipping_address_id = NULL`, dan foreign key menolaknya. Ketiga encoding (JSON, form, query string) sama-sama gagal. Bandingkan `/shipping` yang memakai `$this->body()` dan bekerja normal.
+
+Akibatnya **tidak ada method untuk itu di `CheckoutService`**, dan ganti alamat dilakukan dengan `cancelSession` lalu `startSession` lagi. Urutannya penting: tanpa membatalkan lebih dulu, stok yang sama tertahan dua kali dan sesi baru bisa gagal karena "habis" oleh sesi user itu sendiri.
+
+#### 🔴 `selected_couriers` tersimpan sebagai string JSON
+
+Yang paling menjebak, karena **balasan `PATCH .../shipping` mengirim field bernama sama sebagai objek sungguhan** — sementara yang tersimpan di sesi berupa string. Tanpa `JsonMapJson`, `GET /checkout/sessions/{id}` melempar `type 'String' is not a subtype of type 'Map<String, dynamic>?'` **persis setelah user memilih kurir**, di tengah alur checkout. Ditemukan hanya karena test integrasi menjalankan alur beli sungguhan, bukan potongan JSON karangan. Berlaku juga untuk `applied_vouchers` dan `cart_snapshot`.
+
+#### Perilaku lain yang dipatok test
+
+- **Alamat tanpa validasi**: `POST /me/addresses` dengan seluruh field kosong dibalas `201` dan tersimpan. Kelengkapan divalidasi `AddressCubit` + formulir; `AddressModel.isComplete` yang jadi acuan, dan checkout hanya menawarkan alamat yang lolos.
+- **Nama field alamat**: `full_address` dan `is_primary`. Nama ala Markas (`address_line`, `district`, `is_default`) membuat server membalas **500 HTML**, bukan `VALIDATION_ERROR`.
+- **Boleh ada beberapa alamat "utama" sekaligus** — menyetel `is_primary` pada alamat kedua tidak melepas tanda pada yang pertama. Karena itu ada `primaryAddressOf` (pemilihan deterministik) dan `AddressRepositoryImpl.setPrimary` yang melepas tanda lama satu per satu.
+- **Sesi yang dibatalkan berstatus `expired`**, bukan `cancelled` — sama dengan sesi yang lewat tenggat.
+- **`order_ids` berupa array**: keranjang multi-toko pecah jadi satu order per toko, tapi tetap satu `payment_transaction_id`.
+- **Konfirmasi kedua dibalas `422 CHECKOUT_CONFIRM_FAILED`.** Itu satu-satunya perlindungan yang ada — `Idempotency-Key` belum diimplementasikan backend, jadi **jangan pernah mengulang `confirm` secara otomatis**. `CheckoutCubit` juga menolak panggilan kedua selagi yang pertama berjalan.
+- **Keranjang TIDAK dikosongkan setelah checkout.** Barang yang sudah dipesan tetap ada di keranjang, jadi layar keranjang membaca ulang saat kembali dari checkout.
+
+#### Sesi checkout menahan sumber daya di server
+
+Membuat sesi mereservasi stok **15 menit**. Karena itu `CheckoutCubit.close()` membatalkan sesi yang belum dikonfirmasi — tanpa itu, stok tertahan sampai tenggat hanya karena user menutup layar. Sesi yang **sudah** dikonfirmasi sengaja tidak dibatalkan (reservasinya sudah jadi order).
+
+**Yang belum tersambung:** layar pembayaran. `POST /payments/{txId}/pay` sudah terverifikasi mengembalikan `qr_string`, tapi domainnya belum ditulis — tombol setelah konfirmasi hanya menutup layar.
 
 ### Kontrak sisi member (diverifikasi ke server, 14 September 2026)
 
@@ -440,7 +475,7 @@ Derived from the gap between Part 1 and Part 2. Steps 0-5 are done and the auth 
 4. ~~Add `lib/core/data_state.dart` with the `DataState<T>` union.~~ **Done** — see deviation 1 above.
 5. ~~Build `lib/di/{injector,injector_service,injector_repository}.dart` and call `initialize()` before `runApp`.~~ **Done**; both registries are populated, but nine of the ten service/repository pairs point at the dead backend.
 6. ~~Bersihkan lapisan mati warisan Markas.~~ **Selesai** — 97 berkas dihapus; hanya `RepositoryGuard` yang dipertahankan.
-7. **In progress.** Tulis ulang tiap domain menembak marketplace-api, satu per satu, berpedoman pada "Kontrak sisi member" dan respons sungguhan — jangan `docs/03-api-documentation.md`. **Katalog dan keranjang selesai**; katalog jadi implementasi rujukan (lihat bagian di atas). Berikutnya, mengikuti alur beli yang sudah diverifikasi ujung ke ujung: **address** (`/me/addresses` — ingat `full_address`/`is_primary`, bukan `address_line`/`is_default`) → **checkout** (id UUID, `shipping-options` berbentuk map berkunci `store_id`, `cart_snapshot` berupa JSON ter-string) → **order** → **payment** → wallet/wishlist. Saat checkout selesai, sambungkan tombol di `cart_screen.dart`.
+7. **In progress.** Tulis ulang tiap domain menembak marketplace-api, satu per satu, berpedoman pada "Kontrak sisi member" dan respons sungguhan — jangan `docs/03-api-documentation.md`. **Katalog, keranjang, alamat, dan checkout selesai**; katalog jadi implementasi rujukan bentuknya, checkout jadi rujukan untuk domain yang menahan sumber daya di server. Alur beli kini tersambung penuh di aplikasi, dari katalog sampai order terbentuk. Berikutnya: **payment** (`POST /payments/{txId}/pay` sudah terverifikasi mengembalikan `qr_string`) → **order** (`/orders`, `/orders/{id}`, `/orders/{id}/tracking`) → wallet/wishlist.
 8. **In progress** (auth done). Convert the UI kit's marker states to `@freezed` unions and switch its cubits from public mutable fields to emitted state data — for whatever of `lib/features/` survives step 10.
 9. Split [app_routes.dart](lib/core/utils/app_routes.dart) into per-domain route files under `lib/config/route/`.
 10. Decide the fate of `lib/features/` vs `lib/ui/` — the target names the presentation root `ui/`, which is a rename of the existing tree, not a second one.

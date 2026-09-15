@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:marketplace_app_member/core/domain/model/cart/cart_model.dart';
 import 'package:marketplace_app_member/core/domain/repositories/cart_repository.dart';
 import 'package:marketplace_app_member/core/function/components.dart';
+import 'package:marketplace_app_member/core/utils/app_routes.dart';
 import 'package:marketplace_app_member/core/utils/app_styles.dart';
 import 'package:marketplace_app_member/core/utils/constant.dart';
 import 'package:marketplace_app_member/core/utils/extensions.dart';
@@ -323,14 +325,15 @@ class _SummaryBar extends StatelessWidget {
               ),
             ),
             FilledButton(
-              // Checkout belum ditulis ulang setelah pindah backend; tombolnya
-              // jujur alih-alih memanggil endpoint yang belum ada lapisannya.
+              // Hanya baris tercentang yang ikut — sama seperti cara server
+              // menghitung ringkasan dan membentuk sesi checkout.
               onPressed: cart.hasSelection
-                  ? () => ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Checkout belum tersedia'),
-                        ),
-                      )
+                  ? () async {
+                      await context.push(AppRoutes.checkoutSession);
+                      // Checkout mengubah stok dan bisa mengosongkan pilihan,
+                      // jadi keranjang dibaca ulang saat kembali.
+                      if (context.mounted) CartCubit.get(context).load();
+                    }
                   : null,
               child: const Text('Checkout'),
             ),
