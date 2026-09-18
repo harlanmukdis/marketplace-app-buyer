@@ -125,7 +125,7 @@ Current state: `en` and `ar` are complete (284 keys) and selectable. `fr` appear
 
 ## Known rough edges
 
-- The Flutter counter template `test/widget_test.dart` is **gone** — the suite is real (353 tests, all passing) and is a usable signal. `test/integration/` (104 of those) hits a live backend, so it fails with connection errors when the API is not running; that is the environment, not a regression. Note the API is started with `php -S`, **not** `docker compose` — see "Menyalakan backend dev" in Part 2 — and the integration suite must run `--concurrency=1`.
+- The Flutter counter template `test/widget_test.dart` is **gone** — the suite is real (361 tests, all passing) and is a usable signal. `test/integration/` (107 of those) hits a live backend, so it fails with connection errors when the API is not running; that is the environment, not a regression. Note the API is started with `php -S`, **not** `docker compose` — see "Menyalakan backend dev" in Part 2 — and the integration suite must run `--concurrency=1`.
 - 14 stale `*.dart~` backup files litter `lib/` (and `android/`). They are not compiled but **do show up in grep results** — always confirm a hit isn't in a `~` file before editing.
 - `lib/features/my_cart/presentation/views/map_screen.dart` is 100% commented out, and the `com.google.android.geo.API_KEY` meta-data in `android/app/src/main/AndroidManifest.xml` is commented out too. Restoring the map needs both, plus an iOS key. Location permissions are already declared in the manifest.
 - **The app builds now, but every image is a placeholder.** The UI kit's asset folders were never copied into this repo, so all 67 files in `assets/images/` and `assets/icon/` are grey 64×64 stubs, and the `Hanimation` font declaration in `pubspec.yaml` stays **commented out** (a fake OTF crashes at start, so it could not be stubbed — all text falls back to the system font). What you see on screen is therefore not the kit's design. `assets/PLACEHOLDER-README.md` documents what was stubbed and how to restore the originals.
@@ -138,11 +138,13 @@ Current state: `en` and `ar` are complete (284 keys) and selectable. `fr` appear
 
 # Part 2 — Target architecture
 
-> ### 📘 BACA DULU: `docs/18-frontend-integration-guide.md`
+> ### 📘 BACA DULU: `docs/19-frontend-integration-guide.md`
+>
+> ⚠️ **Nomornya berubah dari 18 → 19** (19 September 2026): slot 18 kini dipakai `18-reward-engine.md`. Berkasnya juga **belum di-commit** di repo API — ia ada di working copy saja, jadi `git log` tidak akan menunjukkan perubahannya. Periksa `git status` repo API, bukan hanya `git log`.
 >
 > Backend menerbitkan **panduan integrasi frontend khusus untuk app member & app seller** (14 September 2026). Itu titik masuk tunggal untuk pekerjaan FE: cara menjalankan API, kontrak dasar, peta 33 modul → endpoint → app mana yang memakainya, alur inti buyer dari browse sampai terima barang, dan daftar jebakan yang sudah diuji ke server. Poin bertanda **[terverifikasi]** di sana sudah ditembak ke server sungguhan, bukan dibaca dari dokumen.
 >
-> Urutan otoritas kalau sumber saling bertentangan: **`application/config/routes.php` > panduan 18 > Postman > docs lainnya.** Seluruh catatan di bawah ini sudah diselaraskan dengan panduan itu dan diverifikasi ulang ke server pada 14 September 2026.
+> Urutan otoritas kalau sumber saling bertentangan: **`application/config/routes.php` > panduan 19 > Postman > docs lainnya.** Seluruh catatan di bawah ini sudah diselaraskan dengan panduan itu dan diverifikasi ulang ke server pada 14 September 2026.
 >
 > ### 🔁 Backend ganti total pada 13 September 2026
 >
@@ -198,7 +200,7 @@ Current state: `en` and `ar` are complete (284 keys) and selectable. `fr` appear
 >
 > ### ⚠️ `docker compose up` TIDAK jalan — API dijalankan dengan `php -S`
 >
-> Catatan sebelumnya di file ini yang menyarankan `docker compose up -d` **salah**. `Dockerfile` menyalin `infra/docker/nginx.conf` yang tidak ada di repo, dan stage runtime-nya nginx tanpa php-fpm. Cara yang benar ada di panduan 18 §1: siapkan MySQL, jalankan `database/schema/*.sql` lalu `database/seeds/*.sql`, kemudian `php -S 127.0.0.1:8000 -t . router.php` dengan `router.php` yang isinya diberikan di panduan itu (tidak ada di repo).
+> Catatan sebelumnya di file ini yang menyarankan `docker compose up -d` **salah**. `Dockerfile` menyalin `infra/docker/nginx.conf` yang tidak ada di repo, dan stage runtime-nya nginx tanpa php-fpm. Cara yang benar ada di panduan 19 §1: siapkan MySQL, jalankan `database/schema/*.sql` lalu `database/seeds/*.sql`, kemudian `php -S 127.0.0.1:8000 -t . router.php` dengan `router.php` yang isinya diberikan di panduan itu (tidak ada di repo).
 >
 > Konsekuensinya untuk `/search/*`: **Elasticsearch/OpenSearch di 9200 tidak punya cara mudah dinyalakan**, jadi anggap search mati secara default dan pakai fallback yang dijelaskan di bawah.
 >
@@ -246,7 +248,7 @@ Current state: `en` and `ar` are complete (284 keys) and selectable. `fr` appear
 - **Wallet domain** — `lib/core/…/wallet/` + `lib/ui/main/wallet/`; lihat "Domain dompet" di bawah
 - `lib/util/error_message.dart` — maps `DataError.code` to localized copy; **never** shows `error.message` to users
 - **Notification domain** — `lib/core/…/notification/` + `lib/ui/main/notification/`; lihat "Domain notifikasi" di bawah
-- Tests: `test/util/` (17, murni), `test/data/` (126, fake service/store + parsing JSON asli), `test/ui/` (106, fake repository), `test/integration/` (104, butuh backend hidup — **jalankan `--concurrency=1`**) — **353 total, semuanya lulus**
+- Tests: `test/util/` (17, murni), `test/data/` (131, fake service/store + parsing JSON asli), `test/ui/` (106, fake repository), `test/integration/` (107, butuh backend hidup — **jalankan `--concurrency=1`**) — **361 total, semuanya lulus**
 
 Still absent: Firebase and `lib/firebase_options.dart`; domain chat dan modul reward.
 
@@ -313,7 +315,7 @@ Keranjang ditulis setelah katalog dan mengikuti bentuk yang sama, dengan dua per
 Bentuk data yang mudah salah ditebak:
 
 - **Grup toko di `GET /cart` hanya membawa `store_name`, tanpa `store_id`.** Id-nya ada di tiap item; `CartStoreGroup.storeId` menurunkannya dari item pertama. Checkout membutuhkannya sebagai kunci pemilihan kurir per toko.
-- **`GET /cart/summary` hanya berisi `subtotal` dan `item_count`** — keduanya **angka asli**, bukan string. `docs/03` menyebut endpoint ini juga mengembalikan estimasi ongkir dan promo aktif; **tidak**. Ongkir baru muncul di `checkout/sessions/{id}/shipping-options`.
+- **`GET /cart/summary` berisi `subtotal`, `item_count`, `vouchers`, dan `discount_amount`** — semuanya **angka asli**, bukan string. Dua field terakhir ditambahkan bersama penumpukan voucher; catatan lama di sini yang menyebut "hanya dua field" sudah tidak berlaku. Ongkir tetap **tidak** ada di sini — baru muncul di `checkout/sessions/{id}/shipping-options`.
 - **Ringkasan hanya menghitung baris tercentang**, dan `item_count` menghitung **baris**, bukan unit — dua baris berisi 5 dan 1 unit tetap `2`. Karena itu layar menulis "N barang terpilih", bukan "N barang".
 - **`POST /cart/items` untuk varian yang sudah ada menggabungkan kuantitas** ke baris lama dan mengembalikan id baris itu — bukan membuat baris baru. Id balasannya kadang number, kadang string.
 - Baris keranjang membawa data produk terdenormalisasi (`product_name`, `sku`, `price`, `variant_options`), jadi layar keranjang **tidak perlu** menembak `/products/{id}` per baris. Yang tidak ada: gambar dan stok.
@@ -329,9 +331,20 @@ Catatan lama di sini — "tidak ada endpoint untuk melepas voucher, jangan sedia
 
 Field body `apply-voucher` adalah **`code`**, bukan `voucher_code` — dicek ke controllernya (`$this->post('code')`). Bedanya tidak kelihatan dari percobaan: nama field yang salah menghasilkan `VOUCHER_INVALID` yang sama persis dengan kode voucher yang salah.
 
-⚠️ **Jalur suksesnya belum bisa diuji**: tidak ada voucher yang di-seed (`GET /me/vouchers` → `[]`), jadi memasang voucher yang benar-benar berlaku mustahil di dev. Test integrasi hanya memastikan rutenya ada dan penolakannya benar. Layar voucher sengaja belum dibuat sampai ada data.
+🔴 **Dua nilai di `vouchers[]` yang TIDAK boleh ditampilkan sebagai potongan.** `discount_amount` per voucher sengaja diisi begini oleh server:
 
-🔴 **`GET /cart/recommended-vouchers` membalas 500** (halaman Database Error) — endpoint baru yang seharusnya mengusulkan kombinasi voucher terbaik. Karena itu `CartService` tidak punya method untuknya; dipatok test supaya perbaikannya ketahuan.
+| jenis | `discount_amount` | alasan |
+|---|---|---|
+| voucher **ongkir** | **`null`** | ongkir belum dihitung di keranjang; nilainya baru ketahuan saat checkout |
+| voucher **cashback** | **`0`** | cashback **tidak** mengurangi yang dibayar — nilainya jadi coins setelah pesanan selesai |
+
+Menampilkan `null` sebagai `Rp0` membuat voucher ongkir terlihat tidak berguna; menampilkan cashback sebagai potongan membuat **total yang dilihat pembeli tidak cocok dengan yang ditagih**. `AppliedVoucherModel.reducesPayment` membedakannya. Konsekuensinya juga: `discount_amount` ringkasan yang nol **tidak** berarti tidak ada voucher terpasang.
+
+Server **membuang sendiri voucher yang sudah tidak valid** terhadap isi keranjang saat ini (`list_applied_vouchers` menghapusnya dari tabel), jadi daftar yang sampai ke aplikasi selalu masih berlaku.
+
+⚠️ **Jalur suksesnya belum bisa diuji**: tidak ada voucher yang di-seed (`GET /me/vouchers` → `[]`), jadi memasang voucher yang benar-benar berlaku mustahil di dev — `vouchers` selalu `[]`. Bentuk entrinya **diturunkan dari sumber backend** (`Cart_model::validate_voucher()`), bukan dari respons yang teramati; periksa ulang begitu ada voucher sungguhan. Layar voucher sengaja belum dibuat sampai ada data.
+
+🔴 **`GET /cart/recommended-vouchers` membalas 500 kalau keranjang KOSONG.** Bukan "endpointnya rusak" — `list_eligible_vouchers` menyusun `store_id IN ()` yang bukan SQL sah saat tidak ada toko di keranjang. Dengan keranjang terisi ia `200`. Catatan sebelumnya di file ini yang menyebutnya rusak total **terlalu luas**: probe-nya kebetulan dijalankan sebelum keranjang diisi. Layar voucher nanti tidak boleh memanggilnya sebelum ada isi; keduanya dipatok test.
 
 ### Domain alamat & checkout — dan tiga bug server
 
@@ -663,7 +676,7 @@ The kit's social-login buttons were dropped, not ported — the backend has no O
 
 A `@freezed` class with custom getters or methods **must** declare a private constructor (`const UserModel._();`), otherwise generation fails with `Getters require a MyClass._() constructor`. Also prefer getters **inside** the class over an `extension`: an extension is only in scope where its own library is imported, so `user.isVerified` silently fails to resolve in a file that imported the model only transitively.
 
-**Backend contract**: the member app talks to **marketplace-api** (CodeIgniter 3 modular HMVC + JWT), a multi-vendor marketplace. Reference material lives in that repo, not this one. Start at **`docs/18-frontend-integration-guide.md`** — it is written for exactly this app and marks which claims were tested against a running server. Then `docs/02-database-schema.md` + `database/schema/*.sql` for field shapes, `docs/04-rbac-permission-matrix.md` for roles, `docs/16-home-layout-cms.md` and `docs/17-campaign-engine.md` for the two newest modules, and `postman/Marketplace-API.postman_collection.json` (223 request, 32 folder) for request bodies.
+**Backend contract**: the member app talks to **marketplace-api** (CodeIgniter 3 modular HMVC + JWT), a multi-vendor marketplace. Reference material lives in that repo, not this one. Start at **`docs/19-frontend-integration-guide.md`** — it is written for exactly this app and marks which claims were tested against a running server. Then `docs/02-database-schema.md` + `database/schema/*.sql` for field shapes, `docs/04-rbac-permission-matrix.md` for roles, `docs/16-home-layout-cms.md` and `docs/17-campaign-engine.md` for the two newest modules, and `postman/Marketplace-API.postman_collection.json` (223 request, 32 folder) for request bodies.
 
 ⚠️ **Koleksi Postman-nya kini bentrok dengan data seed.** Variabel `store_id`/`product_id`/`warehouse_id` masih bernilai `1`, padahal id 1–8 sudah dipakai toko milik seller seed — menjalankan koleksinya apa adanya menghasilkan `403` berulang. Body request-nya tetap sahih; yang salah hanya nilai variabelnya.
 
@@ -755,7 +768,8 @@ Derived from the gap between Part 1 and Part 2. Steps 0-5 are done and the auth 
    **Ditambahkan 19 September 2026** (dari 24 commit backend `eff67e7..70ac372`):
 
    - **Layar voucher keranjang.** Endpointnya sudah lengkap sejak `90751bf` (pasang, lepas, tumpuk maks 1 ongkir + 1 platform + 1 per toko) dan `CartRepository` sudah punya `applyVoucher`/`removeVoucher`. Yang belum ada layarnya. ⚠️ **Tunggu ada voucher yang di-seed** — `GET /me/vouchers` masih `[]`, jadi alur suksesnya tidak bisa diuji sama sekali dan modelnya akan ditulis dari dokumen saja.
-   - **`POST /cart/vouchers/auto-apply`** (commit `2033a15`) — "Gunakan Otomatis" ala Tokopedia/Shopee: menghitung kombinasi terbaik lalu memasangnya sekaligus. Hidup (`200`, `[]` di dev). Pasangannya `GET /cart/recommended-vouchers` **masih 500**.
+   - **`POST /cart/vouchers/auto-apply`** (commit `2033a15`) — "Gunakan Otomatis" ala Tokopedia/Shopee: menghitung kombinasi terbaik lalu memasangnya sekaligus. Hidup (`200`, `[]` di dev), begitu juga `GET /cart/recommended-vouchers` **selama keranjang tidak kosong**.
+   - **`POST /checkout/calculate`** — estimasi bonus coins dari isi keranjang **tanpa** membuat sesi checkout dan **tanpa** mereservasi stok; cocok untuk badge "Dapat Bonus Coins" di halaman keranjang. Terverifikasi hidup: `{subtotal, rewards:{estimated_cashback_coins, breakdown:{base, tier_bonus}, tier, status}}`. ⚠️ `status: "pending_release"` berarti coins **belum** masuk saldo — baru dilepas saat pesanan selesai dan dibatalkan kalau pesanan batal (`order_pending_rewards`). Tampilkan sebagai estimasi, bukan saldo. Kerjakan bersama modul reward.
    - **Reward engine config-driven** (commit `eb18722` + `fcc417e`, tabel `reward_configs` / `order_pending_rewards`) — cashback coins dengan rate per tier dan bonus per metode bayar, menggantikan rate hardcoded `0.001`. Menyentuh modul reward yang memang belum ditulis, jadi kerjakan bersamaan.
    - **`flash_sale` per varian** di `GET /products/{id}` (commit `ad270c3`) — key-nya sudah dikirim server tapi **`null` di seluruh seed**, jadi bentuknya belum bisa diamati. Sama seperti `store_couriers` dan home CMS: tunggu ada isinya.
    - **`GET /flash-sales/{id}/products`** (commit `9c5b9a7` + `1784186`) — kini membawa `product_id`, `image_url`, dan `original_price`.

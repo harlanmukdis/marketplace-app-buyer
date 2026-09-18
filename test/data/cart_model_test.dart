@@ -128,4 +128,82 @@ void main() {
       expect(const CartSummaryModel().isEmpty, isTrue);
     });
   });
+
+  group('AppliedVoucherModel', () {
+    // ⚠️ Fixture ini **diturunkan dari sumber backend**
+    // (`Cart_model::validate_voucher()`), bukan dari respons yang teramati:
+    // tidak ada voucher yang di-seed, jadi `vouchers` selalu `[]` di dev.
+    // Periksa ulang begitu ada voucher sungguhan.
+    Map<String, dynamic> voucher({
+      String category = 'store',
+      String type = 'percentage',
+      Object? amount = 15000,
+    }) =>
+        {
+          'code': 'DISKON10',
+          'category': category,
+          'store_id': category == 'platform' ? null : '1',
+          'discount_type': type,
+          'discount_value': '10.00',
+          'max_discount': '20000.00',
+          'discount_amount': amount,
+        };
+
+    test('voucher toko yang benar-benar memotong harga', () {
+      final v = AppliedVoucherModel.fromJson(voucher());
+      expect(v.storeId, 1);
+      expect(v.discountAmount, 15000);
+      expect(v.reducesPayment, isTrue);
+    });
+
+    test('🔴 voucher ONGKIR membawa discount_amount null, bukan nol', () {
+      // Nilainya baru ketahuan saat checkout karena ongkir belum dihitung di
+      // keranjang. Menampilkan `null` sebagai `Rp0` akan membuat voucher
+      // terlihat tidak berguna.
+      final v = AppliedVoucherModel.fromJson(
+          voucher(category: 'shipping', type: 'free_shipping', amount: null));
+
+      expect(v.discountAmount, isNull);
+      expect(v.isShipping, isTrue);
+      expect(v.reducesPayment, isFalse);
+    });
+
+    test('🔴 voucher CASHBACK tidak memotong pembayaran sama sekali', () {
+      // Nilainya jadi coins setelah pesanan selesai. Menampilkannya sebagai
+      // potongan membuat total yang dilihat pembeli tidak cocok dengan yang
+      // ditagih.
+      final v = AppliedVoucherModel.fromJson(
+          voucher(category: 'platform', type: 'cashback', amount: 0));
+
+      expect(v.discountAmount, 0);
+      expect(v.isCashback, isTrue);
+      expect(v.reducesPayment, isFalse);
+      expect(v.storeId, isNull, reason: 'voucher platform tanpa toko');
+    });
+
+    test('ringkasan menjumlahkan potongan, dan ongkir/cashback menyumbang nol',
+        () {
+      final summary = CartSummaryModel.fromJson({
+        'subtotal': 100000,
+        'item_count': 2,
+        'vouchers': [
+          voucher(),
+          voucher(category: 'shipping', type: 'free_shipping', amount: null),
+        ],
+        // Dijumlah server, bukan aplikasi — dan ongkir tidak ikut.
+        'discount_amount': 15000,
+      });
+
+      expect(summary.vouchers, hasLength(2));
+      expect(summary.hasVouchers, isTrue);
+      expect(summary.discountAmount, 15000);
+      expect(summary.payableSubtotal, 85000);
+    });
+
+    test('potongan melebihi subtotal tidak menghasilkan angka negatif', () {
+      final summary = CartSummaryModel.fromJson(
+          const {'subtotal': 10000, 'item_count': 1, 'discount_amount': 50000});
+      expect(summary.payableSubtotal, 0);
+    });
+  });
 }

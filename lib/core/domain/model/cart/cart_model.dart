@@ -105,9 +105,67 @@ abstract class CartStoreGroup with _$CartStoreGroup {
   bool get noneSelected => items.every((i) => !i.isSelected);
 }
 
+/// Satu voucher yang **sedang terpasang** di keranjang, dari
+/// `GET /cart/summary`.
+///
+/// ⚠️ **Bentuknya diturunkan dari sumber backend** (`Cart_model::
+/// validate_voucher()`), bukan dari respons yang teramati: tidak ada voucher
+/// yang di-seed, jadi `vouchers` selalu `[]` di dev. Sumbernya lebih kuat
+/// daripada dokumen, tapi tetap bukan pengamatan — periksa ulang begitu ada
+/// voucher sungguhan.
+///
+/// 🔴 **[discountAmount] TIDAK selalu berarti potongan harga.** Backend
+/// sengaja mengisinya:
+///
+/// * `null` untuk voucher **ongkir** — nilainya baru ketahuan saat checkout,
+///   karena ongkir belum dihitung di keranjang;
+/// * `0` untuk voucher **cashback** — cashback tidak mengurangi yang dibayar
+///   sama sekali, melainkan jadi coins setelah pesanan selesai.
+///
+/// Menampilkan voucher cashback sebagai potongan membuat total yang dilihat
+/// pembeli tidak cocok dengan yang ditagih. Pakai [isCashback] dan
+/// [isShipping] untuk memilih kalimatnya.
+@freezed
+abstract class AppliedVoucherModel with _$AppliedVoucherModel {
+  const AppliedVoucherModel._();
+
+  const factory AppliedVoucherModel({
+    @StringJson() @Default('') String code,
+
+    /// `shipping` / `platform` / `store` — slot penumpukan, diturunkan server
+    /// dari `discount_type` dan `store_id`, bukan kolom tersendiri.
+    @StringJson() @Default('') String category,
+
+    /// `null` untuk voucher platform.
+    @IntOrNullJson() @JsonKey(name: 'store_id') int? storeId,
+
+    /// `percentage` / `fixed` / `free_shipping` / `cashback`.
+    @StringJson() @JsonKey(name: 'discount_type') @Default('')
+    String discountType,
+
+    @DoubleJson() @JsonKey(name: 'discount_value') @Default(0)
+    double discountValue,
+    @DoubleOrNullJson() @JsonKey(name: 'max_discount') double? maxDiscount,
+
+    /// Potongan rupiah yang benar-benar berlaku. `null` untuk ongkir, `0`
+    /// untuk cashback — lihat catatan kelas.
+    @DoubleOrNullJson() @JsonKey(name: 'discount_amount')
+    double? discountAmount,
+  }) = _AppliedVoucherModel;
+
+  factory AppliedVoucherModel.fromJson(Map<String, dynamic> json) =>
+      _$AppliedVoucherModelFromJson(json);
+
+  bool get isShipping => category == 'shipping';
+  bool get isCashback => discountType == 'cashback';
+
+  /// `true` kalau voucher ini benar-benar mengurangi yang dibayar sekarang.
+  bool get reducesPayment => !isShipping && !isCashback;
+}
+
 /// Ringkasan dari `GET /cart/summary`.
 ///
-/// Dua catatan yang membedakannya dari dugaan wajar:
+/// Catatan yang membedakannya dari dugaan wajar:
 ///
 /// * Nilainya datang sebagai **angka asli**, bukan string seperti mayoritas
 ///   field lain.
@@ -116,8 +174,10 @@ abstract class CartStoreGroup with _$CartStoreGroup {
 /// * [itemCount] menghitung **jumlah baris**, bukan jumlah unit — dua baris
 ///   berisi 5 dan 1 unit tetap menghasilkan `2`.
 ///
-/// `docs/03` menyebut endpoint ini juga mengembalikan estimasi ongkir dan
-/// promo aktif; **tidak, hanya dua field ini.** Ongkir baru muncul di
+/// ✅ [vouchers] dan [discountAmount] **ditambahkan backend bersama
+/// penumpukan voucher** (commit `90751bf`). Catatan lama di sini yang bilang
+/// endpoint ini "hanya berisi `subtotal` dan `item_count`" sudah tidak
+/// berlaku. Ongkir tetap tidak ada di sini — baru muncul di
 /// `checkout/sessions/{id}/shipping-options`.
 @freezed
 abstract class CartSummaryModel with _$CartSummaryModel {
@@ -126,10 +186,34 @@ abstract class CartSummaryModel with _$CartSummaryModel {
   const factory CartSummaryModel({
     @DoubleJson() @Default(0) double subtotal,
     @IntJson() @JsonKey(name: 'item_count') @Default(0) int itemCount,
+
+    /// Voucher yang sedang terpasang; `[]` selama belum ada yang dipasang.
+    ///
+    /// Server **membuang sendiri voucher yang sudah tidak valid** terhadap isi
+    /// keranjang saat ini (`list_applied_vouchers` menghapusnya dari
+    /// `cart_applied_vouchers`), jadi daftar ini selalu voucher yang benar-benar
+    /// masih berlaku — tidak perlu divalidasi ulang di aplikasi.
+    @Default(<AppliedVoucherModel>[]) List<AppliedVoucherModel> vouchers,
+
+    /// Total potongan rupiah dari [vouchers].
+    ///
+    /// ⚠️ **Voucher ongkir dan cashback tidak ikut dijumlah** — keduanya
+    /// menyumbang nol di sini. Jadi `discount_amount` nol tidak berarti tidak
+    /// ada voucher terpasang.
+    @DoubleJson() @JsonKey(name: 'discount_amount') @Default(0)
+    double discountAmount,
   }) = _CartSummaryModel;
 
   factory CartSummaryModel.fromJson(Map<String, dynamic> json) =>
       _$CartSummaryModelFromJson(json);
 
   bool get isEmpty => itemCount == 0;
+
+  bool get hasVouchers => vouchers.isNotEmpty;
+
+  /// Total setelah potongan yang benar-benar berlaku sekarang.
+  double get payableSubtotal {
+    final left = subtotal - discountAmount;
+    return left < 0 ? 0 : left;
+  }
 }

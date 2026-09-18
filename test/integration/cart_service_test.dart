@@ -195,14 +195,49 @@ void main() {
         reason: 'melepas kode yang tak pernah terpasang pun dibalas 200');
   });
 
-  test('🔴 GET /cart/recommended-vouchers membalas 500', () async {
-    // Endpoint baru (commit `90751bf`) yang seharusnya mengusulkan kombinasi
-    // voucher terbaik, tapi meledak jadi halaman Database Error. Karena itu
-    // `CartService` tidak punya method untuk itu. Kalau backend
-    // memperbaikinya, test ini merah lebih dulu.
+  test('🔴 GET /cart/recommended-vouchers membalas 500 saat keranjang KOSONG',
+      () async {
+    // Bukan "endpointnya rusak" — syaratnya yang tidak terdokumentasi di
+    // responsnya. `list_eligible_vouchers` menyusun `store_id IN ()` yang
+    // bukan SQL sah saat tidak ada toko di keranjang. Karena itu layar
+    // voucher nanti tidak boleh memanggilnya sebelum ada isi.
     await expectLater(
       dio.get<dynamic>('/cart/recommended-vouchers'),
       throwsA(anything),
     );
+  });
+
+  test('GET /cart/recommended-vouchers berhasil begitu keranjang terisi',
+      () async {
+    await cart.addItem(productVariantId: variantId, quantity: 1);
+
+    final response = await dio.get<dynamic>('/cart/recommended-vouchers');
+    expect(response.statusCode, 200);
+    // `[]` selama belum ada voucher yang di-seed.
+    expect(response.data['data'], isA<List<dynamic>>());
+  });
+
+  group('ringkasan membawa voucher terpasang', () {
+    test('✅ summary kini punya `vouchers` dan `discount_amount`', () async {
+      // Ditambahkan backend bersama penumpukan voucher (commit `90751bf`).
+      // Catatan lama yang bilang summary "hanya berisi subtotal dan
+      // item_count" sudah tidak berlaku.
+      await cart.addItem(productVariantId: variantId, quantity: 2);
+
+      final summary = await cart.fetchSummary();
+      expect(summary.data.itemCount, 1);
+      expect(summary.data.subtotal, greaterThan(0));
+      expect(summary.data.vouchers, isEmpty,
+          reason: 'belum ada voucher yang di-seed di dev');
+      expect(summary.data.discountAmount, 0);
+      expect(summary.data.payableSubtotal, summary.data.subtotal);
+    });
+
+    test('keranjang kosong pun membawa kedua field itu', () async {
+      final summary = await cart.fetchSummary();
+      expect(summary.data.isEmpty, isTrue);
+      expect(summary.data.hasVouchers, isFalse);
+      expect(summary.data.discountAmount, 0);
+    });
   });
 }

@@ -73,6 +73,38 @@ Map<String, dynamic> _$CartStoreGroupToJson(_CartStoreGroup instance) =>
       'items': instance.items,
     };
 
+_AppliedVoucherModel _$AppliedVoucherModelFromJson(Map<String, dynamic> json) =>
+    _AppliedVoucherModel(
+      code:
+          json['code'] == null ? '' : const StringJson().fromJson(json['code']),
+      category: json['category'] == null
+          ? ''
+          : const StringJson().fromJson(json['category']),
+      storeId: const IntOrNullJson().fromJson(json['store_id']),
+      discountType: json['discount_type'] == null
+          ? ''
+          : const StringJson().fromJson(json['discount_type']),
+      discountValue: json['discount_value'] == null
+          ? 0
+          : const DoubleJson().fromJson(json['discount_value']),
+      maxDiscount: const DoubleOrNullJson().fromJson(json['max_discount']),
+      discountAmount:
+          const DoubleOrNullJson().fromJson(json['discount_amount']),
+    );
+
+Map<String, dynamic> _$AppliedVoucherModelToJson(
+        _AppliedVoucherModel instance) =>
+    <String, dynamic>{
+      'code': const StringJson().toJson(instance.code),
+      'category': const StringJson().toJson(instance.category),
+      'store_id': const IntOrNullJson().toJson(instance.storeId),
+      'discount_type': const StringJson().toJson(instance.discountType),
+      'discount_value': const DoubleJson().toJson(instance.discountValue),
+      'max_discount': const DoubleOrNullJson().toJson(instance.maxDiscount),
+      'discount_amount':
+          const DoubleOrNullJson().toJson(instance.discountAmount),
+    };
+
 _CartSummaryModel _$CartSummaryModelFromJson(Map<String, dynamic> json) =>
     _CartSummaryModel(
       subtotal: json['subtotal'] == null
@@ -81,10 +113,20 @@ _CartSummaryModel _$CartSummaryModelFromJson(Map<String, dynamic> json) =>
       itemCount: json['item_count'] == null
           ? 0
           : const IntJson().fromJson(json['item_count']),
+      vouchers: (json['vouchers'] as List<dynamic>?)
+              ?.map((e) =>
+                  AppliedVoucherModel.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          const <AppliedVoucherModel>[],
+      discountAmount: json['discount_amount'] == null
+          ? 0
+          : const DoubleJson().fromJson(json['discount_amount']),
     );
 
 Map<String, dynamic> _$CartSummaryModelToJson(_CartSummaryModel instance) =>
     <String, dynamic>{
       'subtotal': const DoubleJson().toJson(instance.subtotal),
       'item_count': const IntJson().toJson(instance.itemCount),
+      'vouchers': instance.vouchers,
+      'discount_amount': const DoubleJson().toJson(instance.discountAmount),
     };

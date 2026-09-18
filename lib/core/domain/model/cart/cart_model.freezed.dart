@@ -1117,12 +1117,564 @@ class __$CartStoreGroupCopyWithImpl<$Res>
 }
 
 /// @nodoc
+mixin _$AppliedVoucherModel {
+  @StringJson()
+  String get code;
+
+  /// `shipping` / `platform` / `store` — slot penumpukan, diturunkan server
+  /// dari `discount_type` dan `store_id`, bukan kolom tersendiri.
+  @StringJson()
+  String get category;
+
+  /// `null` untuk voucher platform.
+  @IntOrNullJson()
+  @JsonKey(name: 'store_id')
+  int? get storeId;
+
+  /// `percentage` / `fixed` / `free_shipping` / `cashback`.
+  @StringJson()
+  @JsonKey(name: 'discount_type')
+  String get discountType;
+  @DoubleJson()
+  @JsonKey(name: 'discount_value')
+  double get discountValue;
+  @DoubleOrNullJson()
+  @JsonKey(name: 'max_discount')
+  double? get maxDiscount;
+
+  /// Potongan rupiah yang benar-benar berlaku. `null` untuk ongkir, `0`
+  /// untuk cashback — lihat catatan kelas.
+  @DoubleOrNullJson()
+  @JsonKey(name: 'discount_amount')
+  double? get discountAmount;
+
+  /// Create a copy of AppliedVoucherModel
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  $AppliedVoucherModelCopyWith<AppliedVoucherModel> get copyWith =>
+      _$AppliedVoucherModelCopyWithImpl<AppliedVoucherModel>(
+          this as AppliedVoucherModel, _$identity);
+
+  /// Serializes this AppliedVoucherModel to a JSON map.
+  Map<String, dynamic> toJson();
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is AppliedVoucherModel &&
+            (identical(other.code, code) || other.code == code) &&
+            (identical(other.category, category) ||
+                other.category == category) &&
+            (identical(other.storeId, storeId) || other.storeId == storeId) &&
+            (identical(other.discountType, discountType) ||
+                other.discountType == discountType) &&
+            (identical(other.discountValue, discountValue) ||
+                other.discountValue == discountValue) &&
+            (identical(other.maxDiscount, maxDiscount) ||
+                other.maxDiscount == maxDiscount) &&
+            (identical(other.discountAmount, discountAmount) ||
+                other.discountAmount == discountAmount));
+  }
+
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @override
+  int get hashCode => Object.hash(runtimeType, code, category, storeId,
+      discountType, discountValue, maxDiscount, discountAmount);
+
+  @override
+  String toString() {
+    return 'AppliedVoucherModel(code: $code, category: $category, storeId: $storeId, discountType: $discountType, discountValue: $discountValue, maxDiscount: $maxDiscount, discountAmount: $discountAmount)';
+  }
+}
+
+/// @nodoc
+abstract mixin class $AppliedVoucherModelCopyWith<$Res> {
+  factory $AppliedVoucherModelCopyWith(
+          AppliedVoucherModel value, $Res Function(AppliedVoucherModel) _then) =
+      _$AppliedVoucherModelCopyWithImpl;
+  @useResult
+  $Res call(
+      {@StringJson() String code,
+      @StringJson() String category,
+      @IntOrNullJson() @JsonKey(name: 'store_id') int? storeId,
+      @StringJson() @JsonKey(name: 'discount_type') String discountType,
+      @DoubleJson() @JsonKey(name: 'discount_value') double discountValue,
+      @DoubleOrNullJson() @JsonKey(name: 'max_discount') double? maxDiscount,
+      @DoubleOrNullJson()
+      @JsonKey(name: 'discount_amount')
+      double? discountAmount});
+}
+
+/// @nodoc
+class _$AppliedVoucherModelCopyWithImpl<$Res>
+    implements $AppliedVoucherModelCopyWith<$Res> {
+  _$AppliedVoucherModelCopyWithImpl(this._self, this._then);
+
+  final AppliedVoucherModel _self;
+  final $Res Function(AppliedVoucherModel) _then;
+
+  /// Create a copy of AppliedVoucherModel
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? code = null,
+    Object? category = null,
+    Object? storeId = freezed,
+    Object? discountType = null,
+    Object? discountValue = null,
+    Object? maxDiscount = freezed,
+    Object? discountAmount = freezed,
+  }) {
+    return _then(_self.copyWith(
+      code: null == code
+          ? _self.code
+          : code // ignore: cast_nullable_to_non_nullable
+              as String,
+      category: null == category
+          ? _self.category
+          : category // ignore: cast_nullable_to_non_nullable
+              as String,
+      storeId: freezed == storeId
+          ? _self.storeId
+          : storeId // ignore: cast_nullable_to_non_nullable
+              as int?,
+      discountType: null == discountType
+          ? _self.discountType
+          : discountType // ignore: cast_nullable_to_non_nullable
+              as String,
+      discountValue: null == discountValue
+          ? _self.discountValue
+          : discountValue // ignore: cast_nullable_to_non_nullable
+              as double,
+      maxDiscount: freezed == maxDiscount
+          ? _self.maxDiscount
+          : maxDiscount // ignore: cast_nullable_to_non_nullable
+              as double?,
+      discountAmount: freezed == discountAmount
+          ? _self.discountAmount
+          : discountAmount // ignore: cast_nullable_to_non_nullable
+              as double?,
+    ));
+  }
+}
+
+/// Adds pattern-matching-related methods to [AppliedVoucherModel].
+extension AppliedVoucherModelPatterns on AppliedVoucherModel {
+  /// A variant of `map` that fallback to returning `orElse`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult maybeMap<TResult extends Object?>(
+    TResult Function(_AppliedVoucherModel value)? $default, {
+    required TResult orElse(),
+  }) {
+    final _that = this;
+    switch (_that) {
+      case _AppliedVoucherModel() when $default != null:
+        return $default(_that);
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// Callbacks receives the raw object, upcasted.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case final Subclass2 value:
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult map<TResult extends Object?>(
+    TResult Function(_AppliedVoucherModel value) $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _AppliedVoucherModel():
+        return $default(_that);
+      case _:
+        throw StateError('Unexpected subclass');
+    }
+  }
+
+  /// A variant of `map` that fallback to returning `null`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? mapOrNull<TResult extends Object?>(
+    TResult? Function(_AppliedVoucherModel value)? $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _AppliedVoucherModel() when $default != null:
+        return $default(_that);
+      case _:
+        return null;
+    }
+  }
+
+  /// A variant of `when` that fallback to an `orElse` callback.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult maybeWhen<TResult extends Object?>(
+    TResult Function(
+            @StringJson() String code,
+            @StringJson() String category,
+            @IntOrNullJson() @JsonKey(name: 'store_id') int? storeId,
+            @StringJson() @JsonKey(name: 'discount_type') String discountType,
+            @DoubleJson() @JsonKey(name: 'discount_value') double discountValue,
+            @DoubleOrNullJson()
+            @JsonKey(name: 'max_discount')
+            double? maxDiscount,
+            @DoubleOrNullJson()
+            @JsonKey(name: 'discount_amount')
+            double? discountAmount)?
+        $default, {
+    required TResult orElse(),
+  }) {
+    final _that = this;
+    switch (_that) {
+      case _AppliedVoucherModel() when $default != null:
+        return $default(
+            _that.code,
+            _that.category,
+            _that.storeId,
+            _that.discountType,
+            _that.discountValue,
+            _that.maxDiscount,
+            _that.discountAmount);
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// As opposed to `map`, this offers destructuring.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case Subclass2(:final field2):
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult when<TResult extends Object?>(
+    TResult Function(
+            @StringJson() String code,
+            @StringJson() String category,
+            @IntOrNullJson() @JsonKey(name: 'store_id') int? storeId,
+            @StringJson() @JsonKey(name: 'discount_type') String discountType,
+            @DoubleJson() @JsonKey(name: 'discount_value') double discountValue,
+            @DoubleOrNullJson()
+            @JsonKey(name: 'max_discount')
+            double? maxDiscount,
+            @DoubleOrNullJson()
+            @JsonKey(name: 'discount_amount')
+            double? discountAmount)
+        $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _AppliedVoucherModel():
+        return $default(
+            _that.code,
+            _that.category,
+            _that.storeId,
+            _that.discountType,
+            _that.discountValue,
+            _that.maxDiscount,
+            _that.discountAmount);
+      case _:
+        throw StateError('Unexpected subclass');
+    }
+  }
+
+  /// A variant of `when` that fallback to returning `null`
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? whenOrNull<TResult extends Object?>(
+    TResult? Function(
+            @StringJson() String code,
+            @StringJson() String category,
+            @IntOrNullJson() @JsonKey(name: 'store_id') int? storeId,
+            @StringJson() @JsonKey(name: 'discount_type') String discountType,
+            @DoubleJson() @JsonKey(name: 'discount_value') double discountValue,
+            @DoubleOrNullJson()
+            @JsonKey(name: 'max_discount')
+            double? maxDiscount,
+            @DoubleOrNullJson()
+            @JsonKey(name: 'discount_amount')
+            double? discountAmount)?
+        $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _AppliedVoucherModel() when $default != null:
+        return $default(
+            _that.code,
+            _that.category,
+            _that.storeId,
+            _that.discountType,
+            _that.discountValue,
+            _that.maxDiscount,
+            _that.discountAmount);
+      case _:
+        return null;
+    }
+  }
+}
+
+/// @nodoc
+@JsonSerializable()
+class _AppliedVoucherModel extends AppliedVoucherModel {
+  const _AppliedVoucherModel(
+      {@StringJson() this.code = '',
+      @StringJson() this.category = '',
+      @IntOrNullJson() @JsonKey(name: 'store_id') this.storeId,
+      @StringJson() @JsonKey(name: 'discount_type') this.discountType = '',
+      @DoubleJson() @JsonKey(name: 'discount_value') this.discountValue = 0,
+      @DoubleOrNullJson() @JsonKey(name: 'max_discount') this.maxDiscount,
+      @DoubleOrNullJson()
+      @JsonKey(name: 'discount_amount')
+      this.discountAmount})
+      : super._();
+  factory _AppliedVoucherModel.fromJson(Map<String, dynamic> json) =>
+      _$AppliedVoucherModelFromJson(json);
+
+  @override
+  @JsonKey()
+  @StringJson()
+  final String code;
+
+  /// `shipping` / `platform` / `store` — slot penumpukan, diturunkan server
+  /// dari `discount_type` dan `store_id`, bukan kolom tersendiri.
+  @override
+  @JsonKey()
+  @StringJson()
+  final String category;
+
+  /// `null` untuk voucher platform.
+  @override
+  @IntOrNullJson()
+  @JsonKey(name: 'store_id')
+  final int? storeId;
+
+  /// `percentage` / `fixed` / `free_shipping` / `cashback`.
+  @override
+  @StringJson()
+  @JsonKey(name: 'discount_type')
+  final String discountType;
+  @override
+  @DoubleJson()
+  @JsonKey(name: 'discount_value')
+  final double discountValue;
+  @override
+  @DoubleOrNullJson()
+  @JsonKey(name: 'max_discount')
+  final double? maxDiscount;
+
+  /// Potongan rupiah yang benar-benar berlaku. `null` untuk ongkir, `0`
+  /// untuk cashback — lihat catatan kelas.
+  @override
+  @DoubleOrNullJson()
+  @JsonKey(name: 'discount_amount')
+  final double? discountAmount;
+
+  /// Create a copy of AppliedVoucherModel
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  _$AppliedVoucherModelCopyWith<_AppliedVoucherModel> get copyWith =>
+      __$AppliedVoucherModelCopyWithImpl<_AppliedVoucherModel>(
+          this, _$identity);
+
+  @override
+  Map<String, dynamic> toJson() {
+    return _$AppliedVoucherModelToJson(
+      this,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _AppliedVoucherModel &&
+            (identical(other.code, code) || other.code == code) &&
+            (identical(other.category, category) ||
+                other.category == category) &&
+            (identical(other.storeId, storeId) || other.storeId == storeId) &&
+            (identical(other.discountType, discountType) ||
+                other.discountType == discountType) &&
+            (identical(other.discountValue, discountValue) ||
+                other.discountValue == discountValue) &&
+            (identical(other.maxDiscount, maxDiscount) ||
+                other.maxDiscount == maxDiscount) &&
+            (identical(other.discountAmount, discountAmount) ||
+                other.discountAmount == discountAmount));
+  }
+
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @override
+  int get hashCode => Object.hash(runtimeType, code, category, storeId,
+      discountType, discountValue, maxDiscount, discountAmount);
+
+  @override
+  String toString() {
+    return 'AppliedVoucherModel(code: $code, category: $category, storeId: $storeId, discountType: $discountType, discountValue: $discountValue, maxDiscount: $maxDiscount, discountAmount: $discountAmount)';
+  }
+}
+
+/// @nodoc
+abstract mixin class _$AppliedVoucherModelCopyWith<$Res>
+    implements $AppliedVoucherModelCopyWith<$Res> {
+  factory _$AppliedVoucherModelCopyWith(_AppliedVoucherModel value,
+          $Res Function(_AppliedVoucherModel) _then) =
+      __$AppliedVoucherModelCopyWithImpl;
+  @override
+  @useResult
+  $Res call(
+      {@StringJson() String code,
+      @StringJson() String category,
+      @IntOrNullJson() @JsonKey(name: 'store_id') int? storeId,
+      @StringJson() @JsonKey(name: 'discount_type') String discountType,
+      @DoubleJson() @JsonKey(name: 'discount_value') double discountValue,
+      @DoubleOrNullJson() @JsonKey(name: 'max_discount') double? maxDiscount,
+      @DoubleOrNullJson()
+      @JsonKey(name: 'discount_amount')
+      double? discountAmount});
+}
+
+/// @nodoc
+class __$AppliedVoucherModelCopyWithImpl<$Res>
+    implements _$AppliedVoucherModelCopyWith<$Res> {
+  __$AppliedVoucherModelCopyWithImpl(this._self, this._then);
+
+  final _AppliedVoucherModel _self;
+  final $Res Function(_AppliedVoucherModel) _then;
+
+  /// Create a copy of AppliedVoucherModel
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $Res call({
+    Object? code = null,
+    Object? category = null,
+    Object? storeId = freezed,
+    Object? discountType = null,
+    Object? discountValue = null,
+    Object? maxDiscount = freezed,
+    Object? discountAmount = freezed,
+  }) {
+    return _then(_AppliedVoucherModel(
+      code: null == code
+          ? _self.code
+          : code // ignore: cast_nullable_to_non_nullable
+              as String,
+      category: null == category
+          ? _self.category
+          : category // ignore: cast_nullable_to_non_nullable
+              as String,
+      storeId: freezed == storeId
+          ? _self.storeId
+          : storeId // ignore: cast_nullable_to_non_nullable
+              as int?,
+      discountType: null == discountType
+          ? _self.discountType
+          : discountType // ignore: cast_nullable_to_non_nullable
+              as String,
+      discountValue: null == discountValue
+          ? _self.discountValue
+          : discountValue // ignore: cast_nullable_to_non_nullable
+              as double,
+      maxDiscount: freezed == maxDiscount
+          ? _self.maxDiscount
+          : maxDiscount // ignore: cast_nullable_to_non_nullable
+              as double?,
+      discountAmount: freezed == discountAmount
+          ? _self.discountAmount
+          : discountAmount // ignore: cast_nullable_to_non_nullable
+              as double?,
+    ));
+  }
+}
+
+/// @nodoc
 mixin _$CartSummaryModel {
   @DoubleJson()
   double get subtotal;
   @IntJson()
   @JsonKey(name: 'item_count')
   int get itemCount;
+
+  /// Voucher yang sedang terpasang; `[]` selama belum ada yang dipasang.
+  ///
+  /// Server **membuang sendiri voucher yang sudah tidak valid** terhadap isi
+  /// keranjang saat ini (`list_applied_vouchers` menghapusnya dari
+  /// `cart_applied_vouchers`), jadi daftar ini selalu voucher yang benar-benar
+  /// masih berlaku — tidak perlu divalidasi ulang di aplikasi.
+  List<AppliedVoucherModel> get vouchers;
+
+  /// Total potongan rupiah dari [vouchers].
+  ///
+  /// ⚠️ **Voucher ongkir dan cashback tidak ikut dijumlah** — keduanya
+  /// menyumbang nol di sini. Jadi `discount_amount` nol tidak berarti tidak
+  /// ada voucher terpasang.
+  @DoubleJson()
+  @JsonKey(name: 'discount_amount')
+  double get discountAmount;
 
   /// Create a copy of CartSummaryModel
   /// with the given fields replaced by the non-null parameter values.
@@ -1143,16 +1695,20 @@ mixin _$CartSummaryModel {
             (identical(other.subtotal, subtotal) ||
                 other.subtotal == subtotal) &&
             (identical(other.itemCount, itemCount) ||
-                other.itemCount == itemCount));
+                other.itemCount == itemCount) &&
+            const DeepCollectionEquality().equals(other.vouchers, vouchers) &&
+            (identical(other.discountAmount, discountAmount) ||
+                other.discountAmount == discountAmount));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode => Object.hash(runtimeType, subtotal, itemCount);
+  int get hashCode => Object.hash(runtimeType, subtotal, itemCount,
+      const DeepCollectionEquality().hash(vouchers), discountAmount);
 
   @override
   String toString() {
-    return 'CartSummaryModel(subtotal: $subtotal, itemCount: $itemCount)';
+    return 'CartSummaryModel(subtotal: $subtotal, itemCount: $itemCount, vouchers: $vouchers, discountAmount: $discountAmount)';
   }
 }
 
@@ -1164,7 +1720,9 @@ abstract mixin class $CartSummaryModelCopyWith<$Res> {
   @useResult
   $Res call(
       {@DoubleJson() double subtotal,
-      @IntJson() @JsonKey(name: 'item_count') int itemCount});
+      @IntJson() @JsonKey(name: 'item_count') int itemCount,
+      List<AppliedVoucherModel> vouchers,
+      @DoubleJson() @JsonKey(name: 'discount_amount') double discountAmount});
 }
 
 /// @nodoc
@@ -1182,6 +1740,8 @@ class _$CartSummaryModelCopyWithImpl<$Res>
   $Res call({
     Object? subtotal = null,
     Object? itemCount = null,
+    Object? vouchers = null,
+    Object? discountAmount = null,
   }) {
     return _then(_self.copyWith(
       subtotal: null == subtotal
@@ -1192,6 +1752,14 @@ class _$CartSummaryModelCopyWithImpl<$Res>
           ? _self.itemCount
           : itemCount // ignore: cast_nullable_to_non_nullable
               as int,
+      vouchers: null == vouchers
+          ? _self.vouchers
+          : vouchers // ignore: cast_nullable_to_non_nullable
+              as List<AppliedVoucherModel>,
+      discountAmount: null == discountAmount
+          ? _self.discountAmount
+          : discountAmount // ignore: cast_nullable_to_non_nullable
+              as double,
     ));
   }
 }
@@ -1289,15 +1857,21 @@ extension CartSummaryModelPatterns on CartSummaryModel {
 
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>(
-    TResult Function(@DoubleJson() double subtotal,
-            @IntJson() @JsonKey(name: 'item_count') int itemCount)?
+    TResult Function(
+            @DoubleJson() double subtotal,
+            @IntJson() @JsonKey(name: 'item_count') int itemCount,
+            List<AppliedVoucherModel> vouchers,
+            @DoubleJson()
+            @JsonKey(name: 'discount_amount')
+            double discountAmount)?
         $default, {
     required TResult orElse(),
   }) {
     final _that = this;
     switch (_that) {
       case _CartSummaryModel() when $default != null:
-        return $default(_that.subtotal, _that.itemCount);
+        return $default(_that.subtotal, _that.itemCount, _that.vouchers,
+            _that.discountAmount);
       case _:
         return orElse();
     }
@@ -1318,14 +1892,20 @@ extension CartSummaryModelPatterns on CartSummaryModel {
 
   @optionalTypeArgs
   TResult when<TResult extends Object?>(
-    TResult Function(@DoubleJson() double subtotal,
-            @IntJson() @JsonKey(name: 'item_count') int itemCount)
+    TResult Function(
+            @DoubleJson() double subtotal,
+            @IntJson() @JsonKey(name: 'item_count') int itemCount,
+            List<AppliedVoucherModel> vouchers,
+            @DoubleJson()
+            @JsonKey(name: 'discount_amount')
+            double discountAmount)
         $default,
   ) {
     final _that = this;
     switch (_that) {
       case _CartSummaryModel():
-        return $default(_that.subtotal, _that.itemCount);
+        return $default(_that.subtotal, _that.itemCount, _that.vouchers,
+            _that.discountAmount);
       case _:
         throw StateError('Unexpected subclass');
     }
@@ -1345,14 +1925,20 @@ extension CartSummaryModelPatterns on CartSummaryModel {
 
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>(
-    TResult? Function(@DoubleJson() double subtotal,
-            @IntJson() @JsonKey(name: 'item_count') int itemCount)?
+    TResult? Function(
+            @DoubleJson() double subtotal,
+            @IntJson() @JsonKey(name: 'item_count') int itemCount,
+            List<AppliedVoucherModel> vouchers,
+            @DoubleJson()
+            @JsonKey(name: 'discount_amount')
+            double discountAmount)?
         $default,
   ) {
     final _that = this;
     switch (_that) {
       case _CartSummaryModel() when $default != null:
-        return $default(_that.subtotal, _that.itemCount);
+        return $default(_that.subtotal, _that.itemCount, _that.vouchers,
+            _that.discountAmount);
       case _:
         return null;
     }
@@ -1364,8 +1950,11 @@ extension CartSummaryModelPatterns on CartSummaryModel {
 class _CartSummaryModel extends CartSummaryModel {
   const _CartSummaryModel(
       {@DoubleJson() this.subtotal = 0,
-      @IntJson() @JsonKey(name: 'item_count') this.itemCount = 0})
-      : super._();
+      @IntJson() @JsonKey(name: 'item_count') this.itemCount = 0,
+      final List<AppliedVoucherModel> vouchers = const <AppliedVoucherModel>[],
+      @DoubleJson() @JsonKey(name: 'discount_amount') this.discountAmount = 0})
+      : _vouchers = vouchers,
+        super._();
   factory _CartSummaryModel.fromJson(Map<String, dynamic> json) =>
       _$CartSummaryModelFromJson(json);
 
@@ -1377,6 +1966,38 @@ class _CartSummaryModel extends CartSummaryModel {
   @IntJson()
   @JsonKey(name: 'item_count')
   final int itemCount;
+
+  /// Voucher yang sedang terpasang; `[]` selama belum ada yang dipasang.
+  ///
+  /// Server **membuang sendiri voucher yang sudah tidak valid** terhadap isi
+  /// keranjang saat ini (`list_applied_vouchers` menghapusnya dari
+  /// `cart_applied_vouchers`), jadi daftar ini selalu voucher yang benar-benar
+  /// masih berlaku — tidak perlu divalidasi ulang di aplikasi.
+  final List<AppliedVoucherModel> _vouchers;
+
+  /// Voucher yang sedang terpasang; `[]` selama belum ada yang dipasang.
+  ///
+  /// Server **membuang sendiri voucher yang sudah tidak valid** terhadap isi
+  /// keranjang saat ini (`list_applied_vouchers` menghapusnya dari
+  /// `cart_applied_vouchers`), jadi daftar ini selalu voucher yang benar-benar
+  /// masih berlaku — tidak perlu divalidasi ulang di aplikasi.
+  @override
+  @JsonKey()
+  List<AppliedVoucherModel> get vouchers {
+    if (_vouchers is EqualUnmodifiableListView) return _vouchers;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_vouchers);
+  }
+
+  /// Total potongan rupiah dari [vouchers].
+  ///
+  /// ⚠️ **Voucher ongkir dan cashback tidak ikut dijumlah** — keduanya
+  /// menyumbang nol di sini. Jadi `discount_amount` nol tidak berarti tidak
+  /// ada voucher terpasang.
+  @override
+  @DoubleJson()
+  @JsonKey(name: 'discount_amount')
+  final double discountAmount;
 
   /// Create a copy of CartSummaryModel
   /// with the given fields replaced by the non-null parameter values.
@@ -1401,16 +2022,20 @@ class _CartSummaryModel extends CartSummaryModel {
             (identical(other.subtotal, subtotal) ||
                 other.subtotal == subtotal) &&
             (identical(other.itemCount, itemCount) ||
-                other.itemCount == itemCount));
+                other.itemCount == itemCount) &&
+            const DeepCollectionEquality().equals(other._vouchers, _vouchers) &&
+            (identical(other.discountAmount, discountAmount) ||
+                other.discountAmount == discountAmount));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode => Object.hash(runtimeType, subtotal, itemCount);
+  int get hashCode => Object.hash(runtimeType, subtotal, itemCount,
+      const DeepCollectionEquality().hash(_vouchers), discountAmount);
 
   @override
   String toString() {
-    return 'CartSummaryModel(subtotal: $subtotal, itemCount: $itemCount)';
+    return 'CartSummaryModel(subtotal: $subtotal, itemCount: $itemCount, vouchers: $vouchers, discountAmount: $discountAmount)';
   }
 }
 
@@ -1424,7 +2049,9 @@ abstract mixin class _$CartSummaryModelCopyWith<$Res>
   @useResult
   $Res call(
       {@DoubleJson() double subtotal,
-      @IntJson() @JsonKey(name: 'item_count') int itemCount});
+      @IntJson() @JsonKey(name: 'item_count') int itemCount,
+      List<AppliedVoucherModel> vouchers,
+      @DoubleJson() @JsonKey(name: 'discount_amount') double discountAmount});
 }
 
 /// @nodoc
@@ -1442,6 +2069,8 @@ class __$CartSummaryModelCopyWithImpl<$Res>
   $Res call({
     Object? subtotal = null,
     Object? itemCount = null,
+    Object? vouchers = null,
+    Object? discountAmount = null,
   }) {
     return _then(_CartSummaryModel(
       subtotal: null == subtotal
@@ -1452,6 +2081,14 @@ class __$CartSummaryModelCopyWithImpl<$Res>
           ? _self.itemCount
           : itemCount // ignore: cast_nullable_to_non_nullable
               as int,
+      vouchers: null == vouchers
+          ? _self._vouchers
+          : vouchers // ignore: cast_nullable_to_non_nullable
+              as List<AppliedVoucherModel>,
+      discountAmount: null == discountAmount
+          ? _self.discountAmount
+          : discountAmount // ignore: cast_nullable_to_non_nullable
+              as double,
     ));
   }
 }
