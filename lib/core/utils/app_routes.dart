@@ -8,6 +8,7 @@ import 'package:marketplace_app_member/ui/main/checkout/screens/checkout_screen.
 import 'package:marketplace_app_member/ui/main/order/screens/order_detail_screen.dart';
 import 'package:marketplace_app_member/ui/main/notification/screens/notification_screen.dart';
 import 'package:marketplace_app_member/ui/main/order/screens/order_list_screen.dart';
+import 'package:marketplace_app_member/ui/main/reward/screens/reward_screen.dart';
 import 'package:marketplace_app_member/ui/main/payment/screens/payment_screen.dart';
 import 'package:marketplace_app_member/ui/main/wallet/screens/wallet_screen.dart';
 import 'package:marketplace_app_member/ui/main/auth/screens/register_screen.dart';
@@ -83,6 +84,9 @@ class AppRoutes {
 
   /// Dompet: saldo, riwayat mutasi, topup, penarikan.
   static const String wallet = '/wallet';
+
+  /// Poin, koin, tingkat loyalitas, dan riwayat cashback.
+  static const String reward = '/reward';
 
   static const String homeLayout = '/homeLayout';
   static const String productDetails = '/productDetails';
@@ -389,6 +393,15 @@ final GoRouter router = GoRouter(
         return FadeThroughTransitionPageWrapper(
           transitionKey: state.pageKey,
           page: const CreateNewPasswordView(),
+        );
+      },
+    ),
+    GoRoute(
+      path: AppRoutes.reward,
+      pageBuilder: (BuildContext context, GoRouterState state) {
+        return FadeThroughTransitionPageWrapper(
+          transitionKey: state.pageKey,
+          page: const RewardScreen(),
         );
       },
     ),

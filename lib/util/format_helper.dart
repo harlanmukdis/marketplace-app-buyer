@@ -183,3 +183,16 @@ String formatRupiah(num? amount, {String fallback = '-'}) {
   if (amount == null) return fallback;
   return _rupiah.format(amount);
 }
+
+final NumberFormat _plainNumber = NumberFormat.decimalPattern('id_ID');
+
+/// Angka berpemisah ribuan tanpa simbol mata uang — untuk nilai yang **bukan
+/// uang**, seperti saldo poin dan koin.
+///
+/// Sengaja dipisahkan dari [formatRupiah]: memberi awalan `Rp` pada poin
+/// membuatnya terbaca sebagai rupiah, padahal nilainya sama sekali tidak
+/// setara.
+String formatNumber(num? value, {String fallback = '-'}) {
+  if (value == null) return fallback;
+  return _plainNumber.format(value);
+}

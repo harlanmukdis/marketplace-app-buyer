@@ -8,6 +8,7 @@ import 'package:marketplace_app_member/core/data/datasources/remote/service/noti
 import 'package:marketplace_app_member/core/data/datasources/remote/service/order_service.dart';
 import 'package:marketplace_app_member/core/data/datasources/remote/service/payment_service.dart';
 import 'package:marketplace_app_member/core/data/datasources/remote/service/review_service.dart';
+import 'package:marketplace_app_member/core/data/datasources/remote/service/reward_service.dart';
 import 'package:marketplace_app_member/core/data/datasources/remote/service/wallet_service.dart';
 import 'package:marketplace_app_member/core/data/datasources/remote/service/wishlist_service.dart';
 import 'package:marketplace_app_member/core/data/datasources/remote/service/catalog_service.dart';
@@ -57,6 +58,7 @@ void initializeService() {
   injector.registerLazySingleton<WishlistService>(() => WishlistService(api));
   injector.registerLazySingleton<ReviewService>(() => ReviewService(api));
   injector.registerLazySingleton<WalletService>(() => WalletService(api));
+  injector.registerLazySingleton<RewardService>(() => RewardService(api));
   injector.registerLazySingleton<NotificationService>(
     () => NotificationService(api),
   );

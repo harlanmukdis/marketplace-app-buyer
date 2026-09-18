@@ -118,6 +118,12 @@ class GeneralWidgets extends StatelessWidget {
         ),
         _customListTile(
           context,
+          title: 'Poin & Reward',
+          icon: Icons.stars_outlined,
+          onTap: () => router.push(AppRoutes.reward),
+        ),
+        _customListTile(
+          context,
           title: l.profileInformation,
           icon: Icons.person_outline,
           onTap: () => router.push(AppRoutes.editProfile),

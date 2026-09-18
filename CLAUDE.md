@@ -27,7 +27,7 @@ Buyer app for a **multi-vendor marketplace**, built on a purchased Flutter UI ki
 flutter pub get                       # install dependencies
 flutter run                           # run on connected device/emulator
 flutter analyze                       # static analysis (flutter_lints 4.0.0 via analysis_options.yaml)
-flutter test                          # run all tests (348; all pass)
+flutter test                          # run all tests (399; all pass)
 flutter test test/integration --concurrency=1   # integrasi: butuh backend hidup, WAJIB serial
 flutter test test/data                # one directory
 flutter test test/data/auth_repository_impl_test.dart                       # single file
@@ -57,7 +57,7 @@ Note: `build_runner` 2.15 **removed `--delete-conflicting-outputs`** — passing
 
 | tree | data source | safe to build on? |
 |---|---|---|
-| `lib/ui/main/{auth,catalog,cart,address,checkout,order,payment,wishlist,review,wallet}/` | marketplace-api, live | **yes** — `catalog` is the reference implementation |
+| `lib/ui/main/{auth,catalog,cart,address,checkout,order,payment,wishlist,review,wallet,notification,reward}/` | marketplace-api, live | **yes** — `catalog` is the reference implementation |
 | `lib/features/` (the UI kit's sample tree) | hardcoded lists inside cubits (`HomePageCubit.productsTShirt`) | as sample UI only |
 
 The third tree that used to sit between them — a complete data + UI stack written against the old Markas backend — **was deleted on 14 September 2026**. See "~~The dead layer~~" in Part 2 for what went and the endpoint translation table that survived it.
@@ -125,7 +125,7 @@ Current state: `en` and `ar` are complete (284 keys) and selectable. `fr` appear
 
 ## Known rough edges
 
-- The Flutter counter template `test/widget_test.dart` is **gone** — the suite is real (361 tests, all passing) and is a usable signal. `test/integration/` (107 of those) hits a live backend, so it fails with connection errors when the API is not running; that is the environment, not a regression. Note the API is started with `php -S`, **not** `docker compose` — see "Menyalakan backend dev" in Part 2 — and the integration suite must run `--concurrency=1`.
+- The Flutter counter template `test/widget_test.dart` is **gone** — the suite is real (399 tests, all passing) and is a usable signal. `test/integration/` (122 of those) hits a live backend, so it fails with connection errors when the API is not running; that is the environment, not a regression. Note the API is started with `php -S`, **not** `docker compose` — see "Menyalakan backend dev" in Part 2 — and the integration suite must run `--concurrency=1`.
 - 14 stale `*.dart~` backup files litter `lib/` (and `android/`). They are not compiled but **do show up in grep results** — always confirm a hit isn't in a `~` file before editing.
 - `lib/features/my_cart/presentation/views/map_screen.dart` is 100% commented out, and the `com.google.android.geo.API_KEY` meta-data in `android/app/src/main/AndroidManifest.xml` is commented out too. Restoring the map needs both, plus an iOS key. Location permissions are already declared in the manifest.
 - **The app builds now, but every image is a placeholder.** The UI kit's asset folders were never copied into this repo, so all 67 files in `assets/images/` and `assets/icon/` are grey 64×64 stubs, and the `Hanimation` font declaration in `pubspec.yaml` stays **commented out** (a fake OTF crashes at start, so it could not be stubbed — all text falls back to the system font). What you see on screen is therefore not the kit's design. `assets/PLACEHOLDER-README.md` documents what was stubbed and how to restore the originals.
@@ -248,9 +248,10 @@ Current state: `en` and `ar` are complete (284 keys) and selectable. `fr` appear
 - **Wallet domain** — `lib/core/…/wallet/` + `lib/ui/main/wallet/`; lihat "Domain dompet" di bawah
 - `lib/util/error_message.dart` — maps `DataError.code` to localized copy; **never** shows `error.message` to users
 - **Notification domain** — `lib/core/…/notification/` + `lib/ui/main/notification/`; lihat "Domain notifikasi" di bawah
-- Tests: `test/util/` (17, murni), `test/data/` (131, fake service/store + parsing JSON asli), `test/ui/` (106, fake repository), `test/integration/` (107, butuh backend hidup — **jalankan `--concurrency=1`**) — **361 total, semuanya lulus**
+- **Reward domain** — `lib/core/…/reward/` + `lib/ui/main/reward/`; lihat "Domain reward" di bawah
+- Tests: `test/util/` (17, murni), `test/data/` (148, fake service/store + parsing JSON asli), `test/ui/` (112, fake repository), `test/integration/` (122, butuh backend hidup — **jalankan `--concurrency=1`**) — **399 total, semuanya lulus**
 
-Still absent: Firebase and `lib/firebase_options.dart`; domain chat dan modul reward.
+Still absent: Firebase and `lib/firebase_options.dart`; domain chat.
 
 ### ~~The dead layer~~ — sudah dihapus (14 September 2026)
 
@@ -586,6 +587,49 @@ disimpulkan dari "halaman terakhir terisi penuh".
   **tidak dibawa serta**: domain chat belum ditulis, dan tab palsu di sebelah
   tab sungguhan lebih menyesatkan daripada tidak ada tab.
 
+### Domain reward
+
+Poin, koin, tingkat loyalitas, cashback, dan estimasi koin sebelum checkout.
+
+#### 🔴 `POST /me/points/redeem` SENGAJA tidak dibuatkan method
+
+Dua alasan, keduanya diverifikasi ke server dan ke kode backend.
+
+**1. Nominal negatif MENCETAK poin.** Penjaganya ditulis `if ($wallet->balance < $amount) throw`. Untuk `amount = -1000` itu `0 < -1000` yang `false`, jadi lolos — lalu `balance - (-1000)` **menambah** saldo. Diuji: saldo `0` → tukar `-1000` → saldo `1000`, dan poin hasilnya benar-benar bisa dibelanjakan. Nominal `0` juga diterima, dan body tanpa `amount` membalas **500 HTML**.
+
+**2. Menukar poin tidak memberi apa pun.** `redeem_points()` hanya mengurangi `user_points.balance` lalu mencatat satu baris `point_transactions` bertipe `redeem` — dan **tidak ada satu pun kode lain di backend yang membaca baris itu**. Tidak ada voucher terbit, tidak ada saldo dikredit. Tombolnya hanya akan menghanguskan poin user.
+
+Keduanya dipatok test integrasi, jadi perbaikannya akan terlihat. Pola yang sama dengan `WalletService.transfer`: endpoint yang ada tapi tidak bisa dipakai dengan benar tidak dibuatkan method.
+
+#### Bentuk data yang membentuk layarnya
+
+- **`GET /me/points` dan `GET /me/coins` identik**, jadi satu `RewardBalanceModel` untuk keduanya — bukan dua hal berbeda yang kebetulan mirip. Barisnya **dibuat otomatis saat pertama dibaca**, seperti dompet: akun baru dapat `0`, bukan `404`.
+- **`GET /me/loyalty` sudah menyisipkan objek `tier`**, jadi nama tingkat tidak butuh panggilan kedua. `GET /loyalty/tiers` (publik) hanya dibutuhkan untuk menghitung jarak ke tingkat berikutnya.
+- ✅ **`tier_valid_until` kini sezona dengan `updated_at`.** Catatan sebelumnya di file ini yang menyebutnya UTC **sudah tidak berlaku** — pengukurannya dilakukan sebelum backend menyeragamkan zona waktu (commit `93c6a14`). Diverifikasi ulang: selisihnya tepat satu tahun, tanpa sisa 7 jam.
+- **`benefits` pada tier `null` di seluruh seed**, jadi bentuk isinya belum pernah teramati; dibaca lewat `JsonMapJson` supaya string berisi JSON maupun objek sama-sama terserap. Dipatok test supaya ketahuan begitu diisi.
+- **Dua angka poin yang berbeda di satu layar.** `user_points.balance` (saldo yang bisa dipakai) terpisah dari `loyalty_memberships.tier_points` (yang menentukan tingkat) — menukar poin **tidak** menurunkan tingkat. Layarnya menjelaskan ini, karena dua angka poin tanpa keterangan pasti membingungkan.
+- **Kemajuan ke tingkat berikutnya dihitung dari ambang tingkat SEKARANG**, bukan dari nol. Kalau dari nol, seorang Gold (5000) dengan 12.500 poin terlihat baru 62% menuju Platinum padahal sudah menempuh separuh jarak Gold→Platinum.
+- 🔴 **Tidak ada endpoint riwayat poin maupun koin.** `point_transactions` dan `coin_transactions` diisi server, tapi tak satu pun rute membacanya — hanya saldonya yang bisa ditampilkan. Hanya cashback yang punya daftar (`GET /me/cashback`).
+- **`GET /me/cashback` hidup tapi tidak tercantum** di daftar rute reward mana pun di dokumen. `[]` di dev karena cashback baru terbit dari pesanan yang selesai.
+
+#### `POST /checkout/calculate` — estimasi koin tanpa mereservasi stok
+
+Rutenya di bawah `/checkout`, tapi muatannya murni reward dan ia **tidak membuat sesi checkout maupun mereservasi stok** — jadi aman dipanggil dari layar keranjang, dan methodnya ditaruh di `RewardService`.
+
+Bentuknya **tidak seragam**: `subtotal` di tingkat teratas sementara angka rewardnya bersarang di `rewards`. Itu alasan ada `RewardPreviewModel.fromResponse` tersendiri.
+
+🔴 **Hasilnya estimasi, bukan saldo.** `status: "pending_release"` berarti koinnya belum masuk — baru dilepas saat pesanan selesai, dan **dibatalkan kalau pesanan batal** (tabel `order_pending_rewards`). Menampilkannya sebagai saldo membuat pembeli mengira sudah punya koin yang belum tentu terbit.
+
+#### ⚠️ Saldo tidak bisa ditumbuhkan secara sah di dev
+
+Poin dan koin hanya bertambah lewat reward engine yang dipicu pesanan **selesai**, dan menyelesaikan pesanan butuh aksi penjual. Jadi test integrasi memaku bentuk respons, pembuatan-otomatis, dan penolakan — bukan perjalanan poinnya. Bentuk baris cashback diturunkan dari skema dan diuji di `test/data/`.
+
+`earn_points` lama memakai `$pointsPerIdr = 0.001` hardcoded; sejak commit `eb18722` nilainya dari tabel `reward_configs` (base rate + pengali per tier + bonus per metode bayar).
+
+#### Layarnya menggabungkan lima endpoint, dan hanya satu yang fatal
+
+`RewardRepositoryImpl.fetchOverview` menembak poin, koin, loyalitas, daftar tier, dan cashback **bersamaan** — di-`await` terpisah supaya kegagalan salah satunya tidak jadi *unhandled async error*. Hanya **saldo poin** yang menggagalkan layar; sisanya boleh kosong. Menampilkan saldo tanpa bar loyalitas jauh lebih berguna daripada layar error penuh karena satu endpoint sampingan bermasalah.
+
 ### Kontrak sisi member (diverifikasi ke server, 14 September 2026)
 
 Semua di bawah ini hasil menembak server dengan token buyer, bukan membaca dokumen. Ini yang dipakai saat menulis model — `docs/03-api-documentation.md` tidak memuat satu pun dari detail ini dan sebagian bertentangan.
@@ -744,17 +788,7 @@ Derived from the gap between Part 1 and Part 2. Steps 0-5 are done and the auth 
 4. ~~Add `lib/core/data_state.dart` with the `DataState<T>` union.~~ **Done** — see deviation 1 above.
 5. ~~Build `lib/di/{injector,injector_service,injector_repository}.dart` and call `initialize()` before `runApp`.~~ **Done**; both registries are populated, but nine of the ten service/repository pairs point at the dead backend.
 6. ~~Bersihkan lapisan mati warisan Markas.~~ **Selesai** — 97 berkas dihapus; hanya `RepositoryGuard` yang dipertahankan.
-7. **In progress.** Tulis ulang tiap domain menembak marketplace-api, satu per satu, berpedoman pada "Kontrak sisi member" dan respons sungguhan — jangan `docs/03-api-documentation.md`. **Alur beli selesai seluruhnya**: katalog → keranjang → alamat → checkout → pembayaran → pesanan. Katalog jadi rujukan bentuk domain; checkout jadi rujukan untuk domain yang menahan sumber daya di server. **Wishlist, ulasan, dompet, dan notifikasi juga selesai.** Sisa yang belum ditulis: **chat** (`/chat/conversations`, ada polling di `/poll`) dan **modul reward**.
-
-   **Catatan awal untuk modul reward** (sudah ditembak ke server 15 September 2026, belum ditulis kodenya — supaya tidak perlu diprobe ulang):
-
-   - `GET /me/points`, `GET /me/coins` → `{id, user_id, balance, updated_at}`; barisnya **dibuat otomatis saat pertama dibaca**, seperti dompet, jadi akun baru dapat `balance: "0"`, bukan `404`.
-   - `GET /me/loyalty` → keanggotaan **beserta objek `tier` yang sudah disisipkan** (`{code, name, min_points, benefits}`), jadi tidak perlu memanggil `/loyalty/tiers` untuk merender status. `GET /loyalty/tiers` publik (bronze/silver/gold/platinum, `benefits` masih `null` semua).
-   - 🔴 **Pola dua zona waktu muncul lagi**: pada satu respons `GET /me/loyalty`, `updated_at` WIB sedangkan `tier_valid_until` **UTC** — `get_loyalty_status` memakai `date('Y-m-d H:i:s', strtotime('+1 year'))` dari PHP, sementara `updated_at` dari `CURRENT_TIMESTAMP` MySQL. Pakai `ServerUtcDateTimeJson` untuk `tier_valid_until`.
-   - 🔴 **Tidak ada endpoint riwayat poin.** Tabel `point_transactions` diisi `earn_points`/`redeem_points`, tapi tak satu pun rute membacanya — hanya saldonya yang bisa ditampilkan.
-   - `POST /me/points/redeem` menolak dengan `422 INSUFFICIENT_POINTS` yang rapi dan spesifik — berbeda dari `WITHDRAWAL_REJECTED` di dompet yang ambigu.
-   - ⚠️ `earn_points` memakai `$pointsPerIdr = 0.001` **hardcoded sebagai fallback**, dengan komentar bahwa nilai aktifnya semestinya dari `admin_settings` — pola yang sama dengan minimum penarikan.
-   - `GET /me/cashback` ada dan hidup (`[]` di dev), tapi **tidak tercantum** di daftar rute reward mana pun di dokumen.
+7. **In progress.** Tulis ulang tiap domain menembak marketplace-api, satu per satu, berpedoman pada "Kontrak sisi member" dan respons sungguhan — jangan `docs/03-api-documentation.md`. **Alur beli selesai seluruhnya**: katalog → keranjang → alamat → checkout → pembayaran → pesanan. Katalog jadi rujukan bentuk domain; checkout jadi rujukan untuk domain yang menahan sumber daya di server. **Wishlist, ulasan, dompet, notifikasi, dan reward juga selesai.** Sisa yang belum ditulis: **chat** (`/chat/conversations`, ada polling di `/poll`) — sengaja dikerjakan **terakhir**.
 7b. **Backlog: endpoint backend yang sudah ada tapi belum dipakai aplikasi.** Dikerjakan **setelah** domain di langkah 7 selesai, bukan menyela. Backend bergerak lebih cepat dari aplikasi, jadi daftar ini akan bertambah — **periksa `git log` repo API setiap kali melanjutkan.**
 
    ⚠️ **Pemeriksaan itu bukan formalitas.** Pada 19 September 2026 backend ternyata sudah 24 commit di depan (`eff67e7..70ac372`), dan **tiga di antaranya membatalkan akalan yang sudah tertanam di kode jadi**: drift dua zona waktu (`93c6a14`), `PATCH .../address` yang dulu selalu 500 (`8235c33`), dan listing produk yang dulu tanpa gambar (`db8a626`). Yang menemukannya adalah **test integrasi yang memaku perilaku buruk itu** — empat test merah sekaligus. Itulah gunanya memaku bug server, bukan hanya fitur: perbaikannya jadi terlihat alih-alih diam-diam membuat aplikasi salah 7 jam.
@@ -769,8 +803,8 @@ Derived from the gap between Part 1 and Part 2. Steps 0-5 are done and the auth 
 
    - **Layar voucher keranjang.** Endpointnya sudah lengkap sejak `90751bf` (pasang, lepas, tumpuk maks 1 ongkir + 1 platform + 1 per toko) dan `CartRepository` sudah punya `applyVoucher`/`removeVoucher`. Yang belum ada layarnya. ⚠️ **Tunggu ada voucher yang di-seed** — `GET /me/vouchers` masih `[]`, jadi alur suksesnya tidak bisa diuji sama sekali dan modelnya akan ditulis dari dokumen saja.
    - **`POST /cart/vouchers/auto-apply`** (commit `2033a15`) — "Gunakan Otomatis" ala Tokopedia/Shopee: menghitung kombinasi terbaik lalu memasangnya sekaligus. Hidup (`200`, `[]` di dev), begitu juga `GET /cart/recommended-vouchers` **selama keranjang tidak kosong**.
-   - **`POST /checkout/calculate`** — estimasi bonus coins dari isi keranjang **tanpa** membuat sesi checkout dan **tanpa** mereservasi stok; cocok untuk badge "Dapat Bonus Coins" di halaman keranjang. Terverifikasi hidup: `{subtotal, rewards:{estimated_cashback_coins, breakdown:{base, tier_bonus}, tier, status}}`. ⚠️ `status: "pending_release"` berarti coins **belum** masuk saldo — baru dilepas saat pesanan selesai dan dibatalkan kalau pesanan batal (`order_pending_rewards`). Tampilkan sebagai estimasi, bukan saldo. Kerjakan bersama modul reward.
-   - **Reward engine config-driven** (commit `eb18722` + `fcc417e`, tabel `reward_configs` / `order_pending_rewards`) — cashback coins dengan rate per tier dan bonus per metode bayar, menggantikan rate hardcoded `0.001`. Menyentuh modul reward yang memang belum ditulis, jadi kerjakan bersamaan.
+   - ~~**`POST /checkout/calculate`**~~ — **selesai**, lihat "Domain reward". Yang belum: menampilkannya sebagai badge "Dapat Bonus Coins" di layar keranjang; methodnya (`RewardRepository.previewFromCart`) sudah siap dipakai.
+   - ~~**Reward engine config-driven**~~ — **selesai** bersama domain reward: `POST /checkout/calculate` sudah dipakai, dan rate per tier kini dibaca server dari `reward_configs`.
    - **`flash_sale` per varian** di `GET /products/{id}` (commit `ad270c3`) — key-nya sudah dikirim server tapi **`null` di seluruh seed**, jadi bentuknya belum bisa diamati. Sama seperti `store_couriers` dan home CMS: tunggu ada isinya.
    - **`GET /flash-sales/{id}/products`** (commit `9c5b9a7` + `1784186`) — kini membawa `product_id`, `image_url`, dan `original_price`.
 
