@@ -7,35 +7,25 @@ import 'package:marketplace_app_member/util/json_converters.dart';
 part 'checkout_models.freezed.dart';
 part 'checkout_models.g.dart';
 
-/// Mengubah timestamp **UTC** dari server jadi instan yang benar.
-///
-/// 🔴 **Satu respons checkout memakai DUA zona waktu sekaligus.** Sudah
-/// dibuktikan dua kali ke server: pada sesi yang sama,
-/// `created_at: "2026-09-15 07:52:59"` adalah waktu dinding **WIB**, sedangkan
-/// `expires_at: "2026-09-15 01:07:59"` adalah **UTC** — selisihnya tepat 15
-/// menit hanya kalau `expires_at` digeser +7 jam lebih dulu.
-///
-/// [ServerDateTimeJson] memperlakukan semua timestamp sebagai WIB, yang benar
-/// untuk `created_at` tapi salah 7 jam untuk `expires_at`. Memakainya di sini
-/// membuat hitung mundur checkout langsung menampilkan "kedaluwarsa 6 jam 45
-/// menit lalu" pada sesi yang baru saja dibuat.
-///
-/// Converter ini dipakai **hanya** untuk field tenggat yang dihitung server
-/// (`expires_at`, `payment_deadline`), bukan untuk `created_at`/`updated_at`.
-class ServerUtcDateTimeJson extends JsonConverter<DateTime?, Object?> {
-  const ServerUtcDateTimeJson();
-
-  @override
-  DateTime? fromJson(Object? json) {
-    final raw = json?.toString().trim();
-    if (raw == null || raw.isEmpty || raw == '0000-00-00 00:00:00') return null;
-    // Suffix Z: angka jamnya memang sudah UTC, jadi tidak digeser sama sekali.
-    return DateTime.tryParse('${raw.replaceFirst(' ', 'T')}Z');
-  }
-
-  @override
-  Object? toJson(DateTime? object) => object?.toUtc().toIso8601String();
-}
+// ---------------------------------------------------------------------------
+// ✅ `ServerUtcDateTimeJson` SUDAH DIHAPUS (19 September 2026)
+//
+// Dulu ada converter khusus di sini karena satu respons checkout memakai DUA
+// zona waktu sekaligus: `created_at` waktu dinding WIB, sedangkan `expires_at`
+// UTC — selisihnya tepat 15 menit hanya kalau `expires_at` digeser +7 jam.
+// Penyebabnya PHP `date()` memakai `php.ini date.timezone` (UTC) sementara
+// kolom lain diisi `CURRENT_TIMESTAMP` MySQL (WIB).
+//
+// Backend memperbaikinya di commit `93c6a14` ("Set PHP timezone to match
+// MySQL, fixing systemic date()/NOW() drift") dengan memanggil
+// `date_default_timezone_set('Asia/Jakarta')` di `application/config/config.php`
+// — bukan di `php.ini`, justru supaya tidak bergantung konfigurasi PHP di luar
+// aplikasi. Jadi seluruh timestamp kini WIB tanpa kecuali, dan
+// `ServerDateTimeJson` benar di mana-mana.
+//
+// Test integrasi yang memaku selisih 15 menit / 1 jam itulah yang lebih dulu
+// merah dan menunjukkan perubahannya — persis fungsinya dibuat.
+// ---------------------------------------------------------------------------
 
 /// Hasil `POST /checkout/sessions`.
 ///
@@ -52,7 +42,7 @@ abstract class CheckoutSessionCreated with _$CheckoutSessionCreated {
     @DoubleJson() @Default(0) double subtotal,
     @DoubleJson() @Default(0) double discount,
     @DoubleJson() @JsonKey(name: 'grand_total') @Default(0) double grandTotal,
-    @ServerUtcDateTimeJson() @JsonKey(name: 'expires_at') DateTime? expiresAt,
+    @ServerDateTimeJson() @JsonKey(name: 'expires_at') DateTime? expiresAt,
   }) = _CheckoutSessionCreated;
 
   factory CheckoutSessionCreated.fromJson(Map<String, dynamic> json) =>
@@ -104,11 +94,13 @@ abstract class CheckoutSessionModel with _$CheckoutSessionModel {
     /// `POST /checkout/sessions`.
     @DoubleJson() @JsonKey(name: 'grand_total') @Default(0) double grandTotal,
 
-    /// **UTC** — lihat [ServerUtcDateTimeJson].
-    @ServerUtcDateTimeJson() @JsonKey(name: 'expires_at') DateTime? expiresAt,
+    /// Tenggat reservasi stok, 15 menit sesudah [createdAt].
+    ///
+    /// Dulu field ini butuh converter tersendiri karena dikirim dalam UTC
+    /// sementara [createdAt] dalam WIB; backend sudah menyeragamkannya — lihat
+    /// catatan di kepala berkas ini.
+    @ServerDateTimeJson() @JsonKey(name: 'expires_at') DateTime? expiresAt,
 
-    /// **Waktu dinding server (WIB)** — konverter berbeda dari [expiresAt],
-    /// dan itu memang disengaja.
     @ServerDateTimeJson() @JsonKey(name: 'created_at') DateTime? createdAt,
   }) = _CheckoutSessionModel;
 

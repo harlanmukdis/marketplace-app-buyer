@@ -7,16 +7,20 @@ import 'package:marketplace_app_member/core/domain/model/checkout/checkout_model
 ///
 /// **Id sesi adalah UUID string**, bukan integer — rutenya `(:any)`.
 ///
-/// 🔴 **`PATCH /checkout/sessions/{id}/address` tidak dibuatkan method di sini
-/// dengan sengaja: endpoint itu rusak.** Controllernya membaca body dengan
-/// `$this->post('address_id')` pada rute PATCH, sehingga nilainya selalu
-/// `null` dan server menjalankan `UPDATE … SET shipping_address_id = NULL`,
-/// yang ditolak foreign key. Hasilnya **selalu 500 halaman HTML**, apa pun
-/// encoding body-nya (JSON, form, query string — ketiganya sudah diuji).
+/// ✅ **`PATCH /checkout/sessions/{id}/address` sudah diperbaiki backend**
+/// (commit `8235c33`, dan kepemilikan alamat divalidasi di `28adce7`).
 ///
-/// Jalan memutarnya: alamat ditetapkan saat sesi dibuat lewat [createSession].
-/// Untuk menggantinya, **batalkan sesi lalu buat sesi baru** — itulah yang
-/// dilakukan `CheckoutCubit.changeAddress`.
+/// Dulu endpoint ini selalu membalas 500: controllernya membaca body dengan
+/// `$this->post('address_id')` pada rute PATCH, sehingga nilainya selalu
+/// `null` dan server menjalankan `UPDATE … SET shipping_address_id = NULL`
+/// yang ditolak foreign key. Karena itu aplikasi dulu mengganti alamat dengan
+/// **membatalkan sesi lalu membuat sesi baru** — cara yang bekerja tapi
+/// melepas lalu mengambil ulang reservasi stok, sehingga user bisa kehilangan
+/// barangnya ke pembeli lain hanya karena salah pilih alamat.
+///
+/// Sekarang [changeAddress] mengubahnya **di tempat**: diuji ke server,
+/// `shipping_address_id` benar-benar berubah dan statusnya tetap
+/// `stock_reserved`.
 ///
 /// ⚠️ **`Idempotency-Key` belum diimplementasikan backend**, jadi mengulang
 /// [confirm] secara otomatis berisiko menggandakan order. Jangan pasang retry
@@ -29,8 +33,6 @@ class CheckoutService {
   /// `POST /checkout/sessions` — membuat sesi dari **baris keranjang yang
   /// tercentang**, sekaligus mereservasi stok selama 15 menit.
   ///
-  /// Balasannya membawa `expires_at` dalam **UTC** (lihat
-  /// `ServerUtcDateTimeJson`).
   Future<ApiEnvelope<CheckoutSessionCreated>> createSession({
     required int addressId,
     String? voucherCode,
@@ -51,6 +53,33 @@ class CheckoutService {
             Map<String, dynamic>.from(raw as Map)),
         context: context,
       );
+    } on DioException catch (e) {
+      throw ApiException.fromDio(e, context: context);
+    }
+  }
+
+  /// `PATCH /checkout/sessions/{id}/address` — mengganti alamat kirim **tanpa
+  /// melepas reservasi stok**.
+  ///
+  /// Balasannya `data: null`, jadi seperti mutasi keranjang, hasilnya harus
+  /// dibaca ulang lewat [fetchSession] — repository yang menanggungnya.
+  ///
+  /// ⚠️ **Satu kode error untuk dua sebab.** Alamat milik orang lain dan
+  /// `address_id` yang tidak dikirim sama-sama dibalas `422 VALIDATION_ERROR`
+  /// dengan pesan "Alamat tidak ditemukan / bukan milik akun ini" — keduanya
+  /// sudah diuji. Aplikasi hanya menawarkan alamat milik user sendiri, jadi
+  /// kode itu di praktiknya berarti alamatnya baru saja terhapus.
+  Future<ApiEnvelope<void>> changeAddress(
+    String sessionId, {
+    required int addressId,
+  }) async {
+    final context = 'PATCH /checkout/sessions/$sessionId/address';
+    try {
+      final response = await _dio.patch<dynamic>(
+        '/checkout/sessions/$sessionId/address',
+        data: {'address_id': addressId},
+      );
+      return parseEnvelope(response, (_) {}, context: context);
     } on DioException catch (e) {
       throw ApiException.fromDio(e, context: context);
     }

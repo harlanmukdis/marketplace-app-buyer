@@ -113,6 +113,11 @@ class CartCubit extends Cubit<CartState> {
         action: () => _repository.applyVoucher(code),
       );
 
+  Future<void> removeVoucher(String code) => _mutate(
+        itemId: null,
+        action: () => _repository.removeVoucher(code),
+      );
+
   /// Membuang pesan error aksi setelah ditampilkan, supaya snackbar yang sama
   /// tidak muncul lagi pada rebuild berikutnya.
   void clearActionError() {

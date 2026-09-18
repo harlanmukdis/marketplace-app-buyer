@@ -46,6 +46,7 @@ _ProductModel _$ProductModelFromJson(Map<String, dynamic> json) =>
       flashSale: json['flash_sale'] == null
           ? null
           : FlashSaleModel.fromJson(json['flash_sale'] as Map<String, dynamic>),
+      listingImageUrl: const StringOrNullJson().fromJson(json['image_url']),
       variants: (json['variants'] as List<dynamic>?)
               ?.map((e) =>
                   ProductVariantModel.fromJson(e as Map<String, dynamic>))
@@ -82,6 +83,7 @@ Map<String, dynamic> _$ProductModelToJson(_ProductModel instance) =>
       'created_at': const ServerDateTimeJson().toJson(instance.createdAt),
       'stock': const IntOrNullJson().toJson(instance.stock),
       'flash_sale': instance.flashSale,
+      'image_url': const StringOrNullJson().toJson(instance.listingImageUrl),
       'variants': instance.variants,
       'images': instance.images,
       'couriers': instance.couriers,

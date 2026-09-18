@@ -30,6 +30,21 @@ class CheckoutRepositoryImpl implements CheckoutRepository {
       _load(sessionId);
 
   @override
+  Future<DataState<CheckoutSnapshot>> changeAddress(
+    String sessionId, {
+    required int addressId,
+  }) async {
+    try {
+      await _service.changeAddress(sessionId, addressId: addressId);
+    } on ApiException catch (e) {
+      return DataFailed(e.error);
+    }
+    // Balasannya `data: null`, jadi sesinya dibaca ulang — satu-satunya cara
+    // tahu alamatnya benar-benar berubah.
+    return _load(sessionId);
+  }
+
+  @override
   Future<DataState<CheckoutSnapshot>> setShipping(
     String sessionId,
     Map<String, CourierChoice> selection,

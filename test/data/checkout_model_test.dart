@@ -1,9 +1,10 @@
 /// Parsing model alamat dan checkout terhadap bentuk JSON yang **benar-benar
 /// dikirim** server (15 September 2026).
 ///
-/// Yang paling penting di sini adalah test zona waktu: satu respons checkout
-/// memakai dua zona sekaligus, dan salah membacanya membuat hitung mundur
-/// reservasi langsung tampak habis.
+/// Fixture zona waktunya **diperbarui 19 September 2026**. Dulu satu respons
+/// checkout memakai dua zona sekaligus (`created_at` WIB, `expires_at` UTC);
+/// backend menyeragamkannya di commit `93c6a14`, jadi stempel waktu di sini
+/// disalin ulang dari respons yang sekarang.
 library;
 
 import 'package:flutter_test/flutter_test.dart';
@@ -22,10 +23,8 @@ const _sessionJson = <String, dynamic>{
   'selected_couriers': null,
   'applied_vouchers': null,
   'grand_total': '3049000.00',
-  // UTC.
-  'expires_at': '2026-09-15 01:07:59',
-  // Waktu dinding server (WIB) — 7 jam lebih awal dari expires_at kalau
-  // keduanya keliru dianggap sezona.
+  // Keduanya waktu dinding server (WIB) sejak commit backend `93c6a14`.
+  'expires_at': '2026-09-15 08:07:59',
   'created_at': '2026-09-15 07:52:59',
 };
 
@@ -115,22 +114,23 @@ void main() {
   });
 
   group('CheckoutSessionModel — zona waktu', () {
-    test(
-      '🔴 expires_at dibaca sebagai UTC, created_at sebagai WIB',
-      () {
-        final session = CheckoutSessionModel.fromJson(_sessionJson);
-
-        // Kalau keduanya diperlakukan sama, selisihnya jadi -6:45 dan hitung
-        // mundur langsung menunjukkan sesi kedaluwarsa.
-        final gap = session.expiresAt!.difference(session.createdAt!);
-        expect(gap, const Duration(minutes: 15));
-      },
-    );
-
-    test('expires_at tidak digeser oleh zona waktu perangkat', () {
+    test('expires_at dan created_at dibaca dengan zona yang SAMA', () {
+      // Dulu tidak begitu: `expires_at` UTC sementara `created_at` WIB, dan
+      // membacanya sezona menghasilkan selisih -6:45 sehingga hitung mundur
+      // reservasi langsung menunjukkan sesi kedaluwarsa. Backend
+      // menyeragamkannya di commit `93c6a14`.
       final session = CheckoutSessionModel.fromJson(_sessionJson);
-      expect(session.expiresAt!.toUtc(),
-          DateTime.utc(2026, 9, 15, 1, 7, 59));
+
+      final gap = session.expiresAt!.difference(session.createdAt!);
+      expect(gap, const Duration(minutes: 15));
+    });
+
+    test('waktu server dibaca sebagai instan yang benar, bukan angka mentah',
+        () {
+      // WIB = UTC+7, jadi 08:07:59 WIB adalah 01:07:59 UTC. Ini yang membuat
+      // hitung mundur tetap benar di perangkat berzona waktu mana pun.
+      final session = CheckoutSessionModel.fromJson(_sessionJson);
+      expect(session.expiresAt!.toUtc(), DateTime.utc(2026, 9, 15, 1, 7, 59));
     });
   });
 

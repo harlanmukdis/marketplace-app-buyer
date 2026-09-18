@@ -1,5 +1,4 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
-import 'package:marketplace_app_member/core/domain/model/checkout/checkout_models.dart';
 import 'package:marketplace_app_member/util/json_converters.dart';
 
 part 'order_models.freezed.dart';
@@ -84,12 +83,14 @@ abstract class OrderModel with _$OrderModel {
     @JsonMapJson() @JsonKey(name: 'shipping_address_snapshot')
     Map<String, dynamic>? shippingAddressSnapshot,
 
-    /// **UTC**, seperti `expires_at` di checkout — bukan WIB seperti
-    /// [createdAt] di respons yang sama. Lihat [ServerUtcDateTimeJson].
-    @ServerUtcDateTimeJson() @JsonKey(name: 'payment_deadline')
+    /// Tenggat pembayaran, 1 jam sesudah [createdAt].
+    ///
+    /// Dulu dikirim dalam UTC sementara [createdAt] dalam WIB; sejak backend
+    /// menyeragamkan zona waktunya (commit `93c6a14`) keduanya WIB. Lihat
+    /// catatan di kepala `checkout_models.dart`.
+    @ServerDateTimeJson() @JsonKey(name: 'payment_deadline')
     DateTime? paymentDeadline,
 
-    /// **Waktu dinding server (WIB).**
     @ServerDateTimeJson() @JsonKey(name: 'created_at') DateTime? createdAt,
     @ServerDateTimeJson() @JsonKey(name: 'updated_at') DateTime? updatedAt,
 

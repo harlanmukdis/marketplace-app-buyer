@@ -1,5 +1,4 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
-import 'package:marketplace_app_member/core/domain/model/checkout/checkout_models.dart';
 import 'package:marketplace_app_member/util/json_converters.dart';
 
 part 'payment_models.freezed.dart';
@@ -49,11 +48,10 @@ abstract class PaymentModel with _$PaymentModel {
 
     @ServerDateTimeJson() @JsonKey(name: 'paid_at') DateTime? paidAt,
 
-    /// **UTC** — seperti `expires_at` checkout, dan berbeda dari [createdAt]
-    /// di respons yang sama.
-    @ServerUtcDateTimeJson() @JsonKey(name: 'expired_at') DateTime? expiredAt,
+    /// Tenggat bayar, 1 jam sesudah [createdAt]. Dulu UTC sementara
+    /// [createdAt] WIB; backend sudah menyeragamkannya (commit `93c6a14`).
+    @ServerDateTimeJson() @JsonKey(name: 'expired_at') DateTime? expiredAt,
 
-    /// **Waktu dinding server (WIB).**
     @ServerDateTimeJson() @JsonKey(name: 'created_at') DateTime? createdAt,
   }) = _PaymentModel;
 
@@ -93,8 +91,7 @@ abstract class PaymentInstructionModel with _$PaymentInstructionModel {
     @StringOrNullJson() @JsonKey(name: 'va_number') String? vaNumber,
     @StringOrNullJson() String? bank,
 
-    /// **UTC.**
-    @ServerUtcDateTimeJson() @JsonKey(name: 'expires_at') DateTime? expiresAt,
+    @ServerDateTimeJson() @JsonKey(name: 'expires_at') DateTime? expiresAt,
   }) = _PaymentInstructionModel;
 
   factory PaymentInstructionModel.fromJson(Map<String, dynamic> json) =>

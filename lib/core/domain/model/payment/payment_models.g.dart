@@ -38,7 +38,7 @@ _PaymentModel _$PaymentModelFromJson(Map<String, dynamic> json) =>
           ? ''
           : const StringJson().fromJson(json['status']),
       paidAt: const ServerDateTimeJson().fromJson(json['paid_at']),
-      expiredAt: const ServerUtcDateTimeJson().fromJson(json['expired_at']),
+      expiredAt: const ServerDateTimeJson().fromJson(json['expired_at']),
       createdAt: const ServerDateTimeJson().fromJson(json['created_at']),
     );
 
@@ -54,7 +54,7 @@ Map<String, dynamic> _$PaymentModelToJson(_PaymentModel instance) =>
       'amount': const DoubleJson().toJson(instance.amount),
       'status': const StringJson().toJson(instance.status),
       'paid_at': const ServerDateTimeJson().toJson(instance.paidAt),
-      'expired_at': const ServerUtcDateTimeJson().toJson(instance.expiredAt),
+      'expired_at': const ServerDateTimeJson().toJson(instance.expiredAt),
       'created_at': const ServerDateTimeJson().toJson(instance.createdAt),
     };
 
@@ -64,7 +64,7 @@ _PaymentInstructionModel _$PaymentInstructionModelFromJson(
       qrString: const StringOrNullJson().fromJson(json['qr_string']),
       vaNumber: const StringOrNullJson().fromJson(json['va_number']),
       bank: const StringOrNullJson().fromJson(json['bank']),
-      expiresAt: const ServerUtcDateTimeJson().fromJson(json['expires_at']),
+      expiresAt: const ServerDateTimeJson().fromJson(json['expires_at']),
     );
 
 Map<String, dynamic> _$PaymentInstructionModelToJson(
@@ -73,5 +73,5 @@ Map<String, dynamic> _$PaymentInstructionModelToJson(
       'qr_string': const StringOrNullJson().toJson(instance.qrString),
       'va_number': const StringOrNullJson().toJson(instance.vaNumber),
       'bank': const StringOrNullJson().toJson(instance.bank),
-      'expires_at': const ServerUtcDateTimeJson().toJson(instance.expiresAt),
+      'expires_at': const ServerDateTimeJson().toJson(instance.expiresAt),
     };

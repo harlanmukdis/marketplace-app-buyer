@@ -7,9 +7,9 @@ part 'product_model.g.dart';
 /// Produk dari `GET /products` (listing) maupun `GET /products/{id}` (detail).
 ///
 /// **Satu model untuk dua bentuk, dan bedanya penting.** Listing hanya
-/// mengembalikan kolom tabel `products`; [variants], [images], dan [couriers]
-/// datang kosong di sana, dan [stock] datang `null`. Semuanya baru terisi di
-/// detail.
+/// mengembalikan kolom tabel `products` **plus [listingImageUrl]**;
+/// [variants], [images], dan [couriers] datang kosong di sana, dan [stock]
+/// datang `null`. Semuanya baru terisi di detail.
 ///
 /// Karena itu [stock] sengaja **nullable**, bukan `0` sebagai default:
 /// `null` berarti "belum diketahui" (item listing), sedangkan `0` berarti
@@ -62,6 +62,19 @@ abstract class ProductModel with _$ProductModel {
     /// kode yang mengandalkan key-nya selalu ada.
     @JsonKey(name: 'flash_sale') FlashSaleModel? flashSale,
 
+    /// Gambar utama **versi listing**, satu URL datar.
+    ///
+    /// Ditambahkan backend pada commit `db8a626` ("Add image_url to GET
+    /// /products listing (was always missing)"). Sebelumnya `GET /products`
+    /// tidak membawa gambar sama sekali, sehingga setiap kartu produk terpaksa
+    /// memakai placeholder — satu-satunya alternatifnya menembak detail per
+    /// kartu (N+1).
+    ///
+    /// ⚠️ Hanya ada di **listing**; `GET /products/{id}` tidak mengirimkannya
+    /// dan memakai [images] sebagai gantinya. Pakai [primaryImageUrl] yang
+    /// menyerap keduanya, jangan field ini langsung.
+    @StringOrNullJson() @JsonKey(name: 'image_url') String? listingImageUrl,
+
     @Default(<ProductVariantModel>[]) List<ProductVariantModel> variants,
     @Default(<ProductImageModel>[]) List<ProductImageModel> images,
     @Default(<CourierModel>[]) List<CourierModel> couriers,
@@ -70,12 +83,19 @@ abstract class ProductModel with _$ProductModel {
   factory ProductModel.fromJson(Map<String, dynamic> json) =>
       _$ProductModelFromJson(json);
 
-  /// Gambar utama, `null` kalau produk belum punya gambar **atau** kalau ini
-  /// item listing (listing memang tidak membawa gambar sama sekali).
+  /// Gambar utama, dari bentuk mana pun respons datangnya.
+  ///
+  /// Detail mengirim [images] bersusun; listing mengirim satu
+  /// [listingImageUrl] datar. `null` hanya kalau produknya memang belum punya
+  /// gambar.
   String? get primaryImageUrl {
-    if (images.isEmpty) return null;
-    final sorted = [...images]..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
-    return sorted.first.imageUrl;
+    if (images.isNotEmpty) {
+      final sorted = [...images]
+        ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+      return sorted.first.imageUrl;
+    }
+    final flat = listingImageUrl?.trim();
+    return (flat == null || flat.isEmpty) ? null : flat;
   }
 
   /// Harga yang benar-benar dibayar: flash sale menang atas harga dasar.

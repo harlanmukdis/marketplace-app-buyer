@@ -84,6 +84,10 @@ class _FakeCartRepository implements CartRepository {
   @override
   Future<DataState<CartSnapshot>> applyVoucher(String code) =>
       _respond('voucher:$code');
+
+  @override
+  Future<DataState<CartSnapshot>> removeVoucher(String code) =>
+      _respond('voucher-lepas:$code');
 }
 
 void main() {

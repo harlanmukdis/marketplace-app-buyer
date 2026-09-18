@@ -73,6 +73,21 @@ mixin _$ProductModel {
   /// kode yang mengandalkan key-nya selalu ada.
   @JsonKey(name: 'flash_sale')
   FlashSaleModel? get flashSale;
+
+  /// Gambar utama **versi listing**, satu URL datar.
+  ///
+  /// Ditambahkan backend pada commit `db8a626` ("Add image_url to GET
+  /// /products listing (was always missing)"). Sebelumnya `GET /products`
+  /// tidak membawa gambar sama sekali, sehingga setiap kartu produk terpaksa
+  /// memakai placeholder — satu-satunya alternatifnya menembak detail per
+  /// kartu (N+1).
+  ///
+  /// ⚠️ Hanya ada di **listing**; `GET /products/{id}` tidak mengirimkannya
+  /// dan memakai [images] sebagai gantinya. Pakai [primaryImageUrl] yang
+  /// menyerap keduanya, jangan field ini langsung.
+  @StringOrNullJson()
+  @JsonKey(name: 'image_url')
+  String? get listingImageUrl;
   List<ProductVariantModel> get variants;
   List<ProductImageModel> get images;
   List<CourierModel> get couriers;
@@ -121,6 +136,8 @@ mixin _$ProductModel {
             (identical(other.stock, stock) || other.stock == stock) &&
             (identical(other.flashSale, flashSale) ||
                 other.flashSale == flashSale) &&
+            (identical(other.listingImageUrl, listingImageUrl) ||
+                other.listingImageUrl == listingImageUrl) &&
             const DeepCollectionEquality().equals(other.variants, variants) &&
             const DeepCollectionEquality().equals(other.images, images) &&
             const DeepCollectionEquality().equals(other.couriers, couriers));
@@ -147,6 +164,7 @@ mixin _$ProductModel {
         createdAt,
         stock,
         flashSale,
+        listingImageUrl,
         const DeepCollectionEquality().hash(variants),
         const DeepCollectionEquality().hash(images),
         const DeepCollectionEquality().hash(couriers)
@@ -154,7 +172,7 @@ mixin _$ProductModel {
 
   @override
   String toString() {
-    return 'ProductModel(id: $id, storeId: $storeId, name: $name, slug: $slug, description: $description, productType: $productType, basePrice: $basePrice, compareAtPrice: $compareAtPrice, weightGrams: $weightGrams, status: $status, soldCount: $soldCount, viewCount: $viewCount, ratingAvg: $ratingAvg, ratingCount: $ratingCount, createdAt: $createdAt, stock: $stock, flashSale: $flashSale, variants: $variants, images: $images, couriers: $couriers)';
+    return 'ProductModel(id: $id, storeId: $storeId, name: $name, slug: $slug, description: $description, productType: $productType, basePrice: $basePrice, compareAtPrice: $compareAtPrice, weightGrams: $weightGrams, status: $status, soldCount: $soldCount, viewCount: $viewCount, ratingAvg: $ratingAvg, ratingCount: $ratingCount, createdAt: $createdAt, stock: $stock, flashSale: $flashSale, listingImageUrl: $listingImageUrl, variants: $variants, images: $images, couriers: $couriers)';
   }
 }
 
@@ -184,6 +202,7 @@ abstract mixin class $ProductModelCopyWith<$Res> {
       @ServerDateTimeJson() @JsonKey(name: 'created_at') DateTime? createdAt,
       @IntOrNullJson() int? stock,
       @JsonKey(name: 'flash_sale') FlashSaleModel? flashSale,
+      @StringOrNullJson() @JsonKey(name: 'image_url') String? listingImageUrl,
       List<ProductVariantModel> variants,
       List<ProductImageModel> images,
       List<CourierModel> couriers});
@@ -220,6 +239,7 @@ class _$ProductModelCopyWithImpl<$Res> implements $ProductModelCopyWith<$Res> {
     Object? createdAt = freezed,
     Object? stock = freezed,
     Object? flashSale = freezed,
+    Object? listingImageUrl = freezed,
     Object? variants = null,
     Object? images = null,
     Object? couriers = null,
@@ -293,6 +313,10 @@ class _$ProductModelCopyWithImpl<$Res> implements $ProductModelCopyWith<$Res> {
           ? _self.flashSale
           : flashSale // ignore: cast_nullable_to_non_nullable
               as FlashSaleModel?,
+      listingImageUrl: freezed == listingImageUrl
+          ? _self.listingImageUrl
+          : listingImageUrl // ignore: cast_nullable_to_non_nullable
+              as String?,
       variants: null == variants
           ? _self.variants
           : variants // ignore: cast_nullable_to_non_nullable
@@ -438,6 +462,9 @@ extension ProductModelPatterns on ProductModel {
             DateTime? createdAt,
             @IntOrNullJson() int? stock,
             @JsonKey(name: 'flash_sale') FlashSaleModel? flashSale,
+            @StringOrNullJson()
+            @JsonKey(name: 'image_url')
+            String? listingImageUrl,
             List<ProductVariantModel> variants,
             List<ProductImageModel> images,
             List<CourierModel> couriers)?
@@ -465,6 +492,7 @@ extension ProductModelPatterns on ProductModel {
             _that.createdAt,
             _that.stock,
             _that.flashSale,
+            _that.listingImageUrl,
             _that.variants,
             _that.images,
             _that.couriers);
@@ -510,6 +538,9 @@ extension ProductModelPatterns on ProductModel {
             DateTime? createdAt,
             @IntOrNullJson() int? stock,
             @JsonKey(name: 'flash_sale') FlashSaleModel? flashSale,
+            @StringOrNullJson()
+            @JsonKey(name: 'image_url')
+            String? listingImageUrl,
             List<ProductVariantModel> variants,
             List<ProductImageModel> images,
             List<CourierModel> couriers)
@@ -536,6 +567,7 @@ extension ProductModelPatterns on ProductModel {
             _that.createdAt,
             _that.stock,
             _that.flashSale,
+            _that.listingImageUrl,
             _that.variants,
             _that.images,
             _that.couriers);
@@ -580,6 +612,9 @@ extension ProductModelPatterns on ProductModel {
             DateTime? createdAt,
             @IntOrNullJson() int? stock,
             @JsonKey(name: 'flash_sale') FlashSaleModel? flashSale,
+            @StringOrNullJson()
+            @JsonKey(name: 'image_url')
+            String? listingImageUrl,
             List<ProductVariantModel> variants,
             List<ProductImageModel> images,
             List<CourierModel> couriers)?
@@ -606,6 +641,7 @@ extension ProductModelPatterns on ProductModel {
             _that.createdAt,
             _that.stock,
             _that.flashSale,
+            _that.listingImageUrl,
             _that.variants,
             _that.images,
             _that.couriers);
@@ -640,6 +676,7 @@ class _ProductModel extends ProductModel {
       @ServerDateTimeJson() @JsonKey(name: 'created_at') this.createdAt,
       @IntOrNullJson() this.stock,
       @JsonKey(name: 'flash_sale') this.flashSale,
+      @StringOrNullJson() @JsonKey(name: 'image_url') this.listingImageUrl,
       final List<ProductVariantModel> variants = const <ProductVariantModel>[],
       final List<ProductImageModel> images = const <ProductImageModel>[],
       final List<CourierModel> couriers = const <CourierModel>[]})
@@ -729,6 +766,22 @@ class _ProductModel extends ProductModel {
   @override
   @JsonKey(name: 'flash_sale')
   final FlashSaleModel? flashSale;
+
+  /// Gambar utama **versi listing**, satu URL datar.
+  ///
+  /// Ditambahkan backend pada commit `db8a626` ("Add image_url to GET
+  /// /products listing (was always missing)"). Sebelumnya `GET /products`
+  /// tidak membawa gambar sama sekali, sehingga setiap kartu produk terpaksa
+  /// memakai placeholder — satu-satunya alternatifnya menembak detail per
+  /// kartu (N+1).
+  ///
+  /// ⚠️ Hanya ada di **listing**; `GET /products/{id}` tidak mengirimkannya
+  /// dan memakai [images] sebagai gantinya. Pakai [primaryImageUrl] yang
+  /// menyerap keduanya, jangan field ini langsung.
+  @override
+  @StringOrNullJson()
+  @JsonKey(name: 'image_url')
+  final String? listingImageUrl;
   final List<ProductVariantModel> _variants;
   @override
   @JsonKey()
@@ -804,6 +857,8 @@ class _ProductModel extends ProductModel {
             (identical(other.stock, stock) || other.stock == stock) &&
             (identical(other.flashSale, flashSale) ||
                 other.flashSale == flashSale) &&
+            (identical(other.listingImageUrl, listingImageUrl) ||
+                other.listingImageUrl == listingImageUrl) &&
             const DeepCollectionEquality().equals(other._variants, _variants) &&
             const DeepCollectionEquality().equals(other._images, _images) &&
             const DeepCollectionEquality().equals(other._couriers, _couriers));
@@ -830,6 +885,7 @@ class _ProductModel extends ProductModel {
         createdAt,
         stock,
         flashSale,
+        listingImageUrl,
         const DeepCollectionEquality().hash(_variants),
         const DeepCollectionEquality().hash(_images),
         const DeepCollectionEquality().hash(_couriers)
@@ -837,7 +893,7 @@ class _ProductModel extends ProductModel {
 
   @override
   String toString() {
-    return 'ProductModel(id: $id, storeId: $storeId, name: $name, slug: $slug, description: $description, productType: $productType, basePrice: $basePrice, compareAtPrice: $compareAtPrice, weightGrams: $weightGrams, status: $status, soldCount: $soldCount, viewCount: $viewCount, ratingAvg: $ratingAvg, ratingCount: $ratingCount, createdAt: $createdAt, stock: $stock, flashSale: $flashSale, variants: $variants, images: $images, couriers: $couriers)';
+    return 'ProductModel(id: $id, storeId: $storeId, name: $name, slug: $slug, description: $description, productType: $productType, basePrice: $basePrice, compareAtPrice: $compareAtPrice, weightGrams: $weightGrams, status: $status, soldCount: $soldCount, viewCount: $viewCount, ratingAvg: $ratingAvg, ratingCount: $ratingCount, createdAt: $createdAt, stock: $stock, flashSale: $flashSale, listingImageUrl: $listingImageUrl, variants: $variants, images: $images, couriers: $couriers)';
   }
 }
 
@@ -869,6 +925,7 @@ abstract mixin class _$ProductModelCopyWith<$Res>
       @ServerDateTimeJson() @JsonKey(name: 'created_at') DateTime? createdAt,
       @IntOrNullJson() int? stock,
       @JsonKey(name: 'flash_sale') FlashSaleModel? flashSale,
+      @StringOrNullJson() @JsonKey(name: 'image_url') String? listingImageUrl,
       List<ProductVariantModel> variants,
       List<ProductImageModel> images,
       List<CourierModel> couriers});
@@ -907,6 +964,7 @@ class __$ProductModelCopyWithImpl<$Res>
     Object? createdAt = freezed,
     Object? stock = freezed,
     Object? flashSale = freezed,
+    Object? listingImageUrl = freezed,
     Object? variants = null,
     Object? images = null,
     Object? couriers = null,
@@ -980,6 +1038,10 @@ class __$ProductModelCopyWithImpl<$Res>
           ? _self.flashSale
           : flashSale // ignore: cast_nullable_to_non_nullable
               as FlashSaleModel?,
+      listingImageUrl: freezed == listingImageUrl
+          ? _self.listingImageUrl
+          : listingImageUrl // ignore: cast_nullable_to_non_nullable
+              as String?,
       variants: null == variants
           ? _self._variants
           : variants // ignore: cast_nullable_to_non_nullable

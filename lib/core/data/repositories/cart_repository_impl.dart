@@ -46,6 +46,10 @@ class CartRepositoryImpl implements CartRepository {
   Future<DataState<CartSnapshot>> applyVoucher(String code) =>
       _mutateThenRead(() => _service.applyVoucher(code));
 
+  @override
+  Future<DataState<CartSnapshot>> removeVoucher(String code) =>
+      _mutateThenRead(() => _service.removeVoucher(code));
+
   /// Menjalankan mutasi lalu membaca ulang keranjang.
   ///
   /// Kegagalan mutasi dilaporkan apa adanya **tanpa** membaca ulang: kalau

@@ -19,7 +19,7 @@ _CheckoutSessionCreated _$CheckoutSessionCreatedFromJson(
       grandTotal: json['grand_total'] == null
           ? 0
           : const DoubleJson().fromJson(json['grand_total']),
-      expiresAt: const ServerUtcDateTimeJson().fromJson(json['expires_at']),
+      expiresAt: const ServerDateTimeJson().fromJson(json['expires_at']),
     );
 
 Map<String, dynamic> _$CheckoutSessionCreatedToJson(
@@ -29,7 +29,7 @@ Map<String, dynamic> _$CheckoutSessionCreatedToJson(
       'subtotal': const DoubleJson().toJson(instance.subtotal),
       'discount': const DoubleJson().toJson(instance.discount),
       'grand_total': const DoubleJson().toJson(instance.grandTotal),
-      'expires_at': const ServerUtcDateTimeJson().toJson(instance.expiresAt),
+      'expires_at': const ServerDateTimeJson().toJson(instance.expiresAt),
     };
 
 _CheckoutSessionModel _$CheckoutSessionModelFromJson(
@@ -47,7 +47,7 @@ _CheckoutSessionModel _$CheckoutSessionModelFromJson(
       grandTotal: json['grand_total'] == null
           ? 0
           : const DoubleJson().fromJson(json['grand_total']),
-      expiresAt: const ServerUtcDateTimeJson().fromJson(json['expires_at']),
+      expiresAt: const ServerDateTimeJson().fromJson(json['expires_at']),
       createdAt: const ServerDateTimeJson().fromJson(json['created_at']),
     );
 
@@ -63,7 +63,7 @@ Map<String, dynamic> _$CheckoutSessionModelToJson(
           const JsonMapJson().toJson(instance.selectedCouriers),
       'applied_vouchers': const JsonMapJson().toJson(instance.appliedVouchers),
       'grand_total': const DoubleJson().toJson(instance.grandTotal),
-      'expires_at': const ServerUtcDateTimeJson().toJson(instance.expiresAt),
+      'expires_at': const ServerDateTimeJson().toJson(instance.expiresAt),
       'created_at': const ServerDateTimeJson().toJson(instance.createdAt),
     };
 

@@ -62,8 +62,17 @@ abstract class CartRepository {
 
   Future<DataState<CartSnapshot>> removeItem(int itemId);
 
-  /// Pratinjau diskon voucher terhadap keranjang.
+  /// Memasang voucher ke keranjang.
   ///
-  /// Tidak ada pasangan "lepas voucher" — rutenya tidak ada di API.
+  /// ⚠️ Sejak backend menambahkan penumpukan voucher (commit `90751bf`) ini
+  /// **menyimpan**, bukan sekadar pratinjau, dan beberapa voucher boleh
+  /// terpasang sekaligus — maks 1 ongkir + 1 platform + 1 per toko. Memasang
+  /// ke slot yang sudah terisi mengganti isinya.
   Future<DataState<CartSnapshot>> applyVoucher(String code);
+
+  /// Melepas voucher dari keranjang.
+  ///
+  /// Rutenya baru ada sejak commit `90751bf`; sebelumnya voucher yang sudah
+  /// terpasang tidak bisa dilepas sama sekali.
+  Future<DataState<CartSnapshot>> removeVoucher(String code);
 }

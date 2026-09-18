@@ -61,13 +61,14 @@ mixin _$OrderModel {
   @JsonKey(name: 'shipping_address_snapshot')
   Map<String, dynamic>? get shippingAddressSnapshot;
 
-  /// **UTC**, seperti `expires_at` di checkout — bukan WIB seperti
-  /// [createdAt] di respons yang sama. Lihat [ServerUtcDateTimeJson].
-  @ServerUtcDateTimeJson()
+  /// Tenggat pembayaran, 1 jam sesudah [createdAt].
+  ///
+  /// Dulu dikirim dalam UTC sementara [createdAt] dalam WIB; sejak backend
+  /// menyeragamkan zona waktunya (commit `93c6a14`) keduanya WIB. Lihat
+  /// catatan di kepala `checkout_models.dart`.
+  @ServerDateTimeJson()
   @JsonKey(name: 'payment_deadline')
   DateTime? get paymentDeadline;
-
-  /// **Waktu dinding server (WIB).**
   @ServerDateTimeJson()
   @JsonKey(name: 'created_at')
   DateTime? get createdAt;
@@ -193,7 +194,7 @@ abstract mixin class $OrderModelCopyWith<$Res> {
       @JsonMapJson()
       @JsonKey(name: 'shipping_address_snapshot')
       Map<String, dynamic>? shippingAddressSnapshot,
-      @ServerUtcDateTimeJson()
+      @ServerDateTimeJson()
       @JsonKey(name: 'payment_deadline')
       DateTime? paymentDeadline,
       @ServerDateTimeJson() @JsonKey(name: 'created_at') DateTime? createdAt,
@@ -456,7 +457,7 @@ extension OrderModelPatterns on OrderModel {
             @JsonMapJson()
             @JsonKey(name: 'shipping_address_snapshot')
             Map<String, dynamic>? shippingAddressSnapshot,
-            @ServerUtcDateTimeJson()
+            @ServerDateTimeJson()
             @JsonKey(name: 'payment_deadline')
             DateTime? paymentDeadline,
             @ServerDateTimeJson()
@@ -541,7 +542,7 @@ extension OrderModelPatterns on OrderModel {
             @JsonMapJson()
             @JsonKey(name: 'shipping_address_snapshot')
             Map<String, dynamic>? shippingAddressSnapshot,
-            @ServerUtcDateTimeJson()
+            @ServerDateTimeJson()
             @JsonKey(name: 'payment_deadline')
             DateTime? paymentDeadline,
             @ServerDateTimeJson()
@@ -624,7 +625,7 @@ extension OrderModelPatterns on OrderModel {
             @JsonMapJson()
             @JsonKey(name: 'shipping_address_snapshot')
             Map<String, dynamic>? shippingAddressSnapshot,
-            @ServerUtcDateTimeJson()
+            @ServerDateTimeJson()
             @JsonKey(name: 'payment_deadline')
             DateTime? paymentDeadline,
             @ServerDateTimeJson()
@@ -691,7 +692,7 @@ class _OrderModel extends OrderModel {
       @JsonMapJson()
       @JsonKey(name: 'shipping_address_snapshot')
       final Map<String, dynamic>? shippingAddressSnapshot,
-      @ServerUtcDateTimeJson()
+      @ServerDateTimeJson()
       @JsonKey(name: 'payment_deadline')
       this.paymentDeadline,
       @ServerDateTimeJson() @JsonKey(name: 'created_at') this.createdAt,
@@ -782,14 +783,15 @@ class _OrderModel extends OrderModel {
     return EqualUnmodifiableMapView(value);
   }
 
-  /// **UTC**, seperti `expires_at` di checkout — bukan WIB seperti
-  /// [createdAt] di respons yang sama. Lihat [ServerUtcDateTimeJson].
+  /// Tenggat pembayaran, 1 jam sesudah [createdAt].
+  ///
+  /// Dulu dikirim dalam UTC sementara [createdAt] dalam WIB; sejak backend
+  /// menyeragamkan zona waktunya (commit `93c6a14`) keduanya WIB. Lihat
+  /// catatan di kepala `checkout_models.dart`.
   @override
-  @ServerUtcDateTimeJson()
+  @ServerDateTimeJson()
   @JsonKey(name: 'payment_deadline')
   final DateTime? paymentDeadline;
-
-  /// **Waktu dinding server (WIB).**
   @override
   @ServerDateTimeJson()
   @JsonKey(name: 'created_at')
@@ -940,7 +942,7 @@ abstract mixin class _$OrderModelCopyWith<$Res>
       @JsonMapJson()
       @JsonKey(name: 'shipping_address_snapshot')
       Map<String, dynamic>? shippingAddressSnapshot,
-      @ServerUtcDateTimeJson()
+      @ServerDateTimeJson()
       @JsonKey(name: 'payment_deadline')
       DateTime? paymentDeadline,
       @ServerDateTimeJson() @JsonKey(name: 'created_at') DateTime? createdAt,

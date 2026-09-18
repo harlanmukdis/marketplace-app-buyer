@@ -23,7 +23,7 @@ mixin _$CheckoutSessionCreated {
   @DoubleJson()
   @JsonKey(name: 'grand_total')
   double get grandTotal;
-  @ServerUtcDateTimeJson()
+  @ServerDateTimeJson()
   @JsonKey(name: 'expires_at')
   DateTime? get expiresAt;
 
@@ -76,9 +76,7 @@ abstract mixin class $CheckoutSessionCreatedCopyWith<$Res> {
       @DoubleJson() double subtotal,
       @DoubleJson() double discount,
       @DoubleJson() @JsonKey(name: 'grand_total') double grandTotal,
-      @ServerUtcDateTimeJson()
-      @JsonKey(name: 'expires_at')
-      DateTime? expiresAt});
+      @ServerDateTimeJson() @JsonKey(name: 'expires_at') DateTime? expiresAt});
 }
 
 /// @nodoc
@@ -223,7 +221,7 @@ extension CheckoutSessionCreatedPatterns on CheckoutSessionCreated {
             @DoubleJson() double subtotal,
             @DoubleJson() double discount,
             @DoubleJson() @JsonKey(name: 'grand_total') double grandTotal,
-            @ServerUtcDateTimeJson()
+            @ServerDateTimeJson()
             @JsonKey(name: 'expires_at')
             DateTime? expiresAt)?
         $default, {
@@ -259,7 +257,7 @@ extension CheckoutSessionCreatedPatterns on CheckoutSessionCreated {
             @DoubleJson() double subtotal,
             @DoubleJson() double discount,
             @DoubleJson() @JsonKey(name: 'grand_total') double grandTotal,
-            @ServerUtcDateTimeJson()
+            @ServerDateTimeJson()
             @JsonKey(name: 'expires_at')
             DateTime? expiresAt)
         $default,
@@ -293,7 +291,7 @@ extension CheckoutSessionCreatedPatterns on CheckoutSessionCreated {
             @DoubleJson() double subtotal,
             @DoubleJson() double discount,
             @DoubleJson() @JsonKey(name: 'grand_total') double grandTotal,
-            @ServerUtcDateTimeJson()
+            @ServerDateTimeJson()
             @JsonKey(name: 'expires_at')
             DateTime? expiresAt)?
         $default,
@@ -317,7 +315,7 @@ class _CheckoutSessionCreated extends CheckoutSessionCreated {
       @DoubleJson() this.subtotal = 0,
       @DoubleJson() this.discount = 0,
       @DoubleJson() @JsonKey(name: 'grand_total') this.grandTotal = 0,
-      @ServerUtcDateTimeJson() @JsonKey(name: 'expires_at') this.expiresAt})
+      @ServerDateTimeJson() @JsonKey(name: 'expires_at') this.expiresAt})
       : super._();
   factory _CheckoutSessionCreated.fromJson(Map<String, dynamic> json) =>
       _$CheckoutSessionCreatedFromJson(json);
@@ -339,7 +337,7 @@ class _CheckoutSessionCreated extends CheckoutSessionCreated {
   @JsonKey(name: 'grand_total')
   final double grandTotal;
   @override
-  @ServerUtcDateTimeJson()
+  @ServerDateTimeJson()
   @JsonKey(name: 'expires_at')
   final DateTime? expiresAt;
 
@@ -399,9 +397,7 @@ abstract mixin class _$CheckoutSessionCreatedCopyWith<$Res>
       @DoubleJson() double subtotal,
       @DoubleJson() double discount,
       @DoubleJson() @JsonKey(name: 'grand_total') double grandTotal,
-      @ServerUtcDateTimeJson()
-      @JsonKey(name: 'expires_at')
-      DateTime? expiresAt});
+      @ServerDateTimeJson() @JsonKey(name: 'expires_at') DateTime? expiresAt});
 }
 
 /// @nodoc
@@ -491,13 +487,14 @@ mixin _$CheckoutSessionModel {
   @JsonKey(name: 'grand_total')
   double get grandTotal;
 
-  /// **UTC** — lihat [ServerUtcDateTimeJson].
-  @ServerUtcDateTimeJson()
+  /// Tenggat reservasi stok, 15 menit sesudah [createdAt].
+  ///
+  /// Dulu field ini butuh converter tersendiri karena dikirim dalam UTC
+  /// sementara [createdAt] dalam WIB; backend sudah menyeragamkannya — lihat
+  /// catatan di kepala berkas ini.
+  @ServerDateTimeJson()
   @JsonKey(name: 'expires_at')
   DateTime? get expiresAt;
-
-  /// **Waktu dinding server (WIB)** — konverter berbeda dari [expiresAt],
-  /// dan itu memang disengaja.
   @ServerDateTimeJson()
   @JsonKey(name: 'created_at')
   DateTime? get createdAt;
@@ -576,7 +573,7 @@ abstract mixin class $CheckoutSessionModelCopyWith<$Res> {
       @JsonKey(name: 'applied_vouchers')
       Map<String, dynamic>? appliedVouchers,
       @DoubleJson() @JsonKey(name: 'grand_total') double grandTotal,
-      @ServerUtcDateTimeJson() @JsonKey(name: 'expires_at') DateTime? expiresAt,
+      @ServerDateTimeJson() @JsonKey(name: 'expires_at') DateTime? expiresAt,
       @ServerDateTimeJson() @JsonKey(name: 'created_at') DateTime? createdAt});
 }
 
@@ -753,7 +750,7 @@ extension CheckoutSessionModelPatterns on CheckoutSessionModel {
             @JsonKey(name: 'applied_vouchers')
             Map<String, dynamic>? appliedVouchers,
             @DoubleJson() @JsonKey(name: 'grand_total') double grandTotal,
-            @ServerUtcDateTimeJson()
+            @ServerDateTimeJson()
             @JsonKey(name: 'expires_at')
             DateTime? expiresAt,
             @ServerDateTimeJson()
@@ -811,7 +808,7 @@ extension CheckoutSessionModelPatterns on CheckoutSessionModel {
             @JsonKey(name: 'applied_vouchers')
             Map<String, dynamic>? appliedVouchers,
             @DoubleJson() @JsonKey(name: 'grand_total') double grandTotal,
-            @ServerUtcDateTimeJson()
+            @ServerDateTimeJson()
             @JsonKey(name: 'expires_at')
             DateTime? expiresAt,
             @ServerDateTimeJson()
@@ -867,7 +864,7 @@ extension CheckoutSessionModelPatterns on CheckoutSessionModel {
             @JsonKey(name: 'applied_vouchers')
             Map<String, dynamic>? appliedVouchers,
             @DoubleJson() @JsonKey(name: 'grand_total') double grandTotal,
-            @ServerUtcDateTimeJson()
+            @ServerDateTimeJson()
             @JsonKey(name: 'expires_at')
             DateTime? expiresAt,
             @ServerDateTimeJson()
@@ -911,7 +908,7 @@ class _CheckoutSessionModel extends CheckoutSessionModel {
       @JsonKey(name: 'applied_vouchers')
       final Map<String, dynamic>? appliedVouchers,
       @DoubleJson() @JsonKey(name: 'grand_total') this.grandTotal = 0,
-      @ServerUtcDateTimeJson() @JsonKey(name: 'expires_at') this.expiresAt,
+      @ServerDateTimeJson() @JsonKey(name: 'expires_at') this.expiresAt,
       @ServerDateTimeJson() @JsonKey(name: 'created_at') this.createdAt})
       : _selectedCouriers = selectedCouriers,
         _appliedVouchers = appliedVouchers,
@@ -995,14 +992,15 @@ class _CheckoutSessionModel extends CheckoutSessionModel {
   @JsonKey(name: 'grand_total')
   final double grandTotal;
 
-  /// **UTC** — lihat [ServerUtcDateTimeJson].
+  /// Tenggat reservasi stok, 15 menit sesudah [createdAt].
+  ///
+  /// Dulu field ini butuh converter tersendiri karena dikirim dalam UTC
+  /// sementara [createdAt] dalam WIB; backend sudah menyeragamkannya — lihat
+  /// catatan di kepala berkas ini.
   @override
-  @ServerUtcDateTimeJson()
+  @ServerDateTimeJson()
   @JsonKey(name: 'expires_at')
   final DateTime? expiresAt;
-
-  /// **Waktu dinding server (WIB)** — konverter berbeda dari [expiresAt],
-  /// dan itu memang disengaja.
   @override
   @ServerDateTimeJson()
   @JsonKey(name: 'created_at')
@@ -1089,7 +1087,7 @@ abstract mixin class _$CheckoutSessionModelCopyWith<$Res>
       @JsonKey(name: 'applied_vouchers')
       Map<String, dynamic>? appliedVouchers,
       @DoubleJson() @JsonKey(name: 'grand_total') double grandTotal,
-      @ServerUtcDateTimeJson() @JsonKey(name: 'expires_at') DateTime? expiresAt,
+      @ServerDateTimeJson() @JsonKey(name: 'expires_at') DateTime? expiresAt,
       @ServerDateTimeJson() @JsonKey(name: 'created_at') DateTime? createdAt});
 }
 

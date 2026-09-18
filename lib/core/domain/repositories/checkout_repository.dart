@@ -44,11 +44,6 @@ class CheckoutSnapshot {
 }
 
 /// Alur checkout.
-///
-/// Catatan penting yang membentuk antarmuka ini: **tidak ada method untuk
-/// mengganti alamat pada sesi berjalan.** `PATCH /checkout/sessions/{id}/address`
-/// rusak di server dan selalu membalas 500 — lihat `CheckoutService`. Ganti
-/// alamat dilakukan dengan [cancelSession] lalu [startSession] lagi.
 abstract class CheckoutRepository {
   /// Membuat sesi dari baris keranjang yang tercentang, lalu langsung memuat
   /// detail dan opsi kirimnya.
@@ -58,6 +53,18 @@ abstract class CheckoutRepository {
   });
 
   Future<DataState<CheckoutSnapshot>> refresh(String sessionId);
+
+  /// Mengganti alamat kirim **pada sesi yang sedang berjalan**, lalu
+  /// mengembalikan sesi hasil baca ulang.
+  ///
+  /// Reservasi stoknya dipertahankan. Sampai backend memperbaiki endpointnya
+  /// (commit `8235c33`), ini hanya bisa dilakukan dengan membatalkan sesi lalu
+  /// membuat yang baru — yang melepas reservasi dan membuat user bisa
+  /// kehilangan barangnya hanya karena salah pilih alamat.
+  Future<DataState<CheckoutSnapshot>> changeAddress(
+    String sessionId, {
+    required int addressId,
+  });
 
   /// Memilih kurir untuk sebagian atau seluruh toko.
   Future<DataState<CheckoutSnapshot>> setShipping(

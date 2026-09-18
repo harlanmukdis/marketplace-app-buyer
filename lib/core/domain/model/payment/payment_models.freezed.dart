@@ -363,13 +363,11 @@ mixin _$PaymentModel {
   @JsonKey(name: 'paid_at')
   DateTime? get paidAt;
 
-  /// **UTC** — seperti `expires_at` checkout, dan berbeda dari [createdAt]
-  /// di respons yang sama.
-  @ServerUtcDateTimeJson()
+  /// Tenggat bayar, 1 jam sesudah [createdAt]. Dulu UTC sementara
+  /// [createdAt] WIB; backend sudah menyeragamkannya (commit `93c6a14`).
+  @ServerDateTimeJson()
   @JsonKey(name: 'expired_at')
   DateTime? get expiredAt;
-
-  /// **Waktu dinding server (WIB).**
   @ServerDateTimeJson()
   @JsonKey(name: 'created_at')
   DateTime? get createdAt;
@@ -448,7 +446,7 @@ abstract mixin class $PaymentModelCopyWith<$Res> {
       @DoubleJson() double amount,
       @StringJson() String status,
       @ServerDateTimeJson() @JsonKey(name: 'paid_at') DateTime? paidAt,
-      @ServerUtcDateTimeJson() @JsonKey(name: 'expired_at') DateTime? expiredAt,
+      @ServerDateTimeJson() @JsonKey(name: 'expired_at') DateTime? expiredAt,
       @ServerDateTimeJson() @JsonKey(name: 'created_at') DateTime? createdAt});
 }
 
@@ -626,7 +624,7 @@ extension PaymentModelPatterns on PaymentModel {
             @DoubleJson() double amount,
             @StringJson() String status,
             @ServerDateTimeJson() @JsonKey(name: 'paid_at') DateTime? paidAt,
-            @ServerUtcDateTimeJson()
+            @ServerDateTimeJson()
             @JsonKey(name: 'expired_at')
             DateTime? expiredAt,
             @ServerDateTimeJson()
@@ -682,7 +680,7 @@ extension PaymentModelPatterns on PaymentModel {
             @DoubleJson() double amount,
             @StringJson() String status,
             @ServerDateTimeJson() @JsonKey(name: 'paid_at') DateTime? paidAt,
-            @ServerUtcDateTimeJson()
+            @ServerDateTimeJson()
             @JsonKey(name: 'expired_at')
             DateTime? expiredAt,
             @ServerDateTimeJson()
@@ -736,7 +734,7 @@ extension PaymentModelPatterns on PaymentModel {
             @DoubleJson() double amount,
             @StringJson() String status,
             @ServerDateTimeJson() @JsonKey(name: 'paid_at') DateTime? paidAt,
-            @ServerUtcDateTimeJson()
+            @ServerDateTimeJson()
             @JsonKey(name: 'expired_at')
             DateTime? expiredAt,
             @ServerDateTimeJson()
@@ -780,7 +778,7 @@ class _PaymentModel extends PaymentModel {
       @DoubleJson() this.amount = 0,
       @StringJson() this.status = '',
       @ServerDateTimeJson() @JsonKey(name: 'paid_at') this.paidAt,
-      @ServerUtcDateTimeJson() @JsonKey(name: 'expired_at') this.expiredAt,
+      @ServerDateTimeJson() @JsonKey(name: 'expired_at') this.expiredAt,
       @ServerDateTimeJson() @JsonKey(name: 'created_at') this.createdAt})
       : super._();
   factory _PaymentModel.fromJson(Map<String, dynamic> json) =>
@@ -819,14 +817,12 @@ class _PaymentModel extends PaymentModel {
   @JsonKey(name: 'paid_at')
   final DateTime? paidAt;
 
-  /// **UTC** — seperti `expires_at` checkout, dan berbeda dari [createdAt]
-  /// di respons yang sama.
+  /// Tenggat bayar, 1 jam sesudah [createdAt]. Dulu UTC sementara
+  /// [createdAt] WIB; backend sudah menyeragamkannya (commit `93c6a14`).
   @override
-  @ServerUtcDateTimeJson()
+  @ServerDateTimeJson()
   @JsonKey(name: 'expired_at')
   final DateTime? expiredAt;
-
-  /// **Waktu dinding server (WIB).**
   @override
   @ServerDateTimeJson()
   @JsonKey(name: 'created_at')
@@ -912,7 +908,7 @@ abstract mixin class _$PaymentModelCopyWith<$Res>
       @DoubleJson() double amount,
       @StringJson() String status,
       @ServerDateTimeJson() @JsonKey(name: 'paid_at') DateTime? paidAt,
-      @ServerUtcDateTimeJson() @JsonKey(name: 'expired_at') DateTime? expiredAt,
+      @ServerDateTimeJson() @JsonKey(name: 'expired_at') DateTime? expiredAt,
       @ServerDateTimeJson() @JsonKey(name: 'created_at') DateTime? createdAt});
 }
 
@@ -995,9 +991,7 @@ mixin _$PaymentInstructionModel {
   String? get vaNumber;
   @StringOrNullJson()
   String? get bank;
-
-  /// **UTC.**
-  @ServerUtcDateTimeJson()
+  @ServerDateTimeJson()
   @JsonKey(name: 'expires_at')
   DateTime? get expiresAt;
 
@@ -1047,9 +1041,7 @@ abstract mixin class $PaymentInstructionModelCopyWith<$Res> {
       {@StringOrNullJson() @JsonKey(name: 'qr_string') String? qrString,
       @StringOrNullJson() @JsonKey(name: 'va_number') String? vaNumber,
       @StringOrNullJson() String? bank,
-      @ServerUtcDateTimeJson()
-      @JsonKey(name: 'expires_at')
-      DateTime? expiresAt});
+      @ServerDateTimeJson() @JsonKey(name: 'expires_at') DateTime? expiresAt});
 }
 
 /// @nodoc
@@ -1188,7 +1180,7 @@ extension PaymentInstructionModelPatterns on PaymentInstructionModel {
             @StringOrNullJson() @JsonKey(name: 'qr_string') String? qrString,
             @StringOrNullJson() @JsonKey(name: 'va_number') String? vaNumber,
             @StringOrNullJson() String? bank,
-            @ServerUtcDateTimeJson()
+            @ServerDateTimeJson()
             @JsonKey(name: 'expires_at')
             DateTime? expiresAt)?
         $default, {
@@ -1223,7 +1215,7 @@ extension PaymentInstructionModelPatterns on PaymentInstructionModel {
             @StringOrNullJson() @JsonKey(name: 'qr_string') String? qrString,
             @StringOrNullJson() @JsonKey(name: 'va_number') String? vaNumber,
             @StringOrNullJson() String? bank,
-            @ServerUtcDateTimeJson()
+            @ServerDateTimeJson()
             @JsonKey(name: 'expires_at')
             DateTime? expiresAt)
         $default,
@@ -1256,7 +1248,7 @@ extension PaymentInstructionModelPatterns on PaymentInstructionModel {
             @StringOrNullJson() @JsonKey(name: 'qr_string') String? qrString,
             @StringOrNullJson() @JsonKey(name: 'va_number') String? vaNumber,
             @StringOrNullJson() String? bank,
-            @ServerUtcDateTimeJson()
+            @ServerDateTimeJson()
             @JsonKey(name: 'expires_at')
             DateTime? expiresAt)?
         $default,
@@ -1279,7 +1271,7 @@ class _PaymentInstructionModel extends PaymentInstructionModel {
       {@StringOrNullJson() @JsonKey(name: 'qr_string') this.qrString,
       @StringOrNullJson() @JsonKey(name: 'va_number') this.vaNumber,
       @StringOrNullJson() this.bank,
-      @ServerUtcDateTimeJson() @JsonKey(name: 'expires_at') this.expiresAt})
+      @ServerDateTimeJson() @JsonKey(name: 'expires_at') this.expiresAt})
       : super._();
   factory _PaymentInstructionModel.fromJson(Map<String, dynamic> json) =>
       _$PaymentInstructionModelFromJson(json);
@@ -1295,10 +1287,8 @@ class _PaymentInstructionModel extends PaymentInstructionModel {
   @override
   @StringOrNullJson()
   final String? bank;
-
-  /// **UTC.**
   @override
-  @ServerUtcDateTimeJson()
+  @ServerDateTimeJson()
   @JsonKey(name: 'expires_at')
   final DateTime? expiresAt;
 
@@ -1355,9 +1345,7 @@ abstract mixin class _$PaymentInstructionModelCopyWith<$Res>
       {@StringOrNullJson() @JsonKey(name: 'qr_string') String? qrString,
       @StringOrNullJson() @JsonKey(name: 'va_number') String? vaNumber,
       @StringOrNullJson() String? bank,
-      @ServerUtcDateTimeJson()
-      @JsonKey(name: 'expires_at')
-      DateTime? expiresAt});
+      @ServerDateTimeJson() @JsonKey(name: 'expires_at') DateTime? expiresAt});
 }
 
 /// @nodoc

@@ -24,9 +24,9 @@ const _orderJson = <String, dynamic>{
   'courier_service': 'ez',
   'tracking_number': null,
   'shipping_address_snapshot': '{"address_id":"59"}',
-  // UTC.
-  'payment_deadline': '2026-09-15 15:24:01',
-  // WIB.
+  // Keduanya WIB sejak commit backend `93c6a14`; sebelumnya
+  // `payment_deadline` UTC sehingga tampak 6 jam SEBELUM `created_at`.
+  'payment_deadline': '2026-09-15 22:24:01',
   'created_at': '2026-09-15 21:24:01',
   'updated_at': '2026-09-15 21:24:01',
   'items': [
@@ -75,16 +75,14 @@ void main() {
       expect(order.statusLabel, 'status_baru');
     });
 
-    test(
-      '🔴 payment_deadline UTC dan created_at WIB berselisih tepat 1 jam',
-      () {
-        // Pola yang sama dengan checkout. Kalau keduanya dianggap sezona,
-        // hitung mundur pembayaran langsung tampak habis.
-        final order = OrderModel.fromJson(_orderJson);
-        final gap = order.paymentDeadline!.difference(order.createdAt!);
-        expect(gap, const Duration(hours: 1));
-      },
-    );
+    test('payment_deadline dan created_at dibaca dengan zona yang SAMA', () {
+      // Dulu `payment_deadline` UTC sementara `created_at` WIB, sehingga
+      // selisihnya -6 jam dan hitung mundur pembayaran langsung tampak habis.
+      // Diseragamkan backend di commit `93c6a14`.
+      final order = OrderModel.fromJson(_orderJson);
+      final gap = order.paymentDeadline!.difference(order.createdAt!);
+      expect(gap, const Duration(hours: 1));
+    });
 
     test('shipping_address_snapshot hanya berisi address_id', () {
       // Bukan alamat lengkap — untuk menampilkannya perlu GET /me/addresses.

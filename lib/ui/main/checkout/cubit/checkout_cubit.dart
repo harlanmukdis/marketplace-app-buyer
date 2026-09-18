@@ -82,25 +82,29 @@ class CheckoutCubit extends Cubit<CheckoutState> {
     emit(current.copyWith(selectedPaymentMethod: code));
   }
 
-  /// Mengganti alamat tujuan.
+  /// Mengganti alamat tujuan **pada sesi yang sedang berjalan**.
   ///
-  /// 🔴 Dilakukan dengan **membatalkan sesi lalu membuat sesi baru**, bukan
-  /// dengan `PATCH /checkout/sessions/{id}/address` — endpoint itu rusak di
-  /// server dan selalu membalas 500 (controllernya membaca body PATCH dengan
-  /// `post()`). Membatalkan lebih dulu penting supaya reservasi stok sesi lama
-  /// dilepas; tanpa itu, stok yang sama tertahan dua kali dan sesi baru bisa
-  /// gagal karena stoknya "habis" oleh sesi user itu sendiri.
+  /// Reservasi stoknya dipertahankan. Sampai backend memperbaiki
+  /// `PATCH /checkout/sessions/{id}/address` (commit `8235c33`), ini terpaksa
+  /// dilakukan dengan membatalkan sesi lalu membuat yang baru — cara yang
+  /// melepas reservasi lalu mengambilnya lagi, sehingga user bisa kehilangan
+  /// barangnya ke pembeli lain hanya karena salah pilih alamat.
+  ///
+  /// Kalau belum ada sesi terbuka, alamat ini dipakai untuk memulai satu.
   Future<void> changeAddress(int addressId) async {
-    final previous = _openSessionId;
-    emit(const CheckoutState.preparing());
-
-    if (previous != null) {
-      await _repository.cancelSession(previous);
-      _openSessionId = null;
+    final id = _openSessionId;
+    if (id == null) {
+      await start(addressId: addressId, voucherCode: _voucherCode);
+      return;
     }
-    if (isClosed) return;
 
-    await start(addressId: addressId, voucherCode: _voucherCode);
+    final current = state;
+    if (current is CheckoutReady && current.isSubmitting) return;
+
+    emit(const CheckoutState.preparing());
+    final result = await _repository.changeAddress(id, addressId: addressId);
+    if (isClosed) return;
+    _apply(result);
   }
 
   Future<void> refresh() async {

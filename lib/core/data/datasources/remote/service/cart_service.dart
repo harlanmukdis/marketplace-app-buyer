@@ -128,13 +128,19 @@ class CartService {
     }
   }
 
-  /// `POST /cart/apply-voucher` — pratinjau diskon untuk keranjang.
+  /// `POST /cart/apply-voucher` — memasang voucher ke keranjang.
   ///
   /// Kode yang tidak berlaku dibalas `422 VOUCHER_INVALID`.
   ///
-  /// ⚠️ **Tidak ada endpoint untuk melepas voucher.** `docs/03` menyebut
-  /// `DELETE /cart/vouchers/{code}`, tapi rute itu tidak terdaftar. Jangan
-  /// menyediakan tombol "lepas voucher" yang tidak punya endpoint.
+  /// Field body-nya **`code`**, bukan `voucher_code` — dicek langsung ke
+  /// controllernya (`$this->post('code')`). Bedanya tidak kelihatan dari
+  /// percobaan, karena nama field yang salah menghasilkan `VOUCHER_INVALID`
+  /// yang sama persis dengan kode voucher yang salah.
+  ///
+  /// ⚠️ **Sejak commit backend `90751bf` endpoint ini MENYIMPAN**, bukan
+  /// sekadar pratinjau, dan beberapa voucher boleh terpasang sekaligus: maks
+  /// 1 voucher ongkir + 1 platform + 1 per toko. Memasang voucher baru ke slot
+  /// yang sudah terisi **mengganti** yang lama alih-alih ditolak.
   Future<ApiEnvelope<dynamic>> applyVoucher(String code) async {
     const context = 'POST /cart/apply-voucher';
     try {
@@ -143,6 +149,27 @@ class CartService {
         data: {'code': code},
       );
       return parseEnvelope(response, (raw) => raw, context: context);
+    } on DioException catch (e) {
+      throw ApiException.fromDio(e, context: context);
+    }
+  }
+
+  /// `DELETE /cart/vouchers/{code}` — melepas voucher dari keranjang.
+  ///
+  /// ✅ Rutenya **sekarang ada** (commit `90751bf`). Catatan lama di berkas ini
+  /// yang bilang "tidak ada endpoint untuk melepas voucher, jangan sediakan
+  /// tombolnya" sudah tidak berlaku.
+  ///
+  /// ⚠️ Seperti mutasi keranjang lainnya, **`200` bukan bukti sesuatu
+  /// berubah**: melepas kode yang tidak pernah terpasang pun dibalas `200`
+  /// dengan `data: null`. Repository membaca ulang keranjangnya.
+  Future<ApiEnvelope<void>> removeVoucher(String code) async {
+    final context = 'DELETE /cart/vouchers/$code';
+    try {
+      final response = await _dio.delete<dynamic>(
+        '/cart/vouchers/${Uri.encodeComponent(code)}',
+      );
+      return parseEnvelope(response, (_) {}, context: context);
     } on DioException catch (e) {
       throw ApiException.fromDio(e, context: context);
     }

@@ -77,6 +77,15 @@ class _FakeCheckoutRepository implements CheckoutRepository {
   }
 
   @override
+  Future<DataState<CheckoutSnapshot>> changeAddress(
+    String sessionId, {
+    required int addressId,
+  }) async {
+    calls.add('address:$sessionId:$addressId');
+    return snapshotResult;
+  }
+
+  @override
   Future<DataState<CheckoutSnapshot>> setShipping(
     String sessionId,
     Map<String, CourierChoice> selection,
@@ -195,17 +204,29 @@ void main() {
   });
 
   group('ganti alamat', () {
-    test('membatalkan sesi lama LALU membuat sesi baru', () async {
-      // PATCH .../address rusak di server, jadi ini satu-satunya cara. Urutan
-      // penting: tanpa cancel lebih dulu, stok yang sama tertahan dua kali
-      // dan sesi baru bisa gagal karena "habis" oleh sesi user sendiri.
+    test('mengubah sesi di tempat — TIDAK membatalkan lalu membuat ulang',
+        () async {
+      // Sampai backend memperbaiki PATCH .../address (commit `8235c33`),
+      // ini terpaksa dilakukan dengan cancel + start, yang melepas lalu
+      // mengambil ulang reservasi stok — user bisa kehilangan barangnya ke
+      // pembeli lain hanya karena salah pilih alamat.
       final cubit = CheckoutCubit();
       await cubit.start(addressId: 5);
       repository.calls.clear();
 
       await cubit.changeAddress(9);
 
-      expect(repository.calls, ['cancel:sesi-1', 'start:9']);
+      expect(repository.calls, ['address:sesi-1:9']);
+      expect(repository.calls.any((c) => c.startsWith('cancel:')), isFalse);
+      await cubit.close();
+    });
+
+    test('tanpa sesi terbuka, alamatnya dipakai MEMULAI sesi', () async {
+      final cubit = CheckoutCubit();
+
+      await cubit.changeAddress(9);
+
+      expect(repository.calls, ['start:9']);
       await cubit.close();
     });
   });

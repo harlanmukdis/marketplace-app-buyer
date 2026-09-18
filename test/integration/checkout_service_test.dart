@@ -152,10 +152,16 @@ void main() {
       await checkout.cancel(created.data.id);
     });
 
-    test('🔴 expires_at UTC dan created_at WIB berselisih tepat 15 menit',
+    test('✅ expires_at dan created_at kini SEZONA — selisihnya 15 menit',
         () async {
-      // Kalau backend menyeragamkan zona waktunya, test ini merah — dan
-      // ServerUtcDateTimeJson harus ditinjau ulang.
+      // Dulu selisihnya 7 jam 15 menit: `created_at` waktu dinding WIB dari
+      // MySQL, `expires_at` UTC dari PHP `date()`. Backend menyeragamkannya di
+      // commit `93c6a14` dengan `date_default_timezone_set('Asia/Jakarta')`,
+      // dan test inilah yang lebih dulu merah menunjukkannya — persis
+      // fungsinya dibuat.
+      //
+      // Kalau suatu saat merah lagi dengan selisih 7:15:00, artinya driftnya
+      // kembali dan converter khusus perlu dihidupkan lagi.
       final addressId = await createAddress();
       await cart.addItem(productVariantId: variantId, quantity: 1);
       final created = await checkout.createSession(addressId: addressId);
@@ -182,20 +188,42 @@ void main() {
       await checkout.cancel(created.data.id);
     });
 
-    test('🔴 PATCH .../address SELALU gagal — itu sebabnya ganti alamat '
-        'dilakukan dengan membuat sesi baru', () async {
+    test('✅ PATCH .../address mengganti alamat TANPA melepas reservasi stok',
+        () async {
+      // Dulu endpoint ini selalu 500 (controllernya membaca body PATCH dengan
+      // `post()`), jadi aplikasi mengganti alamat dengan membatalkan sesi lalu
+      // membuat yang baru. Diperbaiki backend di commit `8235c33`.
       final addressId = await createAddress();
       final otherId = await createAddress();
       await cart.addItem(productVariantId: variantId, quantity: 1);
       final created = await checkout.createSession(addressId: addressId);
 
-      // Controllernya membaca body PATCH dengan `post()`, sehingga
-      // shipping_address_id disetel NULL dan ditolak foreign key.
+      final patch = await checkout.changeAddress(
+        created.data.id,
+        addressId: otherId,
+      );
+      expect(patch.statusCode, 200);
+
+      final session = await checkout.fetchSession(created.data.id);
+      expect(session.data.shippingAddressId, otherId);
+      // Yang paling berharga: reservasinya bertahan.
+      expect(session.data.status, 'stock_reserved');
+
+      await checkout.cancel(created.data.id);
+    });
+
+    test('🔴 alamat orang lain dan address_id yang hilang memakai KODE dan '
+        'PESAN yang sama', () async {
+      // Keduanya `422 VALIDATION_ERROR` dengan pesan "Alamat tidak ditemukan /
+      // bukan milik akun ini". Tidak berdampak besar karena aplikasi hanya
+      // menawarkan alamat milik user sendiri — tapi berarti kode itu di
+      // praktiknya berarti "alamatnya baru saja terhapus".
+      final addressId = await createAddress();
+      await cart.addItem(productVariantId: variantId, quantity: 1);
+      final created = await checkout.createSession(addressId: addressId);
+
       await expectLater(
-        dio.patch<dynamic>(
-          '/checkout/sessions/${created.data.id}/address',
-          data: {'address_id': otherId},
-        ),
+        checkout.changeAddress(created.data.id, addressId: 1),
         throwsA(anything),
       );
 

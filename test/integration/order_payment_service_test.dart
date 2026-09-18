@@ -173,8 +173,10 @@ void main() {
       expect(order.orderNumber, startsWith('ORD-'));
     });
 
-    test('🔴 payment_deadline UTC dan created_at WIB berselisih 1 jam',
+    test('✅ payment_deadline dan created_at kini SEZONA — selisihnya 1 jam',
         () async {
+      // Dulu 8 jam: PHP `date()` UTC vs MySQL `CURRENT_TIMESTAMP` WIB.
+      // Diseragamkan backend di commit `93c6a14`.
       final placed = await placeOrder();
       final order = (await orders.fetchOrder(placed.orderIds.first)).data;
 
@@ -290,7 +292,9 @@ void main() {
       },
     );
 
-    test('🔴 expired_at UTC dan created_at WIB berselisih 1 jam', () async {
+    test('✅ expired_at dan created_at kini SEZONA — selisihnya 1 jam',
+        () async {
+      // Sama seperti payment_deadline di order: dulu 8 jam, kini 1 jam.
       final placed = await placeOrder();
       final payment = (await payments.fetchPayment(placed.txId)).data;
 

@@ -125,7 +125,7 @@ Current state: `en` and `ar` are complete (284 keys) and selectable. `fr` appear
 
 ## Known rough edges
 
-- The Flutter counter template `test/widget_test.dart` is **gone** — the suite is real (348 tests, all passing) and is a usable signal. `test/integration/` (100 of those) hits a live backend, so it fails with connection errors when the API is not running; that is the environment, not a regression. Note the API is started with `php -S`, **not** `docker compose` — see the note in Part 2 — and the integration suite must run `--concurrency=1`.
+- The Flutter counter template `test/widget_test.dart` is **gone** — the suite is real (353 tests, all passing) and is a usable signal. `test/integration/` (104 of those) hits a live backend, so it fails with connection errors when the API is not running; that is the environment, not a regression. Note the API is started with `php -S`, **not** `docker compose` — see "Menyalakan backend dev" in Part 2 — and the integration suite must run `--concurrency=1`.
 - 14 stale `*.dart~` backup files litter `lib/` (and `android/`). They are not compiled but **do show up in grep results** — always confirm a hit isn't in a `~` file before editing.
 - `lib/features/my_cart/presentation/views/map_screen.dart` is 100% commented out, and the `com.google.android.geo.API_KEY` meta-data in `android/app/src/main/AndroidManifest.xml` is commented out too. Restoring the map needs both, plus an iOS key. Location permissions are already declared in the manifest.
 - **The app builds now, but every image is a placeholder.** The UI kit's asset folders were never copied into this repo, so all 67 files in `assets/images/` and `assets/icon/` are grey 64×64 stubs, and the `Hanimation` font declaration in `pubspec.yaml` stays **commented out** (a fake OTF crashes at start, so it could not be stubbed — all text falls back to the system font). What you see on screen is therefore not the kit's design. `assets/PLACEHOLDER-README.md` documents what was stubbed and how to restore the originals.
@@ -201,6 +201,33 @@ Current state: `en` and `ar` are complete (284 keys) and selectable. `fr` appear
 > Catatan sebelumnya di file ini yang menyarankan `docker compose up -d` **salah**. `Dockerfile` menyalin `infra/docker/nginx.conf` yang tidak ada di repo, dan stage runtime-nya nginx tanpa php-fpm. Cara yang benar ada di panduan 18 §1: siapkan MySQL, jalankan `database/schema/*.sql` lalu `database/seeds/*.sql`, kemudian `php -S 127.0.0.1:8000 -t . router.php` dengan `router.php` yang isinya diberikan di panduan itu (tidak ada di repo).
 >
 > Konsekuensinya untuk `/search/*`: **Elasticsearch/OpenSearch di 9200 tidak punya cara mudah dinyalakan**, jadi anggap search mati secara default dan pakai fallback yang dijelaskan di bawah.
+>
+> ### 🔧 Menyalakan backend dev (langkah nyata, sudah dijalankan)
+>
+> Servernya mati tiap mesin reboot, dan `router.php` **tidak ada di repo** — kalau ia pernah ditaruh di direktori sementara, ia ikut terhapus dan seluruh request dibalas `Fatal error: Failed opening required …`. Taruh di root repo API, seperti disarankan panduan §1:
+>
+> ```bash
+> # 1. MySQL (XAMPP) — butuh hak root, nyalakan lewat XAMPP Control Panel
+> ls /Applications/XAMPP/xamppfiles/var/mysql/mysql.sock   # cek sudah hidup
+>
+> # 2. router.php di root repo API (jangan di-commit)
+> cat > ~/Desktop/Harlan/marketplace-api/router.php <<'EOF'
+> <?php
+> $path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+> if ($path !== '/' && is_file(__DIR__ . $path)) return false;
+> $_SERVER['SCRIPT_NAME'] = '/index.php';
+> require __DIR__ . '/index.php';
+> EOF
+>
+> # 3. Jalankan — socket XAMPP wajib disebut, PHP CLI Homebrew tidak menemukannya sendiri
+> cd ~/Desktop/Harlan/marketplace-api && php \
+>   -d mysqli.default_socket=/Applications/XAMPP/xamppfiles/var/mysql/mysql.sock \
+>   -S 127.0.0.1:8000 -t . router.php
+>
+> curl -s http://localhost:8000/api/v1/health
+> ```
+>
+> Kalau `POST /checkout/sessions` mendadak **500**, kemungkinan besar skema DB tertinggal dari repo API. Periksa `git diff <commit-lama>..HEAD -- database/` lalu jalankan berkas schema yang baru (`22_cart_applied_voucher.sql`, `23_reward_engine.sql`, dst) — bukan seluruh folder, supaya seed lama tidak tergandakan.
 
 **Status: foundation (steps 1-5) plus the auth domain implemented.** What exists today:
 
@@ -219,7 +246,7 @@ Current state: `en` and `ar` are complete (284 keys) and selectable. `fr` appear
 - **Wallet domain** — `lib/core/…/wallet/` + `lib/ui/main/wallet/`; lihat "Domain dompet" di bawah
 - `lib/util/error_message.dart` — maps `DataError.code` to localized copy; **never** shows `error.message` to users
 - **Notification domain** — `lib/core/…/notification/` + `lib/ui/main/notification/`; lihat "Domain notifikasi" di bawah
-- Tests: `test/util/` (17, murni), `test/data/` (126, fake service/store + parsing JSON asli), `test/ui/` (105, fake repository), `test/integration/` (100, butuh backend hidup — **jalankan `--concurrency=1`**) — **348 total, semuanya lulus**
+- Tests: `test/util/` (17, murni), `test/data/` (126, fake service/store + parsing JSON asli), `test/ui/` (106, fake repository), `test/integration/` (104, butuh backend hidup — **jalankan `--concurrency=1`**) — **353 total, semuanya lulus**
 
 Still absent: Firebase and `lib/firebase_options.dart`; domain chat dan modul reward.
 
@@ -290,25 +317,41 @@ Bentuk data yang mudah salah ditebak:
 - **Ringkasan hanya menghitung baris tercentang**, dan `item_count` menghitung **baris**, bukan unit — dua baris berisi 5 dan 1 unit tetap `2`. Karena itu layar menulis "N barang terpilih", bukan "N barang".
 - **`POST /cart/items` untuk varian yang sudah ada menggabungkan kuantitas** ke baris lama dan mengembalikan id baris itu — bukan membuat baris baru. Id balasannya kadang number, kadang string.
 - Baris keranjang membawa data produk terdenormalisasi (`product_name`, `sku`, `price`, `variant_options`), jadi layar keranjang **tidak perlu** menembak `/products/{id}` per baris. Yang tidak ada: gambar dan stok.
-- **Tidak ada endpoint untuk melepas voucher.** `docs/03` menyebut `DELETE /cart/vouchers/{code}`; rutenya tidak terdaftar. Jangan menyediakan tombol yang tidak punya endpoint.
-
 Satu-satunya validasi server yang benar-benar ada di endpoint ini: varian tidak dikenal dibalas `404 VARIANT_NOT_FOUND`.
+
+#### ✅ Voucher keranjang: kini bertumpuk, dan BISA dilepas (commit `90751bf`)
+
+Catatan lama di sini — "tidak ada endpoint untuk melepas voucher, jangan sediakan tombolnya" — **sudah tidak berlaku**. Yang berubah:
+
+- **`POST /cart/apply-voucher` sekarang MENYIMPAN**, bukan sekadar pratinjau, lewat tabel baru `cart_applied_vouchers` (jadi bertahan setelah reload dan lintas perangkat).
+- **Beberapa voucher boleh terpasang sekaligus**: maks 1 voucher ongkir + 1 platform + 1 **per toko**. Kategorinya diturunkan dari field yang sudah ada (`discount_type=free_shipping` → ongkir, `store_id` null → platform, selebihnya → toko), bukan kolom baru. Memasang voucher ke slot yang sudah terisi **mengganti** yang lama, bukan ditolak.
+- **`DELETE /cart/vouchers/{code}` ada sekarang** → `CartService.removeVoucher`. Seperti mutasi keranjang lainnya, `200` bukan bukti apa pun: melepas kode yang tidak pernah terpasang tetap `200`.
+
+Field body `apply-voucher` adalah **`code`**, bukan `voucher_code` — dicek ke controllernya (`$this->post('code')`). Bedanya tidak kelihatan dari percobaan: nama field yang salah menghasilkan `VOUCHER_INVALID` yang sama persis dengan kode voucher yang salah.
+
+⚠️ **Jalur suksesnya belum bisa diuji**: tidak ada voucher yang di-seed (`GET /me/vouchers` → `[]`), jadi memasang voucher yang benar-benar berlaku mustahil di dev. Test integrasi hanya memastikan rutenya ada dan penolakannya benar. Layar voucher sengaja belum dibuat sampai ada data.
+
+🔴 **`GET /cart/recommended-vouchers` membalas 500** (halaman Database Error) — endpoint baru yang seharusnya mengusulkan kombinasi voucher terbaik. Karena itu `CartService` tidak punya method untuknya; dipatok test supaya perbaikannya ketahuan.
 
 ### Domain alamat & checkout — dan tiga bug server
 
 Ditulis setelah keranjang, dan paling banyak menabrak keanehan server dari semua domain sejauh ini.
 
-#### 🔴 Satu respons checkout memakai DUA zona waktu
+#### ✅ Drift dua zona waktu SUDAH DIPERBAIKI (19 September 2026)
 
-Terbukti dua kali ke server: pada sesi yang sama, `created_at: "2026-09-15 07:52:59"` adalah waktu dinding **WIB**, sedangkan `expires_at: "2026-09-15 01:07:59"` adalah **UTC**. Selisihnya tepat 15 menit hanya kalau `expires_at` digeser +7 jam lebih dulu.
+Dulu satu respons checkout memakai dua zona sekaligus: `created_at: "2026-09-15 07:52:59"` waktu dinding **WIB**, sedangkan `expires_at: "2026-09-15 01:07:59"` **UTC** — selisihnya tepat 15 menit hanya kalau `expires_at` digeser +7 jam. Penyebabnya PHP `date()` mengikuti `php.ini date.timezone` (UTC) sementara kolom lain diisi `CURRENT_TIMESTAMP` MySQL (WIB). Aplikasi menambalnya dengan converter khusus `ServerUtcDateTimeJson`.
 
-`ServerDateTimeJson` memperlakukan semua timestamp sebagai WIB — benar untuk `created_at`, **salah 7 jam untuk `expires_at`**. Memakainya di sana membuat hitung mundur reservasi langsung menampilkan "kedaluwarsa" pada sesi yang baru dibuat. Karena itu ada `ServerUtcDateTimeJson`, dipakai **hanya** untuk tenggat yang dihitung server (`expires_at`, dan nanti `payment_deadline` di order). Jangan menyeragamkannya.
+Backend memperbaikinya di commit **`93c6a14`** dengan `date_default_timezone_set('Asia/Jakarta')` di `application/config/config.php` — sengaja di kode, bukan di `php.ini`, supaya tidak bergantung konfigurasi PHP di luar aplikasi. Commit `0d09a26` dan `8a8cb85` menuntaskan sisanya (validasi voucher dan worker cron).
 
-#### 🔴 `PATCH /checkout/sessions/{id}/address` selalu 500
+**`ServerUtcDateTimeJson` sudah dihapus**; `expires_at`, `payment_deadline`, dan `expired_at` kini memakai `ServerDateTimeJson` seperti field waktu lainnya. Yang menemukan perubahan ini adalah **test integrasi yang memaku selisih 15 menit / 1 jam** — ketiganya merah dengan selisih 7:15:00 dan 8:00:00 begitu server diperbarui. Kalau pola itu muncul lagi, driftnya kembali.
 
-Controllernya membaca body dengan `$this->post('address_id')` pada rute PATCH, sehingga nilainya selalu `null`, server menjalankan `UPDATE … SET shipping_address_id = NULL`, dan foreign key menolaknya. Ketiga encoding (JSON, form, query string) sama-sama gagal. Bandingkan `/shipping` yang memakai `$this->body()` dan bekerja normal.
+#### ✅ `PATCH /checkout/sessions/{id}/address` SUDAH DIPERBAIKI
 
-Akibatnya **tidak ada method untuk itu di `CheckoutService`**, dan ganti alamat dilakukan dengan `cancelSession` lalu `startSession` lagi. Urutannya penting: tanpa membatalkan lebih dulu, stok yang sama tertahan dua kali dan sesi baru bisa gagal karena "habis" oleh sesi user itu sendiri.
+Dulu selalu 500: controllernya membaca body dengan `$this->post('address_id')` pada rute PATCH, sehingga nilainya selalu `null` dan `UPDATE … SET shipping_address_id = NULL` ditolak foreign key. Ketiga encoding sama-sama gagal, jadi aplikasi mengganti alamat dengan `cancelSession` lalu `startSession` — cara yang bekerja tapi **melepas lalu mengambil ulang reservasi stok**, sehingga user bisa kehilangan barangnya ke pembeli lain hanya karena salah pilih alamat.
+
+Diperbaiki backend di commit **`8235c33`**, dan kepemilikan alamat divalidasi di **`28adce7`**. Diverifikasi ke server: `shipping_address_id` benar-benar berubah dan status sesi tetap `stock_reserved`. `CheckoutService.changeAddress` kini mengubahnya di tempat.
+
+⚠️ Balasannya `data: null` (repository membaca ulang), dan **alamat milik orang lain maupun `address_id` yang tidak dikirim sama-sama dibalas `422 VALIDATION_ERROR`** dengan pesan identik. Tidak berdampak besar karena aplikasi hanya menawarkan alamat milik user sendiri — di praktiknya kode itu berarti alamatnya baru saja terhapus.
 
 #### 🔴 `selected_couriers` tersimpan sebagai string JSON
 
@@ -364,7 +407,7 @@ Field `payment_method` di body `POST /payments/{txId}/pay` **diabaikan server** 
 
 #### Bentuk data lain yang dipatok test
 
-- **Pola zona waktu yang sama berulang**: `payment_deadline` (order) dan `expired_at` (payment) **UTC**, sementara `created_at` di respons yang sama **WIB**. Keduanya memakai `ServerUtcDateTimeJson`.
+- **Pola zona waktu yang sama dulu berulang di sini**: `payment_deadline` (order) dan `expired_at` (payment) UTC sementara `created_at` WIB. **Sudah diperbaiki** bersama checkout — lihat catatan `93c6a14` di atas; keduanya kini `ServerDateTimeJson`.
 - **`shipping_address_snapshot` hanya berisi `{"address_id": "59"}`** — bukan alamat lengkap, dan berupa string JSON. Menampilkan alamat tujuan butuh `GET /me/addresses`.
 - **`payments.order_id` selalu `null`.** Transaksi menempel pada `checkout_session_id`: satu pembayaran menutup **semua** order dari sesi itu. Jangan memakainya untuk mencari order.
 - Item order memakai **snapshot** nama, harga, dan opsi varian saat order dibuat — pesanan lama tetap benar walau produknya berubah.
@@ -549,7 +592,9 @@ Semua di bawah ini hasil menembak server dengan token buyer, bukan membaca dokum
 
 #### Katalog — listing vs detail
 
-**`GET /products` tidak membawa gambar maupun stok.** Isinya hanya kolom tabel `products` (+ `compare_at_price`, + `flash_sale` bila sedang promo). Gambar, stok, varian, dan kurir **hanya ada di `GET /products/{id}`**. Kartu produk di listing harus pakai placeholder — **jangan N+1 request detail per kartu**.
+**`GET /products` kini membawa `image_url`, tapi masih tanpa stok.** Isinya kolom tabel `products` + `compare_at_price` + `image_url` (+ `flash_sale` bila sedang promo). Stok, varian, dan kurir **hanya ada di `GET /products/{id}`**. **Jangan N+1 request detail per kartu.**
+
+✅ `image_url` ditambahkan backend di commit **`db8a626`**; sebelumnya listing tidak membawa gambar sama sekali dan setiap kartu terpaksa memakai placeholder. Bentuknya **satu URL datar**, bukan `images[]` — dan sebaliknya, `GET /products/{id}` **tidak** mengirim `image_url` melainkan `images[]` bersusun. `ProductModel.primaryImageUrl` menyerap keduanya; jangan membaca `listingImageUrl` langsung.
 
 **`GET /products/{id}` cukup untuk merender seluruh halaman detail** dalam satu request: `variants[]` (masing-masing dengan `stock` **integer** dan `variant_options` berupa JSON opsi), `images[]`, `couriers[]`, `stock` **integer** total lintas gudang, dan `compare_at_price` (harga coret, `null` kalau tidak ada).
 
@@ -697,13 +742,23 @@ Derived from the gap between Part 1 and Part 2. Steps 0-5 are done and the auth 
    - `POST /me/points/redeem` menolak dengan `422 INSUFFICIENT_POINTS` yang rapi dan spesifik — berbeda dari `WITHDRAWAL_REJECTED` di dompet yang ambigu.
    - ⚠️ `earn_points` memakai `$pointsPerIdr = 0.001` **hardcoded sebagai fallback**, dengan komentar bahwa nilai aktifnya semestinya dari `admin_settings` — pola yang sama dengan minimum penarikan.
    - `GET /me/cashback` ada dan hidup (`[]` di dev), tapi **tidak tercantum** di daftar rute reward mana pun di dokumen.
-7b. **Backlog: endpoint backend yang sudah ada tapi belum dipakai aplikasi.** Dikerjakan **setelah** domain di langkah 7 selesai, bukan menyela. Backend bergerak lebih cepat dari aplikasi, jadi daftar ini akan bertambah — periksa `git log` repo API setiap kali melanjutkan.
+7b. **Backlog: endpoint backend yang sudah ada tapi belum dipakai aplikasi.** Dikerjakan **setelah** domain di langkah 7 selesai, bukan menyela. Backend bergerak lebih cepat dari aplikasi, jadi daftar ini akan bertambah — **periksa `git log` repo API setiap kali melanjutkan.**
+
+   ⚠️ **Pemeriksaan itu bukan formalitas.** Pada 19 September 2026 backend ternyata sudah 24 commit di depan (`eff67e7..70ac372`), dan **tiga di antaranya membatalkan akalan yang sudah tertanam di kode jadi**: drift dua zona waktu (`93c6a14`), `PATCH .../address` yang dulu selalu 500 (`8235c33`), dan listing produk yang dulu tanpa gambar (`db8a626`). Yang menemukannya adalah **test integrasi yang memaku perilaku buruk itu** — empat test merah sekaligus. Itulah gunanya memaku bug server, bukan hanya fitur: perbaikannya jadi terlihat alih-alih diam-diam membuat aplikasi salah 7 jam.
 
    - **`GET /products/{id}/shipping-estimate?address_id=&variant_id=`** (commit `ea86e5d`, 15 Sep 2026). Menjawab "berapa ongkir ke alamat saya?" di halaman produk **tanpa membuat sesi checkout** — jadi tanpa mereservasi stok. Butuh login; `variant_id` opsional. Balasannya **list `ShippingOptionModel` yang sudah ada** (`cost` angka asli), sudah disaring `store_couriers`, urut termurah. Error yang perlu ditangani: `422 VALIDATION_ERROR` tanpa `address_id`, `404 ADDRESS_NOT_FOUND`, `404 VARIANT_NOT_FOUND`, `409 STOCK_INSUFFICIENT`. Sebagian nilainya sudah didapat lebih murah lewat `warehouse_city`/`warehouse_province` di varian, jadi ini peningkatan, bukan penambal lubang.
    - **`GET /home/layout`** dan `GET /categories/{id}/layout` — home CMS. Masih `[]` di server karena tabelnya belum di-seed; tunggu ada isinya supaya modelnya tidak ditulis dari dokumen saja.
    - **`GET /me/favorite-categories`**, `GET /me/vouchers`, `POST /vouchers/claim` — sudah diverifikasi hidup, belum ada layarnya.
    - **Alur consent ulang.** `requires_reconsent: true` pada respons login menuntut modal blocking → `GET /legal/documents/active` → `POST /legal/documents/{id}/accept` (panduan FE §2). Field-nya sudah dimodelkan, tindakannya belum. ⚠️ **Belum bisa diuji**: `/legal/documents/active` membalas `404 LEGAL_DOCUMENT_NOT_FOUND` karena tabel dokumen legal belum di-seed — jadi nilai `true` tidak pernah muncul di dev.
    - **`POST /media/upload`** — multipart, nama field **`file`**, balasan `{url, file_name, file_size_kb, mime_type}`. Baru dibutuhkan saat ulasan berfoto atau ganti avatar dikerjakan. ⚠️ `url` dirakit dari `$config['base_url']` yang di repo masih `http://localhost:8080/marketplace-api/`, jadi URL hasil upload akan salah sampai backend menyetelnya.
+
+   **Ditambahkan 19 September 2026** (dari 24 commit backend `eff67e7..70ac372`):
+
+   - **Layar voucher keranjang.** Endpointnya sudah lengkap sejak `90751bf` (pasang, lepas, tumpuk maks 1 ongkir + 1 platform + 1 per toko) dan `CartRepository` sudah punya `applyVoucher`/`removeVoucher`. Yang belum ada layarnya. ⚠️ **Tunggu ada voucher yang di-seed** — `GET /me/vouchers` masih `[]`, jadi alur suksesnya tidak bisa diuji sama sekali dan modelnya akan ditulis dari dokumen saja.
+   - **`POST /cart/vouchers/auto-apply`** (commit `2033a15`) — "Gunakan Otomatis" ala Tokopedia/Shopee: menghitung kombinasi terbaik lalu memasangnya sekaligus. Hidup (`200`, `[]` di dev). Pasangannya `GET /cart/recommended-vouchers` **masih 500**.
+   - **Reward engine config-driven** (commit `eb18722` + `fcc417e`, tabel `reward_configs` / `order_pending_rewards`) — cashback coins dengan rate per tier dan bonus per metode bayar, menggantikan rate hardcoded `0.001`. Menyentuh modul reward yang memang belum ditulis, jadi kerjakan bersamaan.
+   - **`flash_sale` per varian** di `GET /products/{id}` (commit `ad270c3`) — key-nya sudah dikirim server tapi **`null` di seluruh seed**, jadi bentuknya belum bisa diamati. Sama seperti `store_couriers` dan home CMS: tunggu ada isinya.
+   - **`GET /flash-sales/{id}/products`** (commit `9c5b9a7` + `1784186`) — kini membawa `product_id`, `image_url`, dan `original_price`.
 
    **Sudah dicek cocok, tidak perlu pekerjaan:** seluruh 12 parameter `GET /products` di panduan §7 sudah dikirim `CatalogService`; jebakan §6 nomor 1, 2, 3, 5, dan 8 semuanya sudah ditangani dan dipatok test. Nomor 6 dan 7 khusus app seller.
 

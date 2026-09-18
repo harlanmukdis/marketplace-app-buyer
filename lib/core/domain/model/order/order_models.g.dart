@@ -42,7 +42,7 @@ _OrderModel _$OrderModelFromJson(Map<String, dynamic> json) => _OrderModel(
       shippingAddressSnapshot:
           const JsonMapJson().fromJson(json['shipping_address_snapshot']),
       paymentDeadline:
-          const ServerUtcDateTimeJson().fromJson(json['payment_deadline']),
+          const ServerDateTimeJson().fromJson(json['payment_deadline']),
       createdAt: const ServerDateTimeJson().fromJson(json['created_at']),
       updatedAt: const ServerDateTimeJson().fromJson(json['updated_at']),
       items: (json['items'] as List<dynamic>?)
@@ -80,7 +80,7 @@ Map<String, dynamic> _$OrderModelToJson(_OrderModel instance) =>
       'shipping_address_snapshot':
           const JsonMapJson().toJson(instance.shippingAddressSnapshot),
       'payment_deadline':
-          const ServerUtcDateTimeJson().toJson(instance.paymentDeadline),
+          const ServerDateTimeJson().toJson(instance.paymentDeadline),
       'created_at': const ServerDateTimeJson().toJson(instance.createdAt),
       'updated_at': const ServerDateTimeJson().toJson(instance.updatedAt),
       'items': instance.items,

@@ -44,18 +44,33 @@ void main() {
       expect(result.data.length, lessThanOrEqualTo(5));
     });
 
-    test('item listing TIDAK membawa gambar, stok, varian, maupun kurir',
-        () async {
-      // Ini yang bikin kartu produk harus pakai placeholder, dan yang bikin
-      // "habis" tidak boleh disimpulkan dari listing.
+    test('item listing tidak membawa stok, varian, maupun kurir', () async {
+      // Ini yang bikin "habis" tidak boleh disimpulkan dari listing: `stock`
+      // null berarti belum diketahui, bukan nol.
       final result = await catalog.fetchProducts(perPage: 5);
 
       for (final product in result.data) {
-        expect(product.images, isEmpty);
+        expect(product.images, isEmpty,
+            reason: 'listing memakai image_url datar, bukan images[]');
         expect(product.variants, isEmpty);
         expect(product.couriers, isEmpty);
         expect(product.stock, isNull);
         expect(product.isOutOfStock, isFalse);
+      }
+    });
+
+    test('✅ item listing SEKARANG membawa image_url', () async {
+      // Ditambahkan backend di commit `db8a626`. Sebelumnya listing tidak
+      // membawa gambar sama sekali, sehingga tiap kartu produk terpaksa
+      // memakai placeholder — satu-satunya alternatifnya menembak detail per
+      // kartu (N+1).
+      final result = await catalog.fetchProducts(perPage: 5);
+
+      expect(result.data, isNotEmpty);
+      for (final product in result.data) {
+        expect(product.listingImageUrl, isNotNull);
+        // Dan getter bersama itu menyerapnya, bukan hanya `images[]`.
+        expect(product.primaryImageUrl, product.listingImageUrl);
       }
     });
 

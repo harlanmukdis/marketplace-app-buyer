@@ -178,4 +178,31 @@ void main() {
       throwsA(anything),
     );
   });
+
+  test('✅ melepas voucher SUDAH punya endpoint', () async {
+    // `DELETE /cart/vouchers/{code}` baru ada sejak commit backend `90751bf`
+    // bersama penumpukan voucher. Sebelumnya voucher yang terpasang tidak bisa
+    // dilepas sama sekali, jadi aplikasi sengaja tidak menyediakan tombolnya.
+    //
+    // ⚠️ Jalur suksesnya **tidak bisa diuji di dev**: tidak ada voucher yang
+    // di-seed (`GET /me/vouchers` mengembalikan `[]`), jadi memasang voucher
+    // yang benar-benar berlaku mustahil. Yang dipatok di sini hanya bahwa
+    // rutenya ada dan tidak melempar.
+    await cart.addItem(productVariantId: variantId, quantity: 1);
+
+    final result = await cart.removeVoucher('KODE-TIDAK-ADA');
+    expect(result.statusCode, 200,
+        reason: 'melepas kode yang tak pernah terpasang pun dibalas 200');
+  });
+
+  test('🔴 GET /cart/recommended-vouchers membalas 500', () async {
+    // Endpoint baru (commit `90751bf`) yang seharusnya mengusulkan kombinasi
+    // voucher terbaik, tapi meledak jadi halaman Database Error. Karena itu
+    // `CartService` tidak punya method untuk itu. Kalau backend
+    // memperbaikinya, test ini merah lebih dulu.
+    await expectLater(
+      dio.get<dynamic>('/cart/recommended-vouchers'),
+      throwsA(anything),
+    );
+  });
 }
