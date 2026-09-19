@@ -549,17 +549,48 @@ class _WishlistButton extends StatelessWidget {
 ///
 /// Stok dicek di sini karena **halaman inilah yang tahu stok**; `GET /cart`
 /// tidak mengirimnya, dan server tidak memvalidasi kuantitas sama sekali.
-class _AddToCartButton extends StatelessWidget {
+/// 🔴 **Sibuk dilacak di sini, bukan disimpulkan dari `CartLoading`.**
+///
+/// Versi sebelumnya memakai `busy = cartState is CartLoading`, dan itu membuat
+/// tombolnya **mati selamanya di setiap halaman produk**: `ProductDetailScreen`
+/// membuat `CartCubit()` tanpa `..load()`, sedangkan keadaan awal cubit itu
+/// `CartState.loading()`. Tidak ada yang pernah memindahkannya dari `loading`,
+/// karena satu-satunya jalan keluar adalah `addItem` — yang butuh tombolnya
+/// hidup. Kebuntuan yang sempurna.
+///
+/// Tidak ada test lama yang bisa menangkapnya: servicenya benar,
+/// `CartCubit.addItem` benar, dan test cubit memanggil methodnya langsung
+/// tanpa melewati tombol. Yang salah hanya **perkawinannya**, dan itu baru
+/// terlihat saat app sungguhan ditekan tombolnya —
+/// `integration_test/member_journey_test.dart`.
+///
+/// Memuat keranjang di sini (`CartCubit()..load()`) juga akan menghidupkan
+/// tombolnya, tapi dengan ongkos satu `GET /cart` tiap halaman produk dibuka
+/// **dan** satu bug baru: transisi `loading → ready` dari pemuatan itu akan
+/// memicu snackbar "Ditambahkan ke keranjang" sebelum user menekan apa pun.
+class _AddToCartButton extends StatefulWidget {
   const _AddToCartButton({required this.state});
 
   final ProductDetailLoaded state;
 
   @override
+  State<_AddToCartButton> createState() => _AddToCartButtonState();
+}
+
+class _AddToCartButtonState extends State<_AddToCartButton> {
+  /// `true` selagi penambahan **dari tombol ini** sedang berjalan.
+  bool _submitting = false;
+
+  @override
   Widget build(BuildContext context) {
-    final variantId = state.selectedVariant?.id;
-    final canBuy = state.canAddToCart && variantId != null;
+    final variantId = widget.state.selectedVariant?.id;
+    final canBuy = widget.state.canAddToCart && variantId != null;
 
     return BlocConsumer<CartCubit, CartState>(
+      // Hanya perubahan yang disebabkan ketukan tombol ini yang diberitakan.
+      // Tanpa penjaga ini, setiap `CartReady` yang lewat — termasuk dari
+      // pemuatan biasa — akan mengaku sebagai "berhasil ditambahkan".
+      listenWhen: (_, __) => _submitting,
       listener: (context, cartState) {
         final message = switch (cartState) {
           CartReady(:final actionError?) => errorMessageFor(context, actionError),
@@ -567,6 +598,8 @@ class _AddToCartButton extends StatelessWidget {
           _ => null,
         };
         if (message == null) return;
+
+        setState(() => _submitting = false);
 
         ScaffoldMessenger.of(context)
           ..hideCurrentSnackBar()
@@ -578,13 +611,15 @@ class _AddToCartButton extends StatelessWidget {
         ProductDetailCubit.get(context).load(forceRefresh: true);
       },
       builder: (context, cartState) {
-        final busy = cartState is CartLoading;
         return FilledButton.icon(
-          onPressed: canBuy && !busy
-              ? () => CartCubit.get(context).addItem(
+          onPressed: canBuy && !_submitting
+              ? () {
+                  setState(() => _submitting = true);
+                  CartCubit.get(context).addItem(
                     productVariantId: variantId,
                     quantity: 1,
-                  )
+                  );
+                }
               : null,
           icon: const Icon(Icons.shopping_cart_outlined),
           label: const Text('Tambah ke Keranjang'),

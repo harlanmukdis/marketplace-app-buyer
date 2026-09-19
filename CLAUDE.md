@@ -29,6 +29,7 @@ flutter run                           # run on connected device/emulator
 flutter analyze                       # static analysis (flutter_lints 4.0.0 via analysis_options.yaml)
 flutter test                          # run all tests (414; all pass)
 flutter test test/integration --concurrency=1   # integrasi: butuh backend hidup, WAJIB serial
+flutter test integration_test/member_journey_test.dart -d macos  # app sungguhan, satu berkas per invokasi
 flutter test test/data                # one directory
 flutter test test/data/auth_repository_impl_test.dart                       # single file
 flutter test test/ui --plain-name 'token ditolak server berujung logout'    # single test case
@@ -250,6 +251,7 @@ Current state: `en` and `ar` are complete (284 keys) and selectable. `fr` appear
 - **Notification domain** — `lib/core/…/notification/` + `lib/ui/main/notification/`; lihat "Domain notifikasi" di bawah
 - **Reward domain** — `lib/core/…/reward/` + `lib/ui/main/reward/`; lihat "Domain reward" di bawah
 - Tests: `test/util/` (17, murni), `test/data/` (148, fake service/store + parsing JSON asli), `test/ui/` (122, fake repository), `test/integration/` (127, butuh backend hidup — **jalankan `--concurrency=1`**) — **414 total, semuanya lulus**
+- **`integration_test/`** — app sungguhan di perangkat sungguhan, **di luar `flutter test`**; lihat "Test app sungguhan" di bawah
 
 Still absent: Firebase and `lib/firebase_options.dart`; domain chat.
 
@@ -647,6 +649,68 @@ Poin dan koin hanya bertambah lewat reward engine yang dipicu pesanan **selesai*
 #### Layarnya menggabungkan lima endpoint, dan hanya satu yang fatal
 
 `RewardRepositoryImpl.fetchOverview` menembak poin, koin, loyalitas, daftar tier, dan cashback **bersamaan** — di-`await` terpisah supaya kegagalan salah satunya tidak jadi *unhandled async error*. Hanya **saldo poin** yang menggagalkan layar; sisanya boleh kosong. Menampilkan saldo tanpa bar loyalitas jauh lebih berguna daripada layar error penuh karena satu endpoint sampingan bermasalah.
+
+### Test app sungguhan (`integration_test/`)
+
+Lapisan kelima, di luar empat direktori `test/`: mem-boot **pohon widget yang
+sama dengan `main()`**, menekan tombol aslinya, dan membiarkan layar memanggil
+API sendiri. `flutter test` hanya memungut `test/`, jadi berkas ini tidak
+pernah ikut berjalan tanpa sengaja.
+
+| lapisan | yang dijalankan | yang dibuktikan |
+|---|---|---|
+| `test/integration/` | service + Dio, tanpa widget | **kontrak endpoint** |
+| `integration_test/` | app utuh, perangkat sungguhan | **layarnya tersambung** ke endpoint itu |
+
+```bash
+flutter test integration_test/member_journey_test.dart -d macos
+```
+
+Seluruh rinciannya — enam jebakan setup, pola yang membuatnya tidak rapuh, dan
+batas yang tidak bisa dilewati — ada di **`integration_test/README.md`**. Yang
+paling mudah menyita waktu:
+
+- **macOS, bukan Chrome.** Backend tidak mengirim header CORS sama sekali dan
+  menjawab `OPTIONS` dengan `405`.
+- **`macos/Runner/*.entitlements` wajib punya `com.apple.security.network.client`.**
+  Repo ini dulu tidak punya entri itu di `DebugProfile` maupun `Release`;
+  tanpanya sandbox memblokir semua request dan gejalanya persis seperti backend
+  mati. Sudah ditambahkan.
+- **Satu berkas per invokasi** — berkas kedua tidak bisa start app.
+- **`DevicePreview` dilewati**, karena frame perangkat simulasinya membuat
+  koordinat tap meleset.
+
+#### 🔴 Bug yang hanya bisa ditemukan lapisan ini
+
+Test pertama yang ditulis langsung menemukan **tombol "Tambah ke Keranjang"
+mati di setiap halaman produk**. `ProductDetailScreen` membuat `CartCubit()`
+tanpa `..load()`, sedangkan keadaan awal cubit itu `CartState.loading()` — dan
+tombolnya menghitung `busy = cartState is CartLoading`. Tidak ada yang pernah
+memindahkan cubit itu dari `loading`, karena satu-satunya jalan keluar adalah
+`addItem`, yang butuh tombolnya hidup. Kebuntuan sempurna: **produk tidak bisa
+dimasukkan ke keranjang sama sekali.**
+
+Tidak ada test lama yang bisa menangkapnya, dan itu bukan kebetulan:
+`CartService` benar (dipatok `test/integration/`), `CartCubit.addItem` benar
+(dipatok `test/ui/`), dan test cubit memanggil methodnya **langsung tanpa
+melewati tombol**. Yang salah hanya perkawinan keduanya di widget.
+
+Perbaikannya melacak "sibuk" di `_AddToCartButton` sendiri, bukan
+menyimpulkannya dari keadaan cubit. Memanggil `CartCubit()..load()` juga akan
+menghidupkan tombolnya, tapi dengan ongkos satu `GET /cart` tiap halaman produk
+dibuka **dan** satu bug baru: transisi `loading → ready` dari pemuatan itu akan
+memicu snackbar "Ditambahkan ke keranjang" sebelum user menekan apa pun.
+
+#### 🔴 Batas yang dilaporkan, bukan dilewati diam-diam
+
+**Tidak ada pesanan yang bisa mencapai `paid` di lingkungan ini.** Callback
+pembayaran menolak signature lalu **500 saat mencatat penolakan itu** — ia
+menulis `payment_transaction_id = 0` yang melanggar foreign key. Jadi alur
+pasca-bayar (lacak kiriman → terima barang → ulas) tidak bisa diuji ujung ke
+ujung sampai backend memperbaikinya, dan test berhenti di `pending`.
+
+Ini juga yang membuat **ulasan** tidak bisa diuji ujung ke ujung: ulasan
+menuntut pesanan berstatus `completed`.
 
 ### Kontrak sisi member (diverifikasi ke server, 14 September 2026)
 
