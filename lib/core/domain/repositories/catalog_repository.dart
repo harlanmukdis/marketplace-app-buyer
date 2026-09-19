@@ -2,6 +2,7 @@ import 'package:marketplace_app_member/core/data/datasources/remote/service/cata
 import 'package:marketplace_app_member/core/data_state.dart';
 import 'package:marketplace_app_member/core/domain/model/catalog/category_model.dart';
 import 'package:marketplace_app_member/core/domain/model/catalog/product_model.dart';
+import 'package:marketplace_app_member/core/domain/model/checkout/checkout_models.dart';
 
 /// Antarmuka katalog yang dikonsumsi cubit.
 ///
@@ -49,4 +50,15 @@ abstract class CatalogRepository {
 
   /// Daftar kurir aktif se-platform.
   Future<DataState<List<CourierModel>>> fetchCouriers();
+
+  /// Ongkir ke satu alamat, **tanpa membuat sesi checkout** — jadi tanpa
+  /// mereservasi stok.
+  ///
+  /// Hasilnya urut termurah, jadi elemen pertama bisa langsung dipakai sebagai
+  /// "ongkir mulai dari". Butuh login.
+  Future<DataState<List<ShippingOptionModel>>> fetchShippingEstimate(
+    int productId, {
+    required int addressId,
+    int? variantId,
+  });
 }

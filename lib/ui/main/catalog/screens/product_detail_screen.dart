@@ -8,6 +8,7 @@ import 'package:marketplace_app_member/core/utils/constant.dart';
 import 'package:marketplace_app_member/core/utils/extensions.dart';
 import 'package:marketplace_app_member/ui/main/cart/cubit/cart_cubit.dart';
 import 'package:marketplace_app_member/ui/main/catalog/cubit/product_detail_cubit.dart';
+import 'package:marketplace_app_member/ui/main/catalog/widgets/shipping_estimate_section.dart';
 import 'package:marketplace_app_member/ui/main/review/widgets/product_reviews_section.dart';
 import 'package:marketplace_app_member/ui/main/wishlist/cubit/wishlist_cubit.dart';
 import 'package:marketplace_app_member/util/error_message.dart';
@@ -170,6 +171,10 @@ class _Loaded extends StatelessWidget {
                     ),
                     8.sbh,
                   ],
+                  ShippingEstimateSection(
+                    productId: product.id,
+                    variantId: state.selectedVariant?.id,
+                  ),
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,

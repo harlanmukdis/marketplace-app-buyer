@@ -9,6 +9,7 @@ import 'package:marketplace_app_member/core/utils/app_styles.dart';
 import 'package:marketplace_app_member/core/utils/constant.dart';
 import 'package:marketplace_app_member/core/utils/extensions.dart';
 import 'package:marketplace_app_member/ui/main/cart/cubit/cart_cubit.dart';
+import 'package:marketplace_app_member/ui/main/cart/widgets/reward_preview_badge.dart';
 import 'package:marketplace_app_member/util/error_message.dart';
 import 'package:marketplace_app_member/util/format_helper.dart';
 
@@ -321,6 +322,8 @@ class _SummaryBar extends StatelessWidget {
                       color: dark ? kDarkPrimaryColor : kLightPrimaryColor,
                     ),
                   ),
+                  if (summary.subtotal > 0)
+                    RewardPreviewBadge(subtotal: summary.subtotal),
                 ],
               ),
             ),

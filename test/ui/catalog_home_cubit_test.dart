@@ -10,6 +10,7 @@ import 'package:marketplace_app_member/core/data/datasources/remote/service/cata
 import 'package:marketplace_app_member/core/data_state.dart';
 import 'package:marketplace_app_member/core/domain/model/catalog/category_model.dart';
 import 'package:marketplace_app_member/core/domain/model/catalog/product_model.dart';
+import 'package:marketplace_app_member/core/domain/model/checkout/checkout_models.dart';
 import 'package:marketplace_app_member/core/domain/repositories/catalog_repository.dart';
 import 'package:marketplace_app_member/di/injector.dart';
 import 'package:marketplace_app_member/ui/main/catalog/cubit/catalog_home_cubit.dart';
@@ -72,6 +73,14 @@ class _FakeCatalogRepository implements CatalogRepository {
 
   @override
   Future<DataState<List<CourierModel>>> fetchCouriers() async =>
+      const DataEmpty();
+
+  @override
+  Future<DataState<List<ShippingOptionModel>>> fetchShippingEstimate(
+    int productId, {
+    required int addressId,
+    int? variantId,
+  }) async =>
       const DataEmpty();
 }
 

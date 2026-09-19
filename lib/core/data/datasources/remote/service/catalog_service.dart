@@ -3,6 +3,10 @@ import 'package:marketplace_app_member/config/network/api_envelope.dart';
 import 'package:marketplace_app_member/config/network/api_exception.dart';
 import 'package:marketplace_app_member/core/domain/model/catalog/category_model.dart';
 import 'package:marketplace_app_member/core/domain/model/catalog/product_model.dart';
+// `ShippingOptionModel` sengaja dipakai ulang dari checkout, bukan disalin:
+// bentuk opsi kurirnya benar-benar sama, dan dua salinan akan berbeda diam-diam
+// begitu salah satunya diperbarui.
+import 'package:marketplace_app_member/core/domain/model/checkout/checkout_models.dart';
 
 /// Urutan hasil `GET /products`.
 ///
@@ -155,6 +159,49 @@ class CatalogService {
     try {
       final response = await _dio.get<dynamic>('/couriers');
       return parseEnvelopeList(response, CourierModel.fromJson,
+          context: context);
+    } on DioException catch (e) {
+      throw ApiException.fromDio(e, context: context);
+    }
+  }
+
+  /// `GET /products/{id}/shipping-estimate` — ongkir ke satu alamat, **tanpa
+  /// membuat sesi checkout**.
+  ///
+  /// Nilainya justru di kata "tanpa": satu-satunya cara lain mengetahui ongkir
+  /// adalah `POST /checkout/sessions`, yang **mereservasi stok 15 menit**.
+  /// Memakainya hanya untuk mengintip ongkir di halaman produk berarti menahan
+  /// stok orang lain setiap kali seseorang penasaran.
+  ///
+  /// Balasannya memakai ulang [ShippingOptionModel] yang sama dengan checkout,
+  /// sudah disaring menurut kurir yang dilayani toko (`store_couriers`) dan
+  /// **urut termurah** — jadi opsi pertama bisa langsung dipakai sebagai
+  /// "ongkir mulai dari".
+  ///
+  /// **Butuh login**, berbeda dari `GET /products/{id}` yang publik, karena
+  /// `address_id` milik pembeli. [variantId] opsional — server memakai varian
+  /// pertama kalau tidak dikirim.
+  ///
+  /// Kode error yang dibedakan server dengan rapi (semuanya diuji):
+  /// `422 VALIDATION_ERROR` tanpa `address_id`, `404 ADDRESS_NOT_FOUND` untuk
+  /// alamat milik orang lain, `404 VARIANT_NOT_FOUND`, `401 UNAUTHENTICATED`
+  /// tanpa token, dan `409 STOCK_INSUFFICIENT` bila varian tidak ada stok di
+  /// gudang mana pun.
+  Future<ApiEnvelope<List<ShippingOptionModel>>> fetchShippingEstimate(
+    int productId, {
+    required int addressId,
+    int? variantId,
+  }) async {
+    final context = 'GET /products/$productId/shipping-estimate';
+    try {
+      final response = await _dio.get<dynamic>(
+        '/products/$productId/shipping-estimate',
+        queryParameters: {
+          'address_id': addressId,
+          if (variantId != null) 'variant_id': variantId,
+        },
+      );
+      return parseEnvelopeList(response, ShippingOptionModel.fromJson,
           context: context);
     } on DioException catch (e) {
       throw ApiException.fromDio(e, context: context);

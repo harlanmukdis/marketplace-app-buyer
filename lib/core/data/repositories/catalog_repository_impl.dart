@@ -3,6 +3,7 @@ import 'package:marketplace_app_member/core/data/repositories/repository_guard.d
 import 'package:marketplace_app_member/core/data_state.dart';
 import 'package:marketplace_app_member/core/domain/model/catalog/category_model.dart';
 import 'package:marketplace_app_member/core/domain/model/catalog/product_model.dart';
+import 'package:marketplace_app_member/core/domain/model/checkout/checkout_models.dart';
 import 'package:marketplace_app_member/core/domain/repositories/catalog_repository.dart';
 
 /// Implementasi [CatalogRepository] di atas [CatalogService].
@@ -60,4 +61,24 @@ class CatalogRepositoryImpl with RepositoryGuard implements CatalogRepository {
   @override
   Future<DataState<List<CourierModel>>> fetchCouriers() =>
       guardList(_service.fetchCouriers);
+
+  /// Memakai `guardList`, jadi **nol opsi kurir jadi [DataEmpty]**, bukan
+  /// sukses berisi list kosong.
+  ///
+  /// Bedanya nyata di sini: sejak backend menyaring kurir menurut
+  /// `store_couriers`, toko yang tidak melayani satu pun kurir ke alamat itu
+  /// benar-benar mengembalikan daftar kosong — dan layar perlu mengatakan
+  /// "tidak ada kurir ke alamat ini", bukan diam.
+  @override
+  Future<DataState<List<ShippingOptionModel>>> fetchShippingEstimate(
+    int productId, {
+    required int addressId,
+    int? variantId,
+  }) {
+    return guardList(() => _service.fetchShippingEstimate(
+          productId,
+          addressId: addressId,
+          variantId: variantId,
+        ));
+  }
 }

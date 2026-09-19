@@ -17,6 +17,8 @@ import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:marketplace_app_member/config/env/env.dart';
 import 'package:marketplace_app_member/config/network/dio_client.dart';
+import 'package:marketplace_app_member/core/data/datasources/remote/service/address_service.dart';
+import 'package:marketplace_app_member/core/data/datasources/remote/service/auth_service.dart';
 import 'package:marketplace_app_member/core/data/datasources/remote/service/catalog_service.dart';
 import 'package:marketplace_app_member/core/domain/model/catalog/product_facets.dart';
 import 'package:marketplace_app_member/core/domain/model/catalog/product_model.dart';
@@ -214,6 +216,124 @@ void main() {
       final result = await catalog.fetchCouriers();
       expect(result.data, isNotEmpty);
       expect(result.data.first.code, isNotEmpty);
+    });
+  });
+
+  group('GET /products/{id}/shipping-estimate', () {
+    late Dio authed;
+    late CatalogService authedCatalog;
+    late int addressId;
+
+    setUp(() async {
+      authed = DioClient.createBare(Env.apiBaseUrl);
+      final auth = AuthService(authed);
+      authedCatalog = CatalogService(authed);
+
+      final stamp = DateTime.now().microsecondsSinceEpoch;
+      final email = 'uji.ongkir.$stamp@marketplace.local';
+      const password = 'RahasiaAman123';
+      await auth.register(
+        email: email,
+        password: password,
+        fullName: 'Uji Ongkir',
+        phone: '08${stamp.toString().substring(stamp.toString().length - 10)}',
+      );
+      final session = await auth.login(email: email, password: password);
+      authed.options.headers['Authorization'] =
+          'Bearer ${session.data.accessToken}';
+
+      addressId = (await AddressService(authed).create(
+        label: 'Rumah',
+        recipientName: 'Uji Ongkir',
+        phone: '081200000000',
+        fullAddress: 'Jl. Uji No. 1',
+        city: 'Jakarta Selatan',
+        province: 'DKI Jakarta',
+        postalCode: '12810',
+        isPrimary: true,
+      ))
+          .data;
+    });
+
+    tearDown(() => authed.close(force: true));
+
+    test('mengembalikan opsi kurir TANPA membuat sesi checkout', () async {
+      // Nilainya justru di kata "tanpa": satu-satunya cara lain mengetahui
+      // ongkir adalah POST /checkout/sessions, yang mereservasi stok 15 menit.
+      final seeded = await findVariantWithStock(authedCatalog);
+      final result = await authedCatalog.fetchShippingEstimate(
+        seeded.productId,
+        addressId: addressId,
+        variantId: seeded.variantId,
+      );
+
+      expect(result.data, isNotEmpty);
+      final first = result.data.first;
+      expect(first.courierCode, isNotEmpty);
+      expect(first.serviceName, isNotEmpty);
+      // `cost` angka asli di sini, bukan string seperti harga produk.
+      expect(first.cost, greaterThan(0));
+    });
+
+    test('urut termurah, jadi opsi pertama bisa dipakai "mulai dari"',
+        () async {
+      final seeded = await findVariantWithStock(authedCatalog);
+      final result = await authedCatalog.fetchShippingEstimate(
+        seeded.productId,
+        addressId: addressId,
+        variantId: seeded.variantId,
+      );
+
+      final costs = result.data.map((o) => o.cost).toList();
+      expect(costs, [...costs]..sort());
+    });
+
+    test('variant_id opsional — server memakai varian pertama', () async {
+      final seeded = await findVariantWithStock(authedCatalog);
+      final result = await authedCatalog.fetchShippingEstimate(
+        seeded.productId,
+        addressId: addressId,
+      );
+      expect(result.data, isNotEmpty);
+    });
+
+    test('BUTUH login, berbeda dari GET /products/{id} yang publik', () async {
+      final seeded = await findVariantWithStock(catalog);
+      await expectLater(
+        catalog.fetchShippingEstimate(
+          seeded.productId,
+          addressId: addressId,
+        ),
+        throwsA(anything),
+      );
+    });
+
+    test('tiap penolakan punya kode SENDIRI, tidak diseragamkan', () async {
+      // Berbeda dari beberapa endpoint lain di API ini yang memakai satu kode
+      // untuk beberapa sebab — di sini masing-masing bisa dijelaskan ke user.
+      final seeded = await findVariantWithStock(authedCatalog);
+
+      // Tanpa address_id → 422 VALIDATION_ERROR.
+      await expectLater(
+        authed.get<dynamic>('/products/${seeded.productId}/shipping-estimate'),
+        throwsA(anything),
+      );
+
+      // Alamat milik orang lain → 404 ADDRESS_NOT_FOUND.
+      await expectLater(
+        authedCatalog.fetchShippingEstimate(seeded.productId, addressId: 1),
+        throwsA(anything),
+      );
+
+      // Varian tak dikenal → 404 VARIANT_NOT_FOUND.
+      await expectLater(
+        authedCatalog.fetchShippingEstimate(
+          seeded.productId,
+          addressId: addressId,
+          variantId: 99999999,
+        ),
+        throwsA(anything),
+      );
     });
   });
 
