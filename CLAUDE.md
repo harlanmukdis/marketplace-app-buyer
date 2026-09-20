@@ -230,6 +230,17 @@ Current state: `en` and `ar` are complete (284 keys) and selectable. `fr` appear
 > curl -s http://localhost:8000/api/v1/health
 > ```
 >
+> ### ✅ CORS sudah ada — build web bisa memanggil API (20 September 2026)
+>
+> Sampai 20 September 2026 backend **tidak mengirim satu pun header `Access-Control-*`** dan menjawab `OPTIONS` dengan `405` (endpoint `/auth/*`, yang `extends REST_Controller` langsung) atau `401` (sisanya, yang constructor-nya memanggil `authenticate_or_fail()` sebelum routing method). Akibatnya **build web tidak bisa menghubungi API sama sekali** — dan gejalanya menyesatkan: Dio melaporkannya sebagai kegagalan jaringan, sehingga app menampilkan "No internet connection" padahal server sehat. Itu yang dulu memaksa `integration_test/` menarget macOS.
+>
+> Backend memperbaikinya di `index.php`, **sebelum CI bootstrap** — satu-satunya tempat yang berjalan lebih dulu daripada constructor mana pun dan `_remap()`. Diverifikasi ulang dari sisi sini: preflight `204` di ketiga jenis endpoint, header terpasang pada respons **sukses maupun error**, `Allow-Credentials` sengaja tidak ada (app tidak memakai cookie), dan pemanggil non-browser tidak terpengaruh.
+>
+> Dua jalan buntu yang sempat terlihat masuk akal, dicatat supaya tidak diulang:
+>
+> - **Menambahkan `*_options` ke `$public_actions`** tidak bisa bekerja: `MY_REST_Controller` merangkai nama method dengan verb HTTP, jadi `index_options` tidak akan pernah cocok dengan `'index_get'` yang terdaftar.
+> - **`$config['check_cors'] = TRUE`** di `application/config/rest.php` tidak berpengaruh apa pun: berkas config itu memuat delapan opsi CORS, tapi `REST_Controller.php` yang di-bundle **tidak membaca satu pun** — config-nya berasal dari versi library yang lebih baru daripada yang dipakai.
+>
 > Kalau `POST /checkout/sessions` mendadak **500**, kemungkinan besar skema DB tertinggal dari repo API. Periksa `git diff <commit-lama>..HEAD -- database/` lalu jalankan berkas schema yang baru (`22_cart_applied_voucher.sql`, `23_reward_engine.sql`, dst) — bukan seluruh folder, supaya seed lama tidak tergandakan.
 
 **Status: foundation (steps 1-5) plus the auth domain implemented.** What exists today:
@@ -670,8 +681,13 @@ Seluruh rinciannya — enam jebakan setup, pola yang membuatnya tidak rapuh, dan
 batas yang tidak bisa dilewati — ada di **`integration_test/README.md`**. Yang
 paling mudah menyita waktu:
 
-- **macOS, bukan Chrome.** Backend tidak mengirim header CORS sama sekali dan
-  menjawab `OPTIONS` dengan `405`.
+- **macOS.** Dulu keharusan — backend tidak mengirim header CORS sama sekali dan
+  menjawab `OPTIONS` dengan `405`/`401`, sehingga build web **tidak bisa
+  menghubungi API sama sekali**. ✅ **Sudah diperbaiki backend** (20 September
+  2026, di `index.php` sebelum CI bootstrap; preflight `204`, header terpasang
+  pada respons sukses maupun error — diverifikasi ulang dari sisi sini). macOS
+  tetap dipakai karena Chrome menuntut **chromedriver** yang belum terpasang,
+  bukan lagi karena API tak terjangkau.
 - **`macos/Runner/*.entitlements` wajib punya `com.apple.security.network.client`.**
   Repo ini dulu tidak punya entri itu di `DebugProfile` maupun `Release`;
   tanpanya sandbox memblokir semua request dan gejalanya persis seperti backend

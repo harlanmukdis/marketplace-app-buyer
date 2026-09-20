@@ -23,9 +23,22 @@ flutter test integration_test/member_journey_test.dart -d macos
 
 ## Enam hal yang menghabiskan waktu kalau tidak tahu
 
-**1. Target macOS, bukan Chrome.** Backend **tidak mengirim header CORS sama
-sekali** dan menjawab `OPTIONS` dengan `405`, jadi build web tidak bisa
-menghubunginya lintas-origin. Build native tidak kena batasan itu.
+**1. Target macOS.** Dulu ini **keharusan**: backend tidak mengirim header
+`Access-Control-*` sama sekali dan menjawab `OPTIONS` dengan `405`/`401`, jadi
+build web tidak bisa menghubunginya sama sekali — setiap request diblokir
+browser, dan Dio melaporkannya sebagai kegagalan jaringan sehingga app
+menampilkan "No internet connection" padahal server sehat.
+
+**Backend sudah memperbaikinya** (20 September 2026, di `index.php` sebelum CI
+bootstrap): preflight dijawab `204`, dan header CORS terpasang pada respons
+sukses **maupun** respons error. Diverifikasi ulang dari sisi sini — handshake
+browser penuh untuk `POST /auth/login` dan `GET /me` sama-sama lolos. Jadi
+build web kini bisa memanggil API.
+
+macOS tetap jadi target test ini karena alasan yang berbeda: menjalankan
+`integration_test` di Chrome menuntut **chromedriver** (`flutter drive` +
+driver di port 4444), yang belum terpasang di mesin ini. Bukan lagi karena API
+tidak bisa dihubungi.
 
 **2. `macos/Runner/*.entitlements` wajib punya
 `com.apple.security.network.client`.** Tanpa itu app sandbox memblokir semua
