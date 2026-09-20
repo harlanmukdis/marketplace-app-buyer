@@ -62,12 +62,17 @@ class _FakeAuthRepository implements AuthRepository {
   @override
   Future<void> logout() async => loggedOut = true;
 
+  DataState<UserModel>? updateResult;
+  String? lastUpdatedName;
+
   @override
   Future<DataState<UserModel>> updateProfile({
     String? fullName,
     String? avatarUrl,
-  }) async =>
-      meResult;
+  }) async {
+    lastUpdatedName = fullName;
+    return updateResult ?? meResult;
+  }
 
   @override
   Future<DataState<void>> forgotPassword(String email) async =>
@@ -201,6 +206,85 @@ void main() {
 
       expect(repository.loggedOut, isFalse);
       expect(cubit.state, isA<AuthAuthenticated>());
+      await cubit.close();
+    });
+  });
+
+  group('ubah profil', () {
+    /// Menyiapkan cubit yang sudah berstatus authenticated.
+    Future<AuthCubit> signedIn() async {
+      repository.hasSession = true;
+      final cubit = AuthCubit();
+      await cubit.restoreSession();
+      return cubit;
+    }
+
+    test('menyimpan nama lalu memancarkan user hasil baca ulang', () async {
+      // `PATCH /me` membalas `data: null`, jadi user terbaru hanya bisa
+      // didapat dari `GET /me` — repository yang menanggungnya.
+      final cubit = await signedIn();
+
+      final saved = await cubit.updateProfile(fullName: 'Budi Baru');
+
+      expect(saved, isTrue);
+      expect(repository.lastUpdatedName, 'Budi Baru');
+      expect((cubit.state as AuthAuthenticated).user, isNotNull);
+      expect((cubit.state as AuthAuthenticated).isSaving, isFalse);
+      await cubit.close();
+    });
+
+    test('🔴 gagal menyimpan TIDAK melempar user ke layar masuk', () async {
+      // Ini yang membedakannya dari jalur login: memancarkan
+      // `unauthenticated` di sini akan mementalkan user keluar hanya karena
+      // gagal menyimpan nama.
+      final cubit = await signedIn();
+      repository.updateResult = const DataFailed(
+        DataError(code: 'NETWORK', message: 'NETWORK', kind: DataErrorKind.api),
+      );
+
+      final saved = await cubit.updateProfile(fullName: 'Budi Baru');
+
+      expect(saved, isFalse);
+      final state = cubit.state;
+      expect(state, isA<AuthAuthenticated>(),
+          reason: 'sesinya masih sah — yang gagal hanya penyimpanan');
+      expect((state as AuthAuthenticated).actionError, isNotNull);
+      expect(state.user, isNotNull, reason: 'user lama dipertahankan');
+      await cubit.close();
+    });
+
+    test('tidak mengirim dua permintaan saat sedang menyimpan', () async {
+      final cubit = await signedIn();
+      repository.lastUpdatedName = null;
+
+      await Future.wait([
+        cubit.updateProfile(fullName: 'Pertama'),
+        cubit.updateProfile(fullName: 'Kedua'),
+      ]);
+
+      expect(repository.lastUpdatedName, 'Pertama',
+          reason: 'panggilan kedua diabaikan selagi yang pertama berjalan');
+      await cubit.close();
+    });
+
+    test('ditolak saat belum masuk', () async {
+      final cubit = AuthCubit();
+
+      expect(await cubit.updateProfile(fullName: 'X'), isFalse);
+      expect(repository.lastUpdatedName, isNull);
+      await cubit.close();
+    });
+
+    test('clearActionError membuang pesannya', () async {
+      final cubit = await signedIn();
+      repository.updateResult = const DataFailed(
+        DataError(code: 'NETWORK', message: 'NETWORK', kind: DataErrorKind.api),
+      );
+      await cubit.updateProfile(fullName: 'Budi Baru');
+
+      cubit.clearActionError();
+
+      expect((cubit.state as AuthAuthenticated).actionError, isNull);
       await cubit.close();
     });
   });

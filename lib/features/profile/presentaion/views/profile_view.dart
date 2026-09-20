@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
+import 'package:marketplace_app_member/ui/main/auth/cubit/auth_cubit.dart';
 import 'package:marketplace_app_member/core/utils/extensions.dart';
 
 import '../../../../core/function/components.dart';
-import '../../../../core/utils/app_images.dart';
 import '../../../../core/utils/app_routes.dart';
 import '../../../../core/utils/app_styles.dart';
 import '../../../../core/utils/constant.dart';
 import '../../../../core/widgets/custom_buttons.dart';
+import '../../../../ui/main/auth/widgets/profile_header.dart';
 import '../../../../generated/l10n.dart';
 
 class ProfileView extends StatelessWidget {
@@ -15,80 +17,47 @@ class ProfileView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // `AuthCubit` di repo ini disediakan **per layar**, bukan global (lihat
+    // splash/login/register). Providernya ditaruh di sini, bukan di dalam
+    // `ProfileHeader`, supaya kepala profil dan tombol "ubah profil" berbagi
+    // satu instance — kalau tidak, profil yang baru disimpan tidak akan
+    // terlihat sampai tab ini dibuka ulang.
+    return BlocProvider(
+      create: (_) => AuthCubit()..restoreSession(),
+      child: const _ProfileBody(),
+    );
+  }
+}
+
+class _ProfileBody extends StatelessWidget {
+  const _ProfileBody();
+
+  @override
+  Widget build(BuildContext context) {
     return SingleChildScrollView(
       padding: 24.psh,
       child: Column(
         children: [
-          16.sbh,
-          SafeArea(
-            child: Center(
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  ClipOval(
-                    child: Image.asset(
-                      AppImages.profileImg,
-                      fit: BoxFit.cover,
-                      width: 120,
-                      height: 120,
-                    ),
-                  ),
-                  Positioned(
-                    bottom: 0,
-                    right: 0,
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(16),
-                      onTap: () => router.push(AppRoutes.editProfile),
-                      child: Container(
-                        width: 32,
-                        height: 32,
-                        decoration: const ShapeDecoration(
-                          color: Color(0xFFF6F8FA),
-                          shape: OvalBorder(),
-                        ),
-                        child: Icon(
-                          Icons.edit_outlined,
-                          size: 18,
-                          color: isAppDarkMode()
-                              ? kDarkPrimaryColor
-                              : kLightPrimaryColor,
-                        ),
-                      ),
-                    ),
-                  )
-                ],
-              ),
-            ),
-          ),
-          20.sbh,
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                'Mahmodul Hasan',
-                style: AppStyles.styleSemiBold18(context).copyWith(
-                    color: isAppDarkMode()
-                        ? kDarkSecondColor
-                        : const Color(0xff2b2b2b)),
-              ),
-              8.sbw,
-              SvgPicture.asset(AppImages.verified),
-            ],
-          ),
-          6.sbh,
-          Text(
-            'info.mamodul@gmail.com',
-            style: AppStyles.styleRegular14(context).copyWith(
-                color: isAppDarkMode()
-                    ? const Color(0xffD0D0D0)
-                    : const Color(0xff999999)),
-          ),
-          24.sbh,
-          const GeneralWidgets()
+          // Nama, email, foto, dan lencana dulu ditulis langsung di sini —
+          // `Mahmodul Hasan` / `info.mamodul@gmail.com` dari UI kit. Sekarang
+          // dibaca dari sesi; lihat `ProfileHeader`.
+          ProfileHeader(onEdit: () => _openEditProfile(context)),
+          const GeneralWidgets(),
         ],
       ),
     );
   }
+}
+
+/// Membuka layar ubah profil, lalu **membaca ulang** profilnya saat kembali.
+///
+/// Layar itu punya `AuthCubit` sendiri (tiap rute begitu di repo ini), jadi
+/// perubahan yang tersimpan di sana tidak otomatis sampai ke instance milik
+/// layar ini.
+Future<void> _openEditProfile(BuildContext context) async {
+  final cubit = AuthCubit.get(context);
+  await context.push(AppRoutes.editProfile);
+  if (context.mounted) await cubit.restoreSession();
 }
 
 class GeneralWidgets extends StatelessWidget {
@@ -126,7 +95,7 @@ class GeneralWidgets extends StatelessWidget {
           context,
           title: l.profileInformation,
           icon: Icons.person_outline,
-          onTap: () => router.push(AppRoutes.editProfile),
+          onTap: () => _openEditProfile(context),
         ),
         _customListTile(
           context,
@@ -179,7 +148,23 @@ class GeneralWidgets extends StatelessWidget {
           context,
           title: l.logOut,
           icon: Icons.logout_outlined,
-          onTap: () => showDialog(
+          // Cubit-nya diambil dari context INI, bukan dari context dialog:
+          // dialog hidup di route terpisah, sehingga bukan keturunan
+          // `BlocProvider` milik layar ini dan `AuthCubit.get` di dalamnya
+          // akan melempar `ProviderNotFoundException`.
+          onTap: () => _confirmLogout(context, AuthCubit.get(context), l),
+        ),
+        8.sbh,
+      ],
+    );
+  }
+
+  Future<void> _confirmLogout(
+    BuildContext context,
+    AuthCubit auth,
+    S l,
+  ) {
+    return showDialog<void>(
             context: context,
             builder: (context) => AlertDialog(
               shape: RoundedRectangleBorder(
@@ -210,15 +195,20 @@ class GeneralWidgets extends StatelessWidget {
                       style: AppStyles.styleSemiBold14(context)
                           .copyWith(color: const Color(0xffD32F2F)),
                     ),
-                    onPressed: () => router.go(AppRoutes.login),
+                    onPressed: () async {
+                      // 🔴 Dulu hanya `router.go(login)` — tokennya **tidak
+                      // pernah dihapus**, jadi sesinya tetap hidup dan app
+                      // memulihkannya lagi saat dibuka berikutnya. Di
+                      // perangkat bersama itu berarti "keluar" tidak
+                      // mengeluarkan siapa pun.
+                      Navigator.of(context).pop();
+                      await auth.logout();
+                      router.go(AppRoutes.login);
+                    },
                   ),
                 ],
               ),
             ),
-          ),
-        ),
-        8.sbh,
-      ],
     );
   }
 

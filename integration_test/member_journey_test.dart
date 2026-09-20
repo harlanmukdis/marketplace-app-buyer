@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_phoenix/flutter_phoenix.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:marketplace_app_member/config/network/dio_client.dart';
@@ -169,6 +170,28 @@ void main() {
       // ulang berkala dan nama kategorinya bisa berubah.
       final categoryChips = find.byType(GestureDetector);
       expect(categoryChips, findsWidgets);
+
+      // -------------------------------------------------------------- profil
+      // Kepala layar profil dulu menampilkan nama dan email yang **ditulis
+      // langsung di kode** (`Mahmodul Hasan` / `info.mamodul@gmail.com` dari
+      // UI kit), jadi siapa pun yang masuk melihat identitas orang lain.
+      // Test service tidak bisa menangkapnya — `GET /me` memang selalu benar;
+      // yang salah adalah layarnya tidak pernah membacanya.
+      await tapAt(tester, find.byIcon(Icons.person_outline));
+      await pumpUntil(tester, find.text('E2E Pembeli'));
+
+      expect(find.text(email), findsOneWidget,
+          reason: 'email diambil dari sesi, bukan dari contoh UI kit');
+      expect(find.text('Mahmodul Hasan'), findsNothing);
+      expect(find.text('info.mamodul@gmail.com'), findsNothing);
+
+      // Akun yang baru mendaftar berstatus `pending_verification`, jadi
+      // lencana terverifikasi TIDAK boleh muncul. Sebelumnya ia tampil tanpa
+      // syarat — centang yang tidak ada hubungannya dengan status akun.
+      expect(find.byType(SvgPicture), findsNothing);
+
+      await tapAt(tester, find.byIcon(Icons.home_outlined));
+      await pumpUntil(tester, find.byType(ProductCard));
 
       // ------------------------------------------- produk yang masih berstok
       // Stok tidak ada di listing, hanya di detail — dan test ini benar-benar

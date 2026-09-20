@@ -15,7 +15,18 @@ sealed class AuthState with _$AuthState {
   /// Sesi aktif. [user] `null` kalau profil belum berhasil dimuat — sesi tetap
   /// sah, jadi user tidak boleh ditendang ke login hanya karena `GET /auth/me`
   /// gagal.
-  const factory AuthState.authenticated({UserModel? user}) = AuthAuthenticated;
+  const factory AuthState.authenticated({
+    UserModel? user,
+
+    /// Sedang menyimpan perubahan profil (`PATCH /me`).
+    @Default(false) bool isSaving,
+
+    /// Kegagalan aksi profil.
+    ///
+    /// Dipisahkan dari [AuthUnauthenticated.error] dengan sengaja: gagal
+    /// menyimpan nama **bukan** alasan melempar user ke layar masuk.
+    DataError? actionError,
+  }) = AuthAuthenticated;
 
   /// Belum login. [error] terisi kalau penyebabnya kegagalan, bukan keadaan
   /// awal atau logout biasa.

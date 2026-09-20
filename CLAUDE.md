@@ -27,7 +27,7 @@ Buyer app for a **multi-vendor marketplace**, built on a purchased Flutter UI ki
 flutter pub get                       # install dependencies
 flutter run                           # run on connected device/emulator
 flutter analyze                       # static analysis (flutter_lints 4.0.0 via analysis_options.yaml)
-flutter test                          # run all tests (414; all pass)
+flutter test                          # run all tests (419; all pass)
 flutter test test/integration --concurrency=1   # integrasi: butuh backend hidup, WAJIB serial
 flutter test integration_test/member_journey_test.dart -d macos  # app sungguhan, satu berkas per invokasi
 flutter test test/data                # one directory
@@ -126,7 +126,7 @@ Current state: `en` and `ar` are complete (284 keys) and selectable. `fr` appear
 
 ## Known rough edges
 
-- The Flutter counter template `test/widget_test.dart` is **gone** — the suite is real (414 tests, all passing) and is a usable signal. `test/integration/` (127 of those) hits a live backend, so it fails with connection errors when the API is not running; that is the environment, not a regression. Note the API is started with `php -S`, **not** `docker compose` — see "Menyalakan backend dev" in Part 2 — and the integration suite must run `--concurrency=1`.
+- The Flutter counter template `test/widget_test.dart` is **gone** — the suite is real (419 tests, all passing) and is a usable signal. `test/integration/` (127 of those) hits a live backend, so it fails with connection errors when the API is not running; that is the environment, not a regression. Note the API is started with `php -S`, **not** `docker compose` — see "Menyalakan backend dev" in Part 2 — and the integration suite must run `--concurrency=1`.
 - 14 stale `*.dart~` backup files litter `lib/` (and `android/`). They are not compiled but **do show up in grep results** — always confirm a hit isn't in a `~` file before editing.
 - `lib/features/my_cart/presentation/views/map_screen.dart` is 100% commented out, and the `com.google.android.geo.API_KEY` meta-data in `android/app/src/main/AndroidManifest.xml` is commented out too. Restoring the map needs both, plus an iOS key. Location permissions are already declared in the manifest.
 - **The app builds now, but every image is a placeholder.** The UI kit's asset folders were never copied into this repo, so all 67 files in `assets/images/` and `assets/icon/` are grey 64×64 stubs, and the `Hanimation` font declaration in `pubspec.yaml` stays **commented out** (a fake OTF crashes at start, so it could not be stubbed — all text falls back to the system font). What you see on screen is therefore not the kit's design. `assets/PLACEHOLDER-README.md` documents what was stubbed and how to restore the originals.
@@ -261,7 +261,7 @@ Current state: `en` and `ar` are complete (284 keys) and selectable. `fr` appear
 - `lib/util/error_message.dart` — maps `DataError.code` to localized copy; **never** shows `error.message` to users
 - **Notification domain** — `lib/core/…/notification/` + `lib/ui/main/notification/`; lihat "Domain notifikasi" di bawah
 - **Reward domain** — `lib/core/…/reward/` + `lib/ui/main/reward/`; lihat "Domain reward" di bawah
-- Tests: `test/util/` (17, murni), `test/data/` (148, fake service/store + parsing JSON asli), `test/ui/` (122, fake repository), `test/integration/` (127, butuh backend hidup — **jalankan `--concurrency=1`**) — **414 total, semuanya lulus**
+- Tests: `test/util/` (17, murni), `test/data/` (148, fake service/store + parsing JSON asli), `test/ui/` (127, fake repository), `test/integration/` (127, butuh backend hidup — **jalankan `--concurrency=1`**) — **419 total, semuanya lulus**
 - **`integration_test/`** — app sungguhan di perangkat sungguhan, **di luar `flutter test`**; lihat "Test app sungguhan" di bawah
 
 Still absent: Firebase and `lib/firebase_options.dart`; domain chat.
@@ -696,7 +696,36 @@ paling mudah menyita waktu:
 - **`DevicePreview` dilewati**, karena frame perangkat simulasinya membuat
   koordinat tap meleset.
 
-#### 🔴 Bug yang hanya bisa ditemukan lapisan ini
+#### 🔴 Dua bug yang hanya bisa ditemukan lapisan ini
+
+**Layar profil menampilkan identitas orang lain.** Nama, email, dan lencana
+terverifikasi di `profile_view.dart` **ditulis langsung di kode** — warisan UI
+kit (`Mahmodul Hasan` / `info.mamodul@gmail.com`), dengan centang terverifikasi
+yang tampil tanpa syarat. `GET /me` sudah dipanggil dan `UserModel` sudah
+lengkap; layarnya saja yang tidak pernah membacanya. Kini dibaca dari
+`AuthCubit`, dan lencananya bergantung pada `UserModel.isVerified` — yang
+membaca **`status`**, bukan `email_verified` (kolom itu tidak pernah berubah
+jadi `1` di backend ini).
+
+Dua kerusakan menyertainya di layar yang sama:
+
+- **Tombol Simpan di "Ubah Profil" adalah `onPressed: () {}`** — formulirnya
+  juga tanpa controller, jadi ketikan user dipungut lalu dibuang. Sekarang
+  memanggil `PATCH /me`. Formulirnya dipangkas dari empat field jadi satu:
+  email jadi teks (identitas login, tidak diterima endpoint), alamat dialihkan
+  ke `/me/addresses` yang punya layar sendiri, dan kata sandi diganti tautan
+  ke alur reset — **tidak ada endpoint ganti sandi** di backend ini, hanya
+  `forgot-password` → `reset-password` lewat token email.
+- 🔴 **"Keluar" tidak mengeluarkan siapa pun.** Dialognya hanya
+  `router.go(login)`; tokennya tidak pernah dihapus, jadi sesi tetap hidup dan
+  app memulihkannya saat dibuka berikutnya. Kini memanggil `AuthCubit.logout()`
+  lebih dulu.
+
+`member_journey_test.dart` kini singgah ke tab profil dan memeriksa nama
+akun yang baru didaftarkan muncul, nama contoh UI kit tidak, dan lencana
+terverifikasi **tidak** tampil untuk akun `pending_verification`.
+
+#### 🔴 Bug pertama yang ditemukan lapisan ini
 
 Test pertama yang ditulis langsung menemukan **tombol "Tambah ke Keranjang"
 mati di setiap halaman produk**. `ProductDetailScreen` membuat `CartCubit()`

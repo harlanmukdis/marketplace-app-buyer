@@ -164,7 +164,8 @@ extension AuthStatePatterns on AuthState {
   TResult maybeWhen<TResult extends Object?>({
     TResult Function()? initial,
     TResult Function()? loading,
-    TResult Function(UserModel? user)? authenticated,
+    TResult Function(UserModel? user, bool isSaving, DataError? actionError)?
+        authenticated,
     TResult Function(DataError? error)? unauthenticated,
     TResult Function()? registeredNeedsLogin,
     required TResult orElse(),
@@ -176,7 +177,7 @@ extension AuthStatePatterns on AuthState {
       case AuthLoading() when loading != null:
         return loading();
       case AuthAuthenticated() when authenticated != null:
-        return authenticated(_that.user);
+        return authenticated(_that.user, _that.isSaving, _that.actionError);
       case AuthUnauthenticated() when unauthenticated != null:
         return unauthenticated(_that.error);
       case AuthRegisteredNeedsLogin() when registeredNeedsLogin != null:
@@ -203,7 +204,9 @@ extension AuthStatePatterns on AuthState {
   TResult when<TResult extends Object?>({
     required TResult Function() initial,
     required TResult Function() loading,
-    required TResult Function(UserModel? user) authenticated,
+    required TResult Function(
+            UserModel? user, bool isSaving, DataError? actionError)
+        authenticated,
     required TResult Function(DataError? error) unauthenticated,
     required TResult Function() registeredNeedsLogin,
   }) {
@@ -214,7 +217,7 @@ extension AuthStatePatterns on AuthState {
       case AuthLoading():
         return loading();
       case AuthAuthenticated():
-        return authenticated(_that.user);
+        return authenticated(_that.user, _that.isSaving, _that.actionError);
       case AuthUnauthenticated():
         return unauthenticated(_that.error);
       case AuthRegisteredNeedsLogin():
@@ -238,7 +241,8 @@ extension AuthStatePatterns on AuthState {
   TResult? whenOrNull<TResult extends Object?>({
     TResult? Function()? initial,
     TResult? Function()? loading,
-    TResult? Function(UserModel? user)? authenticated,
+    TResult? Function(UserModel? user, bool isSaving, DataError? actionError)?
+        authenticated,
     TResult? Function(DataError? error)? unauthenticated,
     TResult? Function()? registeredNeedsLogin,
   }) {
@@ -249,7 +253,7 @@ extension AuthStatePatterns on AuthState {
       case AuthLoading() when loading != null:
         return loading();
       case AuthAuthenticated() when authenticated != null:
-        return authenticated(_that.user);
+        return authenticated(_that.user, _that.isSaving, _that.actionError);
       case AuthUnauthenticated() when unauthenticated != null:
         return unauthenticated(_that.error);
       case AuthRegisteredNeedsLogin() when registeredNeedsLogin != null:
@@ -303,9 +307,19 @@ class AuthLoading implements AuthState {
 /// @nodoc
 
 class AuthAuthenticated implements AuthState {
-  const AuthAuthenticated({this.user});
+  const AuthAuthenticated({this.user, this.isSaving = false, this.actionError});
 
   final UserModel? user;
+
+  /// Sedang menyimpan perubahan profil (`PATCH /me`).
+  @JsonKey()
+  final bool isSaving;
+
+  /// Kegagalan aksi profil.
+  ///
+  /// Dipisahkan dari [AuthUnauthenticated.error] dengan sengaja: gagal
+  /// menyimpan nama **bukan** alasan melempar user ke layar masuk.
+  final DataError? actionError;
 
   /// Create a copy of AuthState
   /// with the given fields replaced by the non-null parameter values.
@@ -319,15 +333,19 @@ class AuthAuthenticated implements AuthState {
     return identical(this, other) ||
         (other.runtimeType == runtimeType &&
             other is AuthAuthenticated &&
-            (identical(other.user, user) || other.user == user));
+            (identical(other.user, user) || other.user == user) &&
+            (identical(other.isSaving, isSaving) ||
+                other.isSaving == isSaving) &&
+            (identical(other.actionError, actionError) ||
+                other.actionError == actionError));
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType, user);
+  int get hashCode => Object.hash(runtimeType, user, isSaving, actionError);
 
   @override
   String toString() {
-    return 'AuthState.authenticated(user: $user)';
+    return 'AuthState.authenticated(user: $user, isSaving: $isSaving, actionError: $actionError)';
   }
 }
 
@@ -338,7 +356,7 @@ abstract mixin class $AuthAuthenticatedCopyWith<$Res>
           AuthAuthenticated value, $Res Function(AuthAuthenticated) _then) =
       _$AuthAuthenticatedCopyWithImpl;
   @useResult
-  $Res call({UserModel? user});
+  $Res call({UserModel? user, bool isSaving, DataError? actionError});
 
   $UserModelCopyWith<$Res>? get user;
 }
@@ -356,12 +374,22 @@ class _$AuthAuthenticatedCopyWithImpl<$Res>
   @pragma('vm:prefer-inline')
   $Res call({
     Object? user = freezed,
+    Object? isSaving = null,
+    Object? actionError = freezed,
   }) {
     return _then(AuthAuthenticated(
       user: freezed == user
           ? _self.user
           : user // ignore: cast_nullable_to_non_nullable
               as UserModel?,
+      isSaving: null == isSaving
+          ? _self.isSaving
+          : isSaving // ignore: cast_nullable_to_non_nullable
+              as bool,
+      actionError: freezed == actionError
+          ? _self.actionError
+          : actionError // ignore: cast_nullable_to_non_nullable
+              as DataError?,
     ));
   }
 
