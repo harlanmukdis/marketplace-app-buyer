@@ -195,6 +195,61 @@ void main() {
     });
   });
 
+  group('🔴 /me/notification-preferences — sengaja belum dibuatkan layar', () {
+    test('GET selalu KOSONG untuk pembeli, walau preferensinya tersimpan',
+        () async {
+      // `list_preferences` menyusun daftarnya dari
+      // `SELECT DISTINCT type FROM notifications WHERE user_id = ?` — jadi
+      // hanya tipe yang **sudah pernah diterima** yang muncul. Pembeli tidak
+      // pernah menerima apa pun (notifikasi order pergi ke pemilik toko),
+      // sehingga daftarnya permanen kosong.
+      //
+      // Akibatnya endpoint ini **write-only** di praktiknya: PATCH-nya
+      // tersimpan, tapi tidak ada cara membacanya kembali. Layar preferensi
+      // hanya akan menampilkan daftar hampa dengan tombol yang tidak bisa
+      // memantulkan keadaannya sendiri — karena itu belum dibuat.
+      final other = await emptyInboxAccount();
+      addTearDown(() => other.close(force: true));
+
+      final sebelum = await other.get<dynamic>('/me/notification-preferences');
+      expect(sebelum.data['data'], isEmpty);
+
+      final patch = await other.patch<dynamic>(
+        '/me/notification-preferences',
+        data: {
+          'notification_type': 'order_paid',
+          'channel': 'push',
+          'is_enabled': false,
+        },
+      );
+      expect(patch.statusCode, 200, reason: 'tersimpan…');
+
+      final sesudah = await other.get<dynamic>('/me/notification-preferences');
+      expect(sesudah.data['data'], isEmpty,
+          reason: '…tapi tidak pernah terbaca kembali');
+    });
+
+    test('channel in_app ditolak — inbox tidak bisa dimatikan', () async {
+      // Disengaja backend: `Notification_model::create()` selalu menulis ke
+      // tabel `notifications` terlepas channel yang diminta, karena itu
+      // riwayat. Yang bisa dimatikan hanya push/email/whatsapp/sms.
+      final other = await emptyInboxAccount();
+      addTearDown(() => other.close(force: true));
+
+      await expectLater(
+        other.patch<dynamic>(
+          '/me/notification-preferences',
+          data: {
+            'notification_type': 'order_paid',
+            'channel': 'in_app',
+            'is_enabled': false,
+          },
+        ),
+        throwsA(anything),
+      );
+    });
+  });
+
   group('menandai terbaca', () {
     test('menandai satu notifikasi benar-benar mengubahnya', () async {
       // Dicari yang masih belum dibaca, bukan `.single`: kotak masuk berisi

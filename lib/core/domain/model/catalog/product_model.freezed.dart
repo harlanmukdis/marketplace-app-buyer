@@ -88,6 +88,23 @@ mixin _$ProductModel {
   @StringOrNullJson()
   @JsonKey(name: 'image_url')
   String? get listingImageUrl;
+
+  /// Label kartu produk, dihitung **server** (commit `7328161`).
+  ///
+  /// Subset dari `["new", "best_seller", "hot", "sale"]`, dan ada di
+  /// **listing maupun detail**. Nilainya diturunkan dari field yang sudah
+  /// ada di baris yang sama (`created_at`, `sold_count`, `view_count`,
+  /// `compare_at_price`, `flash_sale`) tanpa query tambahan.
+  ///
+  /// Sengaja dihitung server supaya web dan mobile tidak menurunkan ambang
+  /// yang sama sendiri-sendiri lalu menampilkan label yang berbeda untuk
+  /// produk yang sama. **Jangan menghitung ulang di sini** — pakai
+  /// [badgeLabels] apa adanya.
+  ///
+  /// ⚠️ Tetap `List<String>` mentah, bukan enum: kolomnya bebas di server
+  /// dan ambangnya akan pindah ke `admin_settings`, jadi nilai baru bisa
+  /// muncul kapan saja. [badgeLabels] membuang yang tidak dikenal.
+  List<String> get badges;
   List<ProductVariantModel> get variants;
   List<ProductImageModel> get images;
   List<CourierModel> get couriers;
@@ -138,6 +155,7 @@ mixin _$ProductModel {
                 other.flashSale == flashSale) &&
             (identical(other.listingImageUrl, listingImageUrl) ||
                 other.listingImageUrl == listingImageUrl) &&
+            const DeepCollectionEquality().equals(other.badges, badges) &&
             const DeepCollectionEquality().equals(other.variants, variants) &&
             const DeepCollectionEquality().equals(other.images, images) &&
             const DeepCollectionEquality().equals(other.couriers, couriers));
@@ -165,6 +183,7 @@ mixin _$ProductModel {
         stock,
         flashSale,
         listingImageUrl,
+        const DeepCollectionEquality().hash(badges),
         const DeepCollectionEquality().hash(variants),
         const DeepCollectionEquality().hash(images),
         const DeepCollectionEquality().hash(couriers)
@@ -172,7 +191,7 @@ mixin _$ProductModel {
 
   @override
   String toString() {
-    return 'ProductModel(id: $id, storeId: $storeId, name: $name, slug: $slug, description: $description, productType: $productType, basePrice: $basePrice, compareAtPrice: $compareAtPrice, weightGrams: $weightGrams, status: $status, soldCount: $soldCount, viewCount: $viewCount, ratingAvg: $ratingAvg, ratingCount: $ratingCount, createdAt: $createdAt, stock: $stock, flashSale: $flashSale, listingImageUrl: $listingImageUrl, variants: $variants, images: $images, couriers: $couriers)';
+    return 'ProductModel(id: $id, storeId: $storeId, name: $name, slug: $slug, description: $description, productType: $productType, basePrice: $basePrice, compareAtPrice: $compareAtPrice, weightGrams: $weightGrams, status: $status, soldCount: $soldCount, viewCount: $viewCount, ratingAvg: $ratingAvg, ratingCount: $ratingCount, createdAt: $createdAt, stock: $stock, flashSale: $flashSale, listingImageUrl: $listingImageUrl, badges: $badges, variants: $variants, images: $images, couriers: $couriers)';
   }
 }
 
@@ -203,6 +222,7 @@ abstract mixin class $ProductModelCopyWith<$Res> {
       @IntOrNullJson() int? stock,
       @JsonKey(name: 'flash_sale') FlashSaleModel? flashSale,
       @StringOrNullJson() @JsonKey(name: 'image_url') String? listingImageUrl,
+      List<String> badges,
       List<ProductVariantModel> variants,
       List<ProductImageModel> images,
       List<CourierModel> couriers});
@@ -240,6 +260,7 @@ class _$ProductModelCopyWithImpl<$Res> implements $ProductModelCopyWith<$Res> {
     Object? stock = freezed,
     Object? flashSale = freezed,
     Object? listingImageUrl = freezed,
+    Object? badges = null,
     Object? variants = null,
     Object? images = null,
     Object? couriers = null,
@@ -317,6 +338,10 @@ class _$ProductModelCopyWithImpl<$Res> implements $ProductModelCopyWith<$Res> {
           ? _self.listingImageUrl
           : listingImageUrl // ignore: cast_nullable_to_non_nullable
               as String?,
+      badges: null == badges
+          ? _self.badges
+          : badges // ignore: cast_nullable_to_non_nullable
+              as List<String>,
       variants: null == variants
           ? _self.variants
           : variants // ignore: cast_nullable_to_non_nullable
@@ -465,6 +490,7 @@ extension ProductModelPatterns on ProductModel {
             @StringOrNullJson()
             @JsonKey(name: 'image_url')
             String? listingImageUrl,
+            List<String> badges,
             List<ProductVariantModel> variants,
             List<ProductImageModel> images,
             List<CourierModel> couriers)?
@@ -493,6 +519,7 @@ extension ProductModelPatterns on ProductModel {
             _that.stock,
             _that.flashSale,
             _that.listingImageUrl,
+            _that.badges,
             _that.variants,
             _that.images,
             _that.couriers);
@@ -541,6 +568,7 @@ extension ProductModelPatterns on ProductModel {
             @StringOrNullJson()
             @JsonKey(name: 'image_url')
             String? listingImageUrl,
+            List<String> badges,
             List<ProductVariantModel> variants,
             List<ProductImageModel> images,
             List<CourierModel> couriers)
@@ -568,6 +596,7 @@ extension ProductModelPatterns on ProductModel {
             _that.stock,
             _that.flashSale,
             _that.listingImageUrl,
+            _that.badges,
             _that.variants,
             _that.images,
             _that.couriers);
@@ -615,6 +644,7 @@ extension ProductModelPatterns on ProductModel {
             @StringOrNullJson()
             @JsonKey(name: 'image_url')
             String? listingImageUrl,
+            List<String> badges,
             List<ProductVariantModel> variants,
             List<ProductImageModel> images,
             List<CourierModel> couriers)?
@@ -642,6 +672,7 @@ extension ProductModelPatterns on ProductModel {
             _that.stock,
             _that.flashSale,
             _that.listingImageUrl,
+            _that.badges,
             _that.variants,
             _that.images,
             _that.couriers);
@@ -677,10 +708,12 @@ class _ProductModel extends ProductModel {
       @IntOrNullJson() this.stock,
       @JsonKey(name: 'flash_sale') this.flashSale,
       @StringOrNullJson() @JsonKey(name: 'image_url') this.listingImageUrl,
+      final List<String> badges = const <String>[],
       final List<ProductVariantModel> variants = const <ProductVariantModel>[],
       final List<ProductImageModel> images = const <ProductImageModel>[],
       final List<CourierModel> couriers = const <CourierModel>[]})
-      : _variants = variants,
+      : _badges = badges,
+        _variants = variants,
         _images = images,
         _couriers = couriers,
         super._();
@@ -782,6 +815,47 @@ class _ProductModel extends ProductModel {
   @StringOrNullJson()
   @JsonKey(name: 'image_url')
   final String? listingImageUrl;
+
+  /// Label kartu produk, dihitung **server** (commit `7328161`).
+  ///
+  /// Subset dari `["new", "best_seller", "hot", "sale"]`, dan ada di
+  /// **listing maupun detail**. Nilainya diturunkan dari field yang sudah
+  /// ada di baris yang sama (`created_at`, `sold_count`, `view_count`,
+  /// `compare_at_price`, `flash_sale`) tanpa query tambahan.
+  ///
+  /// Sengaja dihitung server supaya web dan mobile tidak menurunkan ambang
+  /// yang sama sendiri-sendiri lalu menampilkan label yang berbeda untuk
+  /// produk yang sama. **Jangan menghitung ulang di sini** — pakai
+  /// [badgeLabels] apa adanya.
+  ///
+  /// ⚠️ Tetap `List<String>` mentah, bukan enum: kolomnya bebas di server
+  /// dan ambangnya akan pindah ke `admin_settings`, jadi nilai baru bisa
+  /// muncul kapan saja. [badgeLabels] membuang yang tidak dikenal.
+  final List<String> _badges;
+
+  /// Label kartu produk, dihitung **server** (commit `7328161`).
+  ///
+  /// Subset dari `["new", "best_seller", "hot", "sale"]`, dan ada di
+  /// **listing maupun detail**. Nilainya diturunkan dari field yang sudah
+  /// ada di baris yang sama (`created_at`, `sold_count`, `view_count`,
+  /// `compare_at_price`, `flash_sale`) tanpa query tambahan.
+  ///
+  /// Sengaja dihitung server supaya web dan mobile tidak menurunkan ambang
+  /// yang sama sendiri-sendiri lalu menampilkan label yang berbeda untuk
+  /// produk yang sama. **Jangan menghitung ulang di sini** — pakai
+  /// [badgeLabels] apa adanya.
+  ///
+  /// ⚠️ Tetap `List<String>` mentah, bukan enum: kolomnya bebas di server
+  /// dan ambangnya akan pindah ke `admin_settings`, jadi nilai baru bisa
+  /// muncul kapan saja. [badgeLabels] membuang yang tidak dikenal.
+  @override
+  @JsonKey()
+  List<String> get badges {
+    if (_badges is EqualUnmodifiableListView) return _badges;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_badges);
+  }
+
   final List<ProductVariantModel> _variants;
   @override
   @JsonKey()
@@ -859,6 +933,7 @@ class _ProductModel extends ProductModel {
                 other.flashSale == flashSale) &&
             (identical(other.listingImageUrl, listingImageUrl) ||
                 other.listingImageUrl == listingImageUrl) &&
+            const DeepCollectionEquality().equals(other._badges, _badges) &&
             const DeepCollectionEquality().equals(other._variants, _variants) &&
             const DeepCollectionEquality().equals(other._images, _images) &&
             const DeepCollectionEquality().equals(other._couriers, _couriers));
@@ -886,6 +961,7 @@ class _ProductModel extends ProductModel {
         stock,
         flashSale,
         listingImageUrl,
+        const DeepCollectionEquality().hash(_badges),
         const DeepCollectionEquality().hash(_variants),
         const DeepCollectionEquality().hash(_images),
         const DeepCollectionEquality().hash(_couriers)
@@ -893,7 +969,7 @@ class _ProductModel extends ProductModel {
 
   @override
   String toString() {
-    return 'ProductModel(id: $id, storeId: $storeId, name: $name, slug: $slug, description: $description, productType: $productType, basePrice: $basePrice, compareAtPrice: $compareAtPrice, weightGrams: $weightGrams, status: $status, soldCount: $soldCount, viewCount: $viewCount, ratingAvg: $ratingAvg, ratingCount: $ratingCount, createdAt: $createdAt, stock: $stock, flashSale: $flashSale, listingImageUrl: $listingImageUrl, variants: $variants, images: $images, couriers: $couriers)';
+    return 'ProductModel(id: $id, storeId: $storeId, name: $name, slug: $slug, description: $description, productType: $productType, basePrice: $basePrice, compareAtPrice: $compareAtPrice, weightGrams: $weightGrams, status: $status, soldCount: $soldCount, viewCount: $viewCount, ratingAvg: $ratingAvg, ratingCount: $ratingCount, createdAt: $createdAt, stock: $stock, flashSale: $flashSale, listingImageUrl: $listingImageUrl, badges: $badges, variants: $variants, images: $images, couriers: $couriers)';
   }
 }
 
@@ -926,6 +1002,7 @@ abstract mixin class _$ProductModelCopyWith<$Res>
       @IntOrNullJson() int? stock,
       @JsonKey(name: 'flash_sale') FlashSaleModel? flashSale,
       @StringOrNullJson() @JsonKey(name: 'image_url') String? listingImageUrl,
+      List<String> badges,
       List<ProductVariantModel> variants,
       List<ProductImageModel> images,
       List<CourierModel> couriers});
@@ -965,6 +1042,7 @@ class __$ProductModelCopyWithImpl<$Res>
     Object? stock = freezed,
     Object? flashSale = freezed,
     Object? listingImageUrl = freezed,
+    Object? badges = null,
     Object? variants = null,
     Object? images = null,
     Object? couriers = null,
@@ -1042,6 +1120,10 @@ class __$ProductModelCopyWithImpl<$Res>
           ? _self.listingImageUrl
           : listingImageUrl // ignore: cast_nullable_to_non_nullable
               as String?,
+      badges: null == badges
+          ? _self._badges
+          : badges // ignore: cast_nullable_to_non_nullable
+              as List<String>,
       variants: null == variants
           ? _self._variants
           : variants // ignore: cast_nullable_to_non_nullable

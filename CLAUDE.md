@@ -27,7 +27,7 @@ Buyer app for a **multi-vendor marketplace**, built on a purchased Flutter UI ki
 flutter pub get                       # install dependencies
 flutter run                           # run on connected device/emulator
 flutter analyze                       # static analysis (flutter_lints 4.0.0 via analysis_options.yaml)
-flutter test                          # run all tests (462; all pass)
+flutter test                          # run all tests (470; all pass)
 flutter test test/integration --concurrency=1   # integrasi: butuh backend hidup, WAJIB serial
 # ^ memakai 8 login; plafonnya 20 per IP per 15 menit, jadi maks DUA putaran
 #   beruntun. Lebih dari itu: DELETE FROM auth_rate_limits; (lihat "Rate limit
@@ -129,7 +129,7 @@ Current state: `en` and `ar` are complete (284 keys) and selectable. `fr` appear
 
 ## Known rough edges
 
-- The Flutter counter template `test/widget_test.dart` is **gone** — the suite is real (462 tests, all passing) and is a usable signal. `test/integration/` (141 of those) hits a live backend, so it fails with connection errors when the API is not running; that is the environment, not a regression. Note the API is started with `php -S`, **not** `docker compose` — see "Menyalakan backend dev" in Part 2 — and the integration suite must run `--concurrency=1`.
+- The Flutter counter template `test/widget_test.dart` is **gone** — the suite is real (470 tests, all passing) and is a usable signal. `test/integration/` (145 of those) hits a live backend, so it fails with connection errors when the API is not running; that is the environment, not a regression. Note the API is started with `php -S`, **not** `docker compose` — see "Menyalakan backend dev" in Part 2 — and the integration suite must run `--concurrency=1`.
 - 14 stale `*.dart~` backup files litter `lib/` (and `android/`). They are not compiled but **do show up in grep results** — always confirm a hit isn't in a `~` file before editing.
 - `lib/features/my_cart/presentation/views/map_screen.dart` is 100% commented out, and the `com.google.android.geo.API_KEY` meta-data in `android/app/src/main/AndroidManifest.xml` is commented out too. Restoring the map needs both, plus an iOS key. Location permissions are already declared in the manifest.
 - **The app builds now, but every image is a placeholder.** The UI kit's asset folders were never copied into this repo, so all 67 files in `assets/images/` and `assets/icon/` are grey 64×64 stubs, and the `Hanimation` font declaration in `pubspec.yaml` stays **commented out** (a fake OTF crashes at start, so it could not be stubbed — all text falls back to the system font). What you see on screen is therefore not the kit's design. `assets/PLACEHOLDER-README.md` documents what was stubbed and how to restore the originals.
@@ -333,7 +333,7 @@ Current state: `en` and `ar` are complete (284 keys) and selectable. `fr` appear
 - **Notification domain** — `lib/core/…/notification/` + `lib/ui/main/notification/`; lihat "Domain notifikasi" di bawah
 - **Reward domain** — `lib/core/…/reward/` + `lib/ui/main/reward/`; lihat "Domain reward" di bawah
 - **Chat domain** — `lib/core/…/chat/` + `lib/ui/main/chat/`; lihat "Domain chat" di bawah
-- Tests: `test/util/` (17, murni), `test/data/` (162, fake service/store + parsing JSON asli), `test/ui/` (142, fake repository), `test/integration/` (141 — 140 jalan + 1 opt-in; butuh backend hidup, **jalankan `--concurrency=1`**) — **462 total, semuanya lulus**
+- Tests: `test/util/` (17, murni), `test/data/` (166, fake service/store + parsing JSON asli), `test/ui/` (142, fake repository), `test/integration/` (145 — 144 jalan + 1 opt-in; butuh backend hidup, **jalankan `--concurrency=1`**) — **470 total, semuanya lulus**
 - **`integration_test/`** — app sungguhan di perangkat sungguhan, **di luar `flutter test`**; lihat "Test app sungguhan" di bawah
 
 Still absent: Firebase and `lib/firebase_options.dart`.
@@ -620,20 +620,48 @@ Tiga endpoint: `GET /me/notifications`, `POST /me/notifications/{id}/read`, dan
 
 #### 🔴 Kotak masuknya praktis SELALU kosong — dan itu bukan bug aplikasi
 
-Ditelusuri ke seluruh kode backend: **satu-satunya pemanggil
-`Notification_model->create()` adalah undangan staf toko**
-(`store_staff/controllers/Staff.php`). Tidak ada notifikasi yang terbit dari
-pesanan, pembayaran, pengiriman, chat, atau voucher — padahal
+Dua pemanggil `Notification_model->create()`, dan **tidak satu pun menyasar
+pembeli**:
+
+- **undangan staf toko** (`store_staff/controllers/Staff.php`);
+- **pesanan baru masuk** (`Checkout_model::confirm()`, commit `6796257`,
+  21 September 2026) — dikirim ke `stores.owner_user_id`, jadi yang menerima
+  **penjualnya**, bukan pembeli yang baru saja memesan.
+
+Catatan sebelumnya di file ini yang menyebut undangan staf sebagai
+"satu-satunya pemanggil" karena itu **sudah tidak berlaku** — tapi
+kesimpulannya tidak berubah: tidak ada notifikasi yang terbit untuk pembeli
+dari pesanan, pembayaran, pengiriman, chat, maupun voucher, padahal
 `notification_templates.code` sendiri mencantumkan `order_paid`,
 `order_shipped`, `voucher_expiring`, dan `chat_new_message` sebagai niatnya,
 dan tabel `notification_queues` beserta `workers/notification_worker.php` sudah
 siap memprosesnya.
 
-Jadi seorang pembeli biasa **tidak akan pernah** menerima notifikasi sampai
-backend memasang pemanggilan itu di alur-alurnya. Layar tetap dibangun —
+Jadi seorang pembeli biasa **tetap tidak akan pernah** menerima notifikasi
+sampai backend memasang pemanggilan itu di sisi pembeli. Layar tetap dibangun —
 endpointnya nyata dan bentuknya sudah dipatok test — tapi **keadaan kosong
 adalah kasus normalnya**, bukan sudut yang jarang. Karena itu `NotificationState`
 punya `empty()` tersendiri dengan penjelasan, bukan daftar hampa.
+
+#### 🔴 `/me/notification-preferences` ada, tapi tidak bisa dibaca kembali
+
+`GET` + `PATCH /me/notification-preferences` (commit `b6f3503`) memungkinkan
+mute per `(notification_type, channel)`, dengan `channel` terbatas pada
+`push`/`email`/`whatsapp`/`sms` — `in_app` sengaja ditolak (`VALIDATION_ERROR`)
+karena inbox selalu jadi riwayat.
+
+Masalahnya di `list_preferences`: daftarnya disusun dari
+`SELECT DISTINCT type FROM notifications WHERE user_id = ?` — **hanya tipe yang
+sudah pernah DITERIMA**. Karena kotak masuk pembeli permanen kosong, hasilnya
+selalu `[]`. Diverifikasi ke server: `PATCH` dibalas `200` dan benar tersimpan,
+lalu `GET` berikutnya **tetap `[]`**.
+
+Endpoint ini praktis **write-only** bagi app member. Layar preferensi hanya
+akan menampilkan daftar hampa dengan sakelar yang tidak bisa memantulkan
+keadaannya sendiri, jadi **sengaja belum dibuat**. Keduanya dipatok
+`test/integration/notification_service_test.dart`, sehingga perbaikannya
+(menyusun daftar dari `notification_templates`, bukan dari inbox) akan terlihat
+sebagai test merah.
 
 Konsekuensi untuk pengujian: test integrasi harus **menerbitkan notifikasinya
 sendiri**, dengan login sebagai dua penjual seed lalu mengundang akun uji
@@ -948,6 +976,14 @@ Perubahannya benar — client memang tidak boleh menyelipkan `id` atau `created_
 
 **`flash_sale` adalah key OPSIONAL** — ia *tidak ada* saat produk tidak sedang flash sale, bukan `null`. Cek keberadaan key-nya, jangan `?? null`. Bentuknya `{flash_price, sold_count, stock_quota, ends_at}`, dan disisipkan juga ke item listing. `compare_at_price` dan `flash_sale` bisa muncul bersamaan — FE yang memutuskan mana menang (umumnya flash sale).
 
+✅ **`badges: []` ada di listing DAN detail** (commit backend `7328161`, 21 September 2026). Subset dari `["new", "best_seller", "hot", "sale"]`, dihitung server dari field yang sudah ada di baris yang sama (`created_at`, `sold_count`, `view_count`, `compare_at_price`, `flash_sale`) tanpa query tambahan.
+
+Ambangnya hardcoded sebagai fallback — `new` ≤14 hari, `best_seller` ≥50 terjual, `hot` ≥500 dilihat, `sale` ≥20% diskon — dengan catatan "nilai aktif dari `admin_settings`", pola yang sama dengan `min_withdrawal_amount`. **Jangan menghitung ulang di aplikasi**: itu justru yang dihindari backend, supaya web dan mobile tidak menampilkan label berbeda untuk produk yang sama.
+
+`ProductModel.knownBadges` mengurutkannya menurut kepentingan di kartu (`sale` → `best_seller` → `hot` → `new`), bukan urutan dari server, dan **membuang kode yang tidak dikenal** — nilai baru bisa muncul kapan saja, dan `best_seller` mentah di atas kartu produk lebih buruk daripada tidak ada label. Test integrasi memaku "tidak ada kode di luar yang dipetakan", jadi jenis baru ketahuan sebagai test merah.
+
+⚠️ Kartu listing sengaja **tidak menampilkan `sale`**: sudut kirinya sudah memuat angka diskon persisnya (`-30%`), yang lebih berguna daripada label "Diskon" generik dari ambang 20%. Halaman detail menampilkan semuanya. Di dev seluruh produk seed hanya punya `new` — `sold_count` dan `view_count` semuanya nol.
+
 **Produk tanpa varian tetap punya satu default variant.** `cart_items` dan `order_items` selalu merujuk `product_variant_id`, **tidak pernah** `product_id`.
 
 **Parameter `GET /products`:** `q` (LIKE nama+deskripsi), `category_id`, `store_id`, `min_price`, `max_price`, `min_rating`, `city`, `province`, `courier`, `sort_by` (`latest` default, `popular`, `trending`, `price_asc`, `price_desc`, `rating` — nilai asing diabaikan jadi `latest`), `page`, `per_page` (maks 100).
@@ -1109,6 +1145,12 @@ Derived from the gap between Part 1 and Part 2. Steps 0-5 are done and the auth 
    - **Paginasi `/recommendations/personalized` dan `/trending`** (commit `9536015`) — sekarang menerima `page`/`per_page`. Aplikasi belum memakai endpoint rekomendasi mana pun.
 
    **Sudah ditangani, tidak perlu pekerjaan lagi:** rate limit auth (lihat catatan tersendiri di atas), balasan penjual di daftar ulasan (`ReviewReplyModel`), dan whitelist field alamat. Seluruh 12 parameter `GET /products` di panduan §7 sudah dikirim `CatalogService`; jebakan §6 nomor 1, 2, 3, 5, dan 8 semuanya sudah ditangani dan dipatok test. Nomor 6 dan 7 khusus app seller.
+
+   **Ditambahkan 21 September 2026 sore** (5 commit `90ab9db..8fa683b`, rilis v1.4.0):
+
+   - ~~**`badges: []` di listing dan detail**~~ — **selesai**, lihat "Katalog — listing vs detail".
+   - **`GET`/`PATCH /me/notification-preferences`** (commit `b6f3503`) — mute per tipe & channel. ⚠️ **Sengaja belum dibuatkan layar**: `GET`-nya selalu `[]` untuk pembeli, jadi preferensi yang disimpan tidak bisa dibaca kembali. Lihat catatannya di domain notifikasi.
+   - **Notifikasi "pesanan baru masuk"** (commit `6796257`) — dikirim ke **pemilik toko**, bukan pembeli. Tidak ada yang berubah untuk app member selain catatan "satu-satunya pemanggil" yang kini keliru.
 
    **Tidak relevan untuk app member** (semuanya admin/seller): `GET /admin/dashboard/counts`, `/admin/reports/revenue-by-store`, `/admin/reports/store-signups`, `/admin/locations/*`, pembuatan etalase dan bundel, serta lima perbaikan audit keamanan selain rate limit — race condition dompet (`f6fc9b5`), IDOR laporan ulasan (`afe623f`), dan whitelist gudang (`f7a9670`) semuanya di sisi server.
 

@@ -117,10 +117,42 @@ class _Thumbnail extends StatelessWidget {
               start: 6,
               child: _Badge(label: '-$discount%', color: kWarningColor),
             ),
+          if (_serverBadges.isNotEmpty)
+            PositionedDirectional(
+              top: 6,
+              end: 6,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  for (final code in _serverBadges) ...[
+                    _Badge(
+                      label: ProductModel.badgeLabel(code)!,
+                      color: _badgeColor(code),
+                    ),
+                    4.sbh,
+                  ],
+                ],
+              ),
+            ),
         ],
       ),
     );
   }
+
+  /// Badge dari server, dipangkas supaya tidak menumpuk di atas gambar.
+  ///
+  /// `sale` **selalu dibuang di kartu**: sudut kiri sudah menampilkan angka
+  /// diskonnya persis (`-30%`), yang lebih berguna daripada label "Diskon"
+  /// generik dari ambang 20% milik server. Dua badge sekaligus sudah cukup —
+  /// lebih dari itu menutupi produknya sendiri.
+  List<String> get _serverBadges =>
+      product.knownBadges.where((c) => c != 'sale').take(2).toList();
+
+  Color _badgeColor(String code) => switch (code) {
+        'best_seller' => kSuccessColor,
+        'hot' => kDeleteColor,
+        _ => kLightPrimaryColor,
+      };
 }
 
 class _Badge extends StatelessWidget {

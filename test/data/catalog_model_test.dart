@@ -29,6 +29,7 @@ const _listItemJson = <String, dynamic>{
   'rating_avg': '0.00',
   'rating_count': '0',
   'created_at': '2026-09-14 20:17:14',
+  'badges': ['new'],
 };
 
 /// Respons `GET /products/{id}` — lengkap.
@@ -60,6 +61,55 @@ const _detailJson = <String, dynamic>{
 };
 
 void main() {
+  group('ProductModel — badges', () {
+    // Ditambahkan backend di commit `7328161`. Dihitung server dari field yang
+    // sudah ada di baris yang sama, supaya web dan mobile tidak menurunkan
+    // ambangnya sendiri-sendiri lalu menampilkan label berbeda untuk produk
+    // yang sama.
+    test('ada di listing MAUPUN detail', () {
+      expect(ProductModel.fromJson(_listItemJson).badges, ['new']);
+      expect(ProductModel.fromJson(_detailJson).badges, ['new']);
+    });
+
+    test('diurutkan menurut kepentingan di kartu, bukan urutan server', () {
+      // Server mengirim menurut urutan pemeriksaannya sendiri
+      // (new, best_seller, hot, sale); kartu hanya muat satu-dua label, jadi
+      // yang paling menjual harus di depan.
+      final product = ProductModel.fromJson({
+        ..._listItemJson,
+        'badges': ['new', 'best_seller', 'hot', 'sale'],
+      });
+
+      expect(product.knownBadges, ['sale', 'best_seller', 'hot', 'new']);
+      expect(product.badgeLabels, ['Diskon', 'Terlaris', 'Populer', 'Baru']);
+    });
+
+    test('🔴 kode yang TIDAK dikenal dibuang, bukan ditampilkan mentah', () {
+      // Ambangnya akan pindah ke `admin_settings` dan jenis baru bisa muncul
+      // kapan saja. Menampilkan `best_seller` mentah di atas kartu produk
+      // lebih buruk daripada tidak ada label sama sekali.
+      final product = ProductModel.fromJson({
+        ..._listItemJson,
+        'badges': ['new', 'trending_banget', 'sale'],
+      });
+
+      expect(product.knownBadges, ['sale', 'new']);
+      expect(product.badgeLabels, ['Diskon', 'Baru']);
+    });
+
+    test('produk tanpa badge tidak melempar', () {
+      // Field-nya baru; respons lama (atau endpoint lain yang memakai model
+      // yang sama, mis. wishlist) tidak mengirimkannya sama sekali.
+      final tanpaField = Map<String, dynamic>.from(_listItemJson)
+        ..remove('badges');
+
+      expect(ProductModel.fromJson(tanpaField).badges, isEmpty);
+      expect(ProductModel.fromJson(tanpaField).badgeLabels, isEmpty);
+      expect(ProductModel.fromJson({..._listItemJson, 'badges': []}).badgeLabels,
+          isEmpty);
+    });
+  });
+
   group('ProductModel', () {
     test('item listing terbaca walau tanpa gambar, stok, dan varian', () {
       final product = ProductModel.fromJson(_listItemJson);

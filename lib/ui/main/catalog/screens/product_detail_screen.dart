@@ -113,6 +113,10 @@ class _Loaded extends StatelessWidget {
                     color: dark ? kDarkSecondColor : kLightSecondColor,
                   ),
                 ),
+                if (product.badgeLabels.isNotEmpty) ...[
+                  8.sbh,
+                  _BadgeRow(labels: product.badgeLabels),
+                ],
                 8.sbh,
                 _StatsRow(product: product),
                 if (product.flashSale != null) ...[
@@ -282,6 +286,47 @@ class _PriceBlock extends StatelessWidget {
             ),
           ),
         ],
+      ],
+    );
+  }
+}
+
+/// Label "Terlaris" / "Populer" / "Baru" / "Diskon" dari `badges` server.
+///
+/// Berbeda dari kartu listing, di sini **`sale` ikut ditampilkan**: halaman
+/// detail punya ruang, dan angka diskonnya sendiri sudah tampil di blok harga
+/// di atas — jadi labelnya melengkapi, bukan mengulang di tempat yang sama.
+class _BadgeRow extends StatelessWidget {
+  const _BadgeRow({required this.labels});
+
+  final List<String> labels;
+
+  @override
+  Widget build(BuildContext context) {
+    final dark = isAppDarkMode();
+
+    return Wrap(
+      spacing: 6,
+      runSpacing: 6,
+      children: [
+        for (final label in labels)
+          Container(
+            padding: const EdgeInsetsDirectional.symmetric(
+              horizontal: 8,
+              vertical: 3,
+            ),
+            decoration: BoxDecoration(
+              color: (dark ? kDarkPrimaryColor : kLightPrimaryColor)
+                  .withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Text(
+              label,
+              style: AppStyles.styleSemiBold12(context).copyWith(
+                color: dark ? kDarkPrimaryColor : kLightPrimaryColor,
+              ),
+            ),
+          ),
       ],
     );
   }

@@ -61,6 +61,39 @@ void main() {
       }
     });
 
+    test('✅ badges dikirim di listing MAUPUN detail', () async {
+      // Ditambahkan backend di commit `7328161`. Sebelumnya tiap klien harus
+      // menurunkan ambang "Terlaris"/"Populer"/"Baru" sendiri dari
+      // sold_count/view_count/created_at, dan web dengan mobile pasti
+      // berbeda diam-diam.
+      final listing = await catalog.fetchProducts(perPage: 5);
+      expect(listing.data, isNotEmpty);
+
+      // Seluruh produk seed dibuat minggu ini, jadi setidaknya "new" ada.
+      expect(listing.data.first.badges, isNotEmpty);
+
+      final detail = await catalog.fetchProduct(listing.data.first.id);
+      expect(detail.data.badges, listing.data.first.badges,
+          reason: 'listing dan detail harus sepakat untuk produk yang sama');
+    });
+
+    test('badges hanya berisi kode yang dikenal aplikasi', () async {
+      // Kalau server menambah jenis baru, test ini yang memberi tahu — dan
+      // `knownBadges` sudah membuangnya sehingga UI tidak menampilkan kode
+      // mentah sementara itu.
+      final listing = await catalog.fetchProducts(perPage: 20);
+      final semua =
+          listing.data.expand((p) => p.badges).toSet();
+
+      expect(semua, isNotEmpty);
+      expect(
+        semua.difference(ProductModel.badgeOrder.toSet()),
+        isEmpty,
+        reason: 'ada kode badge baru dari server yang belum dipetakan '
+            'ProductModel.badgeLabel',
+      );
+    });
+
     test('✅ item listing SEKARANG membawa image_url', () async {
       // Ditambahkan backend di commit `db8a626`. Sebelumnya listing tidak
       // membawa gambar sama sekali, sehingga tiap kartu produk terpaksa

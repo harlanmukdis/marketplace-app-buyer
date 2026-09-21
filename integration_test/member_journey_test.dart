@@ -165,6 +165,14 @@ void main() {
       // menggagalkan layar — jadi keberadaannya diuji, bukan isinya.
       expect(find.text('Semua'), findsOneWidget);
 
+      // Badge dari server (`badges: []`, commit backend `7328161`) benar-benar
+      // sampai ke kartu. Seluruh produk seed dibuat minggu ini, jadi "Baru"
+      // yang paling pasti ada; label lain bergantung sold_count/view_count
+      // yang nol di dev, dan "Diskon" sengaja tidak ditampilkan di kartu
+      // karena sudut kirinya sudah memuat angka diskon persisnya.
+      expect(find.text('Baru'), findsWidgets,
+          reason: 'badges dari server tidak sampai ke ProductCard');
+
       // ------------------------------------------------ menyaring per kategori
       // Chip pertama sesudah "Semua". Namanya tidak dipatok: seed di-build
       // ulang berkala dan nama kategorinya bisa berubah.

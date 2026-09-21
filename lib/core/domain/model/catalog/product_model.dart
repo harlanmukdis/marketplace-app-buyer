@@ -75,6 +75,23 @@ abstract class ProductModel with _$ProductModel {
     /// menyerap keduanya, jangan field ini langsung.
     @StringOrNullJson() @JsonKey(name: 'image_url') String? listingImageUrl,
 
+    /// Label kartu produk, dihitung **server** (commit `7328161`).
+    ///
+    /// Subset dari `["new", "best_seller", "hot", "sale"]`, dan ada di
+    /// **listing maupun detail**. Nilainya diturunkan dari field yang sudah
+    /// ada di baris yang sama (`created_at`, `sold_count`, `view_count`,
+    /// `compare_at_price`, `flash_sale`) tanpa query tambahan.
+    ///
+    /// Sengaja dihitung server supaya web dan mobile tidak menurunkan ambang
+    /// yang sama sendiri-sendiri lalu menampilkan label yang berbeda untuk
+    /// produk yang sama. **Jangan menghitung ulang di sini** — pakai
+    /// [badgeLabels] apa adanya.
+    ///
+    /// ⚠️ Tetap `List<String>` mentah, bukan enum: kolomnya bebas di server
+    /// dan ambangnya akan pindah ke `admin_settings`, jadi nilai baru bisa
+    /// muncul kapan saja. [badgeLabels] membuang yang tidak dikenal.
+    @Default(<String>[]) List<String> badges,
+
     @Default(<ProductVariantModel>[]) List<ProductVariantModel> variants,
     @Default(<ProductImageModel>[]) List<ProductImageModel> images,
     @Default(<CourierModel>[]) List<CourierModel> couriers,
@@ -97,6 +114,34 @@ abstract class ProductModel with _$ProductModel {
     final flat = listingImageUrl?.trim();
     return (flat == null || flat.isEmpty) ? null : flat;
   }
+
+  /// Kode badge yang dikenal aplikasi, **urut menurut kepentingannya di
+  /// kartu** — bukan menurut urutan dari server.
+  ///
+  /// Kartu hanya muat satu-dua label, jadi yang paling menjual harus di
+  /// depan. Kode yang tidak dikenal **dibuang, bukan ditampilkan mentah**:
+  /// server boleh menambah jenis badge kapan saja, dan `best_seller` mentah
+  /// di atas kartu produk lebih buruk daripada tidak ada label.
+  List<String> get knownBadges => [
+        for (final code in badgeOrder)
+          if (badges.contains(code)) code,
+      ];
+
+  /// Urutan tampil, sekaligus daftar kode yang dikenal.
+  static const badgeOrder = ['sale', 'best_seller', 'hot', 'new'];
+
+  /// Label Indonesia untuk satu kode badge, atau `null` kalau tidak dikenal.
+  static String? badgeLabel(String code) => switch (code) {
+        'sale' => 'Diskon',
+        'best_seller' => 'Terlaris',
+        'hot' => 'Populer',
+        'new' => 'Baru',
+        _ => null,
+      };
+
+  /// Seluruh badge yang dikenal, sudah jadi teks siap tampil.
+  List<String> get badgeLabels =>
+      [for (final code in knownBadges) badgeLabel(code)!];
 
   /// Harga yang benar-benar dibayar: flash sale menang atas harga dasar.
   double get effectivePrice => flashSale?.flashPrice ?? basePrice;
