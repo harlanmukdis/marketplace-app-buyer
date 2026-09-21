@@ -151,8 +151,19 @@ void main() {
         return;
       }
 
-      expect(result.data.first.id, lessThan(result.data.last.id),
-          reason: 'stempel waktu seri dikembalikan menaik, bukan menurun');
+      // ⚠️ Arah serinya **sembarang**: diamati menaik di sini, tapi endpoint
+      // chat yang punya bug persis sama mengembalikan menurun pada run lain.
+      // Jadi yang dipatok adalah fakta deterministiknya — stempel waktunya
+      // bertabrakan, sehingga `id` wajib jadi pemecah seri
+      // (`NotificationCubit._merge`). Memaku salah satu arah akan membuat
+      // test ini merah sewaktu-waktu tanpa ada yang berubah.
+      expect(
+        {result.data.first.createdAt, result.data.last.createdAt},
+        hasLength(1),
+        reason: 'dua notifikasi berbagi satu stempel waktu, jadi urutan di '
+            'antara mereka tidak bisa disimpulkan dari created_at',
+      );
+      expect(result.data.map((n) => n.id).toSet(), hasLength(2));
     });
 
     test('halaman jauh di belakang mengembalikan daftar kosong', () async {

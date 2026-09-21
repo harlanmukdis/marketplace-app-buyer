@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 
 import 'package:marketplace_app_member/ui/main/auth/screens/login_screen.dart';
 import 'package:marketplace_app_member/ui/main/catalog/screens/product_detail_screen.dart';
+import 'package:marketplace_app_member/ui/main/chat/screens/chat_list_screen.dart';
+import 'package:marketplace_app_member/ui/main/chat/screens/chat_room_screen.dart';
 import 'package:marketplace_app_member/ui/main/checkout/screens/checkout_screen.dart';
 import 'package:marketplace_app_member/ui/main/order/screens/order_detail_screen.dart';
 import 'package:marketplace_app_member/ui/main/notification/screens/notification_screen.dart';
@@ -87,6 +89,18 @@ class AppRoutes {
 
   /// Poin, koin, tingkat loyalitas, dan riwayat cashback.
   static const String reward = '/reward';
+
+  /// Daftar percakapan dengan toko.
+  static const String chatList = '/chats';
+
+  /// Satu ruang percakapan. Path parameter, bukan `extra`, agar tahan
+  /// refresh di web. Nama toko dikirim lewat `extra` sebagai pelengkap —
+  /// tidak ada endpoint untuk menukar id percakapan jadi nama toko, jadi
+  /// judulnya jatuh ke 'Chat' kalau ruang dibuka tanpa melewati daftar.
+  static const String chatRoom = '/chat-room';
+
+  static String chatRoomPath(int conversationId) =>
+      '/chat-room/$conversationId';
 
   static const String homeLayout = '/homeLayout';
   static const String productDetails = '/productDetails';
@@ -393,6 +407,28 @@ final GoRouter router = GoRouter(
         return FadeThroughTransitionPageWrapper(
           transitionKey: state.pageKey,
           page: const CreateNewPasswordView(),
+        );
+      },
+    ),
+    GoRoute(
+      path: AppRoutes.chatList,
+      pageBuilder: (BuildContext context, GoRouterState state) {
+        return FadeThroughTransitionPageWrapper(
+          transitionKey: state.pageKey,
+          page: const ChatListScreen(),
+        );
+      },
+    ),
+    GoRoute(
+      path: '${AppRoutes.chatRoom}/:id',
+      pageBuilder: (BuildContext context, GoRouterState state) {
+        return FadeThroughTransitionPageWrapper(
+          transitionKey: state.pageKey,
+          page: ChatRoomScreen(
+            conversationId:
+                int.tryParse(state.pathParameters['id'] ?? '') ?? 0,
+            storeName: state.extra as String?,
+          ),
         );
       },
     ),

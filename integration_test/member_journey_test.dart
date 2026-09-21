@@ -230,6 +230,29 @@ void main() {
               'pertama (stok: ${stockSeen.join(", ")}). Test ini '
               'MENGONSUMSI stok tiap kali jalan — seed ulang database.');
 
+      // ----------------------------------------------------- chat penjual
+      // Dibuka dari halaman produk karena **hanya halaman ini yang tahu
+      // `store_id`** — tidak ada pencarian toko di app member.
+      await tapAt(tester, find.widgetWithText(OutlinedButton, 'Chat penjual'));
+      await pumpUntil(tester, find.text('Tulis pesan…'),
+          timeout: const Duration(seconds: 45));
+
+      // Percakapan baru lahir tanpa pesan; ruangnya tetap bisa dipakai.
+      expect(find.text('Belum ada pesan.'), findsOneWidget);
+
+      await tester.enterText(find.byType(TextField).last, 'Halo, stok ready?');
+      await tester.pump();
+      await tapAt(tester, find.byIcon(Icons.send_rounded));
+
+      // Gelembungnya hanya bisa muncul dari hasil BACA ULANG: balasan
+      // `POST .../messages` cuma berisi {id}, tanpa created_at maupun
+      // sender_user_id.
+      await pumpUntil(tester, find.text('Halo, stok ready?'),
+          timeout: const Duration(seconds: 45));
+
+      await back(tester);
+      await pumpUntil(tester, find.text('Tambah ke Keranjang'));
+
       // -------------------------------------------- menambahkan ke keranjang
       await tapText(tester, 'Tambah ke Keranjang');
       // Ditunggu **snackbar-nya**, bukan tombolnya: tombolnya sudah ada sejak

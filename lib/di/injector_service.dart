@@ -3,6 +3,7 @@ import 'package:marketplace_app_member/config/network/dio_client.dart';
 import 'package:marketplace_app_member/core/data/datasources/remote/service/auth_service.dart';
 import 'package:marketplace_app_member/core/data/datasources/remote/service/address_service.dart';
 import 'package:marketplace_app_member/core/data/datasources/remote/service/cart_service.dart';
+import 'package:marketplace_app_member/core/data/datasources/remote/service/chat_service.dart';
 import 'package:marketplace_app_member/core/data/datasources/remote/service/checkout_service.dart';
 import 'package:marketplace_app_member/core/data/datasources/remote/service/notification_service.dart';
 import 'package:marketplace_app_member/core/data/datasources/remote/service/order_service.dart';
@@ -59,6 +60,7 @@ void initializeService() {
   injector.registerLazySingleton<ReviewService>(() => ReviewService(api));
   injector.registerLazySingleton<WalletService>(() => WalletService(api));
   injector.registerLazySingleton<RewardService>(() => RewardService(api));
+  injector.registerLazySingleton<ChatService>(() => ChatService(api));
   injector.registerLazySingleton<NotificationService>(
     () => NotificationService(api),
   );

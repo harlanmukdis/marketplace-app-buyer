@@ -99,6 +99,12 @@ class GeneralWidgets extends StatelessWidget {
         ),
         _customListTile(
           context,
+          title: 'Chat',
+          icon: Icons.chat_bubble_outline,
+          onTap: () => router.push(AppRoutes.chatList),
+        ),
+        _customListTile(
+          context,
           title: l.notifications,
           icon: Icons.notifications_none_outlined,
           onTap: () => router.push(AppRoutes.notifications),

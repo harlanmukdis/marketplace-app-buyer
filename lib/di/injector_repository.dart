@@ -1,7 +1,10 @@
 import 'package:marketplace_app_member/core/data/datasources/remote/service/auth_service.dart';
 import 'package:marketplace_app_member/core/data/datasources/remote/service/address_service.dart';
 import 'package:marketplace_app_member/core/data/datasources/remote/service/cart_service.dart';
+import 'package:marketplace_app_member/core/data/datasources/remote/service/chat_service.dart';
 import 'package:marketplace_app_member/core/data/datasources/remote/service/checkout_service.dart';
+import 'package:marketplace_app_member/core/data/repositories/chat_repository_impl.dart';
+import 'package:marketplace_app_member/core/domain/repositories/chat_repository.dart';
 import 'package:marketplace_app_member/core/data/datasources/remote/service/notification_service.dart';
 import 'package:marketplace_app_member/core/data/datasources/remote/service/order_service.dart';
 import 'package:marketplace_app_member/core/data/repositories/notification_repository_impl.dart';
@@ -111,6 +114,10 @@ void initializeRepository() {
 
   injector.registerLazySingleton<RewardRepository>(
     () => RewardRepositoryImpl(injector<RewardService>()),
+  );
+
+  injector.registerLazySingleton<ChatRepository>(
+    () => ChatRepositoryImpl(injector<ChatService>()),
   );
 
   injector.registerLazySingleton<NotificationRepository>(

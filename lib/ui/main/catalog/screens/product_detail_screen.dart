@@ -9,6 +9,7 @@ import 'package:marketplace_app_member/core/utils/extensions.dart';
 import 'package:marketplace_app_member/ui/main/cart/cubit/cart_cubit.dart';
 import 'package:marketplace_app_member/ui/main/catalog/cubit/product_detail_cubit.dart';
 import 'package:marketplace_app_member/ui/main/catalog/widgets/shipping_estimate_section.dart';
+import 'package:marketplace_app_member/ui/main/chat/widgets/chat_with_store_button.dart';
 import 'package:marketplace_app_member/ui/main/review/widgets/product_reviews_section.dart';
 import 'package:marketplace_app_member/ui/main/wishlist/cubit/wishlist_cubit.dart';
 import 'package:marketplace_app_member/util/error_message.dart';
@@ -184,6 +185,15 @@ class _Loaded extends StatelessWidget {
                     ],
                   ),
                 ],
+                20.sbh,
+                // Di LUAR blok "Pengiriman" dengan sengaja: bertanya ke
+                // penjual harus selalu mungkin, termasuk untuk produk yang
+                // belum punya kurir maupun lokasi gudang.
+                //
+                // Halaman inilah satu-satunya yang tahu `store_id` — daftar
+                // percakapan tidak punya cara memulai percakapan baru, karena
+                // tidak ada pencarian toko di app member.
+                ChatWithStoreButton(storeId: product.storeId),
                 24.sbh,
                 ProductReviewsSection(productId: product.id),
                 32.sbh,
