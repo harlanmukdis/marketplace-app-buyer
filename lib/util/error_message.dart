@@ -43,6 +43,15 @@ String errorMessageFor(BuildContext context, DataError error) {
       return l.phoneAlreadyRegistered;
     case ApiErrorCode.emailTaken:
       return l.emailAlreadyRegistered;
+
+    // Sengaja TIDAK memakai `l.somethingWentWrong` maupun pesan kredensial:
+    // panduan FE §2 menuntut 429 dibedakan, karena user yang membacanya
+    // sebagai "password salah" akan terus mencoba dan memperpanjang kuncian.
+    // Lama kuncinya tidak dikirim server (tidak ada `Retry-After` maupun
+    // `details`), jadi pesannya tidak boleh menjanjikan angka menit.
+    case ApiErrorCode.tooManyRequests:
+      return 'Terlalu banyak percobaan. Tunggu beberapa menit sebelum '
+          'mencoba lagi.';
   }
 
   // --- belanja ---

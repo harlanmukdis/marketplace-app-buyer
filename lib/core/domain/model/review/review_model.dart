@@ -12,9 +12,14 @@ part 'review_model.g.dart';
 ///   maupun avatar, dan tidak ada endpoint publik untuk menukar id jadi nama.
 ///   Jadi layar ulasan hanya bisa menulis "Pembeli" — lihat [displayName].
 /// * **Foto/video ulasan.** Tabel `review_media` ada dan `POST` menerimanya,
-///   tapi `list_for_product` memilih `SELECT *` dari tabel `reviews` saja.
-/// * **Balasan penjual.** Tabel `review_replies` ada, endpoint `reply` ada,
-///   tapi isinya juga tidak ikut di daftar.
+///   tapi `list_for_product` tidak ikut menggabungkannya.
+///
+/// ✅ **Balasan penjual kini IKUT dikirim** (commit backend `d614bd8`).
+/// Sebelumnya `list_for_product` hanya `SELECT *` dari tabel `reviews`,
+/// sehingga balasan yang sudah tersimpan lewat `POST /reviews/{id}/reply`
+/// tidak pernah sampai ke siapa pun — bukan ke pembeli, bukan pula ke
+/// penjualnya sendiri. Sekarang ada LEFT JOIN ke `review_replies`, yang aman
+/// karena `review_id`-nya UNIQUE (maksimal satu balasan per ulasan).
 ///
 /// Karena itu [isAnonymous] praktis tidak berpengaruh apa-apa di aplikasi
 /// member: tanpa nama, semua ulasan sudah anonim.
@@ -38,6 +43,12 @@ abstract class ReviewModel with _$ReviewModel {
     @BoolJson() @JsonKey(name: 'is_anonymous') @Default(false) bool isAnonymous,
     @StringJson() @Default('published') String status,
     @ServerDateTimeJson() @JsonKey(name: 'created_at') DateTime? createdAt,
+
+    /// Balasan penjual, atau `null` kalau belum dibalas.
+    ///
+    /// Dirakit server jadi objek bersarang — **bukan** string JSON seperti
+    /// `data` di notifikasi atau `selected_couriers` di sesi checkout.
+    ReviewReplyModel? reply,
   }) = _ReviewModel;
 
   factory ReviewModel.fromJson(Map<String, dynamic> json) =>
@@ -50,6 +61,33 @@ abstract class ReviewModel with _$ReviewModel {
   /// Selalu generik: server tidak mengirim nama pengulas sama sekali.
   /// Ditulis di sini supaya layar tidak tergoda menampilkan `user_id` mentah.
   String get displayName => 'Pembeli';
+
+  /// Ada balasan penjual yang benar-benar berisi teks.
+  ///
+  /// Dipisah dari `reply != null` karena `reply_text` bisa saja kosong —
+  /// tidak ada validasi panjang di endpoint balasannya.
+  bool get hasReply => reply?.hasText ?? false;
+}
+
+/// Balasan penjual atas satu ulasan, dari field `reply` di
+/// `GET /products/{id}/reviews`.
+///
+/// ⚠️ **Tanpa nama penjual.** Yang dikirim hanya `reply_text` dan
+/// `created_at`; nama tokonya harus diambil dari konteks halaman produk
+/// (`ProductModel.storeId`), bukan dari ulasannya.
+@freezed
+abstract class ReviewReplyModel with _$ReviewReplyModel {
+  const ReviewReplyModel._();
+
+  const factory ReviewReplyModel({
+    @StringOrNullJson() @JsonKey(name: 'reply_text') String? replyText,
+    @ServerDateTimeJson() @JsonKey(name: 'created_at') DateTime? createdAt,
+  }) = _ReviewReplyModel;
+
+  factory ReviewReplyModel.fromJson(Map<String, dynamic> json) =>
+      _$ReviewReplyModelFromJson(json);
+
+  bool get hasText => (replyText ?? '').trim().isNotEmpty;
 }
 
 /// Sebaran bintang dari `meta.rating_histogram` pada

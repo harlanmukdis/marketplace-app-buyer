@@ -56,6 +56,7 @@ void main() {
       'is_anonymous': '0',
       'status': 'published',
       'created_at': '2026-09-15 22:30:00',
+      'reply': null,
     };
 
     test('angka string terbaca sebagai angka', () {
@@ -77,6 +78,60 @@ void main() {
           isFalse);
       expect(ReviewModel.fromJson({...json, 'comment': '   '}).hasComment,
           isFalse);
+    });
+
+    test('✅ balasan penjual kini ikut di daftar', () {
+      // Ditambahkan backend di `d614bd8`. Sebelumnya `list_for_product` hanya
+      // `SELECT *` dari tabel `reviews`, jadi balasan yang sudah tersimpan
+      // tidak pernah sampai ke pembeli MAUPUN ke penjualnya sendiri.
+      final review = ReviewModel.fromJson({
+        ...json,
+        'reply': {
+          'reply_text': 'Terima kasih kak!',
+          'created_at': '2026-09-16 08:00:00',
+        },
+      });
+
+      expect(review.hasReply, isTrue);
+      expect(review.reply!.replyText, 'Terima kasih kak!');
+
+      // Waktunya lewat `ServerDateTimeJson` seperti field waktu lain — dibaca
+      // sebagai waktu dinding WIB lalu disimpan UTC. Yang dipatok selisihnya,
+      // bukan angka absolutnya, supaya test tidak ikut berubah kalau zona
+      // penyimpanannya digeser: ulasan 15/09 22:30, balasan 16/09 08:00.
+      expect(review.reply!.createdAt!.difference(review.createdAt!),
+          const Duration(hours: 9, minutes: 30));
+    });
+
+    test('balasan dikirim sebagai OBJEK, bukan string JSON', () {
+      // Berbeda dari `data` di notifikasi dan `selected_couriers` di sesi
+      // checkout, yang keduanya berupa string dan butuh JsonMapJson. Di sini
+      // server merakitnya sendiri di PHP, jadi bentuknya objek sungguhan —
+      // test ini yang akan memberi tahu kalau itu berubah.
+      final raw = <String, dynamic>{
+        ...json,
+        'reply': {'reply_text': 'Siap kak', 'created_at': '2026-09-16 08:00:00'},
+      };
+      expect(raw['reply'], isA<Map<String, dynamic>>());
+      expect(ReviewModel.fromJson(raw).reply, isA<ReviewReplyModel>());
+    });
+
+    test('ulasan tanpa balasan tetap terbaca', () {
+      // `reply` null untuk ulasan yang belum dibalas — mayoritas kasusnya.
+      final review = ReviewModel.fromJson(json);
+      expect(review.reply, isNull);
+      expect(review.hasReply, isFalse);
+    });
+
+    test('balasan berisi teks kosong tidak dianggap ada', () {
+      // Endpoint balasannya tidak memvalidasi panjang, jadi `reply` bisa ada
+      // tapi hampa — merendernya akan menampilkan kotak balasan kosong.
+      final review = ReviewModel.fromJson({
+        ...json,
+        'reply': {'reply_text': '   ', 'created_at': '2026-09-16 08:00:00'},
+      });
+      expect(review.reply, isNotNull);
+      expect(review.hasReply, isFalse);
     });
   });
 

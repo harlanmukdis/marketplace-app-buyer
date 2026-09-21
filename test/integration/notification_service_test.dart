@@ -27,6 +27,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:marketplace_app_member/config/env/env.dart';
 import 'package:marketplace_app_member/config/network/dio_client.dart';
 import 'package:marketplace_app_member/core/data/datasources/remote/service/auth_service.dart';
+import 'support/test_account.dart';
 import 'package:marketplace_app_member/core/data/datasources/remote/service/notification_service.dart';
 
 /// Penjual seed beserta id tokonya (panduan FE §3).
@@ -40,7 +41,6 @@ void main() {
   late Dio dio;
   late NotificationService notifications;
   late String buyerEmail;
-  late String buyerToken;
 
   /// Menerbitkan satu notifikasi untuk [buyerEmail] lewat undangan staf.
   ///
@@ -49,10 +49,7 @@ void main() {
   Future<void> inviteAsStaff(({String email, int storeId}) seller) async {
     final sellerDio = DioClient.createBare(Env.apiBaseUrl);
     try {
-      final session = await AuthService(sellerDio)
-          .login(email: seller.email, password: _seedPassword);
-      sellerDio.options.headers['Authorization'] =
-          'Bearer ${session.data.accessToken}';
+      await loginAs(sellerDio, email: seller.email, password: _seedPassword);
 
       await sellerDio.post<dynamic>(
         '/stores/${seller.storeId}/staff/invite',
@@ -79,10 +76,7 @@ void main() {
       fullName: 'Uji Notifikasi',
       phone: phone,
     );
-    final session =
-        await auth.login(email: buyerEmail, password: _seedPassword);
-    buyerToken = session.data.accessToken;
-    dio.options.headers['Authorization'] = 'Bearer $buyerToken';
+    await loginAs(dio, email: buyerEmail, password: _seedPassword);
   });
 
   tearDown(() => dio.close(force: true));
@@ -228,10 +222,7 @@ void main() {
           fullName: 'Uji Notifikasi Lain',
           phone: '08${stamp.toString().substring(stamp.toString().length - 10)}',
         );
-        final session =
-            await auth.login(email: otherEmail, password: _seedPassword);
-        otherDio.options.headers['Authorization'] =
-            'Bearer ${session.data.accessToken}';
+        await loginAs(otherDio, email: otherEmail, password: _seedPassword);
 
         final response = await NotificationService(otherDio).markRead(mine.id);
         expect(response.statusCode, 200,

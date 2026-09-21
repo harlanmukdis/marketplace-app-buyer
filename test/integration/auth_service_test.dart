@@ -146,6 +146,42 @@ void main() {
       final env = await auth.login(email: email, password: password);
       expect(env.data.accessToken, isNotEmpty);
     });
+
+    test('🔴 login BERHASIL pun ikut dihitung rate limit — ke-6 dikunci',
+        () async {
+      // Backend v1.2.0 (commit `17df39e`) membatasi login 5x per email per 15
+      // menit. Penghitungnya bertambah **sebelum** `password_verify`, jadi
+      // yang dibatasi bukan percobaan gagal melainkan **semua** percobaan.
+      //
+      // Konsekuensinya jauh melampaui test ini: user yang masuk di ponsel,
+      // tablet, lalu web akan terkunci walau tidak pernah salah password
+      // sekali pun. Dan karena ada batas kedua **20x per IP**, satu IP
+      // CGNAT operator seluler — yang dibagi ribuan pelanggan — bisa
+      // mengunci pengguna yang tidak berbuat apa-apa.
+      //
+      // Dipatok di sini supaya perbaikannya (menghitung kegagalan saja, dan
+      // mengosongkan penghitung saat berhasil) terlihat sebagai test merah.
+      await auth.register(
+        email: email,
+        password: password,
+        fullName: 'Pembeli Uji',
+        phone: phone,
+      );
+
+      for (var attempt = 1; attempt <= 5; attempt++) {
+        final env = await auth.login(email: email, password: password);
+        expect(env.data.accessToken, isNotEmpty,
+            reason: 'percobaan ke-$attempt memakai password yang BENAR');
+      }
+
+      try {
+        await auth.login(email: email, password: password);
+        fail('percobaan ke-6 dengan password benar seharusnya dikunci');
+      } on ApiException catch (e) {
+        expect(e.error.code, ApiErrorCode.tooManyRequests);
+        expect(e.error.statusCode, 429);
+      }
+    });
   });
 
   group('profil', () {

@@ -27,6 +27,9 @@ _ReviewModel _$ReviewModelFromJson(Map<String, dynamic> json) => _ReviewModel(
           ? 'published'
           : const StringJson().fromJson(json['status']),
       createdAt: const ServerDateTimeJson().fromJson(json['created_at']),
+      reply: json['reply'] == null
+          ? null
+          : ReviewReplyModel.fromJson(json['reply'] as Map<String, dynamic>),
     );
 
 Map<String, dynamic> _$ReviewModelToJson(_ReviewModel instance) =>
@@ -39,5 +42,18 @@ Map<String, dynamic> _$ReviewModelToJson(_ReviewModel instance) =>
       'comment': const StringOrNullJson().toJson(instance.comment),
       'is_anonymous': const BoolJson().toJson(instance.isAnonymous),
       'status': const StringJson().toJson(instance.status),
+      'created_at': const ServerDateTimeJson().toJson(instance.createdAt),
+      'reply': instance.reply,
+    };
+
+_ReviewReplyModel _$ReviewReplyModelFromJson(Map<String, dynamic> json) =>
+    _ReviewReplyModel(
+      replyText: const StringOrNullJson().fromJson(json['reply_text']),
+      createdAt: const ServerDateTimeJson().fromJson(json['created_at']),
+    );
+
+Map<String, dynamic> _$ReviewReplyModelToJson(_ReviewReplyModel instance) =>
+    <String, dynamic>{
+      'reply_text': const StringOrNullJson().toJson(instance.replyText),
       'created_at': const ServerDateTimeJson().toJson(instance.createdAt),
     };

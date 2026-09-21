@@ -19,6 +19,7 @@ import 'package:marketplace_app_member/config/env/env.dart';
 import 'package:marketplace_app_member/config/network/dio_client.dart';
 import 'package:marketplace_app_member/core/data/datasources/remote/service/address_service.dart';
 import 'package:marketplace_app_member/core/data/datasources/remote/service/auth_service.dart';
+import 'support/test_account.dart';
 import 'package:marketplace_app_member/core/data/datasources/remote/service/catalog_service.dart';
 import 'package:marketplace_app_member/core/domain/model/catalog/product_facets.dart';
 import 'package:marketplace_app_member/core/domain/model/catalog/product_model.dart';
@@ -238,9 +239,7 @@ void main() {
         fullName: 'Uji Ongkir',
         phone: '08${stamp.toString().substring(stamp.toString().length - 10)}',
       );
-      final session = await auth.login(email: email, password: password);
-      authed.options.headers['Authorization'] =
-          'Bearer ${session.data.accessToken}';
+      await loginAs(authed, email: email, password: password);
 
       addressId = (await AddressService(authed).create(
         label: 'Rumah',

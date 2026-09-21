@@ -27,8 +27,13 @@ Buyer app for a **multi-vendor marketplace**, built on a purchased Flutter UI ki
 flutter pub get                       # install dependencies
 flutter run                           # run on connected device/emulator
 flutter analyze                       # static analysis (flutter_lints 4.0.0 via analysis_options.yaml)
-flutter test                          # run all tests (453; all pass)
-flutter test test/integration --concurrency=1   # integrasi: butuh backend hidup, WAJIB serial
+flutter test                          # run all tests (462; all pass)
+# Integrasi: butuh backend hidup, WAJIB serial — DAN penghitung rate limit auth
+# harus dikosongkan dulu, kalau tidak ~100 test merah dengan 429. Lihat
+# "Rate limit auth" di Part 2.
+mysql -u root --socket=/Applications/XAMPP/xamppfiles/var/mysql/mysql.sock \
+  marketplace -e "DELETE FROM auth_rate_limits;"
+flutter test test/integration --concurrency=1
 flutter test integration_test/member_journey_test.dart -d macos  # app sungguhan, satu berkas per invokasi
 flutter test test/data                # one directory
 flutter test test/data/auth_repository_impl_test.dart                       # single file
@@ -126,7 +131,7 @@ Current state: `en` and `ar` are complete (284 keys) and selectable. `fr` appear
 
 ## Known rough edges
 
-- The Flutter counter template `test/widget_test.dart` is **gone** — the suite is real (453 tests, all passing) and is a usable signal. `test/integration/` (140 of those) hits a live backend, so it fails with connection errors when the API is not running; that is the environment, not a regression. Note the API is started with `php -S`, **not** `docker compose` — see "Menyalakan backend dev" in Part 2 — and the integration suite must run `--concurrency=1`.
+- The Flutter counter template `test/widget_test.dart` is **gone** — the suite is real (462 tests, all passing) and is a usable signal. `test/integration/` (141 of those) hits a live backend, so it fails with connection errors when the API is not running; that is the environment, not a regression. Note the API is started with `php -S`, **not** `docker compose` — see "Menyalakan backend dev" in Part 2 — and the integration suite must run `--concurrency=1`.
 - 14 stale `*.dart~` backup files litter `lib/` (and `android/`). They are not compiled but **do show up in grep results** — always confirm a hit isn't in a `~` file before editing.
 - `lib/features/my_cart/presentation/views/map_screen.dart` is 100% commented out, and the `com.google.android.geo.API_KEY` meta-data in `android/app/src/main/AndroidManifest.xml` is commented out too. Restoring the map needs both, plus an iOS key. Location permissions are already declared in the manifest.
 - **The app builds now, but every image is a placeholder.** The UI kit's asset folders were never copied into this repo, so all 67 files in `assets/images/` and `assets/icon/` are grey 64×64 stubs, and the `Hanimation` font declaration in `pubspec.yaml` stays **commented out** (a fake OTF crashes at start, so it could not be stubbed — all text falls back to the system font). What you see on screen is therefore not the kit's design. `assets/PLACEHOLDER-README.md` documents what was stubbed and how to restore the originals.
@@ -139,13 +144,41 @@ Current state: `en` and `ar` are complete (284 keys) and selectable. `fr` appear
 
 # Part 2 — Target architecture
 
-> ### 📘 BACA DULU: `docs/19-frontend-integration-guide.md`
+> ### 📘 BACA DULU: `docs/20-frontend-integration-guide.md`
 >
-> ⚠️ **Nomornya berubah dari 18 → 19** (19 September 2026): slot 18 kini dipakai `18-reward-engine.md`. Berkasnya juga **belum di-commit** di repo API — ia ada di working copy saja, jadi `git log` tidak akan menunjukkan perubahannya. Periksa `git status` repo API, bukan hanya `git log`.
+> ⚠️ **Nomornya sudah berubah dua kali: 18 → 19 → 20** (21 September 2026). Slot 19 kini dipakai `19-security-audit-findings.md`, slot 18 oleh `18-reward-engine.md`. Berkasnya **tetap belum di-commit** di repo API — ia ada di working copy saja, jadi `git log` tidak akan menunjukkan perubahannya. Periksa `git status` repo API, bukan hanya `git log`. Jangan menyalin nomornya ke catatan baru tanpa mengecek: ia bergeser tiap kali backend menambah dokumen.
 >
 > Backend menerbitkan **panduan integrasi frontend khusus untuk app member & app seller** (14 September 2026). Itu titik masuk tunggal untuk pekerjaan FE: cara menjalankan API, kontrak dasar, peta 33 modul → endpoint → app mana yang memakainya, alur inti buyer dari browse sampai terima barang, dan daftar jebakan yang sudah diuji ke server. Poin bertanda **[terverifikasi]** di sana sudah ditembak ke server sungguhan, bukan dibaca dari dokumen.
 >
-> Urutan otoritas kalau sumber saling bertentangan: **`application/config/routes.php` > panduan 19 > Postman > docs lainnya.** Seluruh catatan di bawah ini sudah diselaraskan dengan panduan itu dan diverifikasi ulang ke server pada 14 September 2026.
+> Urutan otoritas kalau sumber saling bertentangan: **`application/config/routes.php` > panduan 20 > Postman > docs lainnya.** Seluruh catatan di bawah ini sudah diselaraskan dengan panduan itu dan diverifikasi ulang ke server pada 14 September 2026.
+>
+> ### 🔴 Rate limit auth — dan kenapa ia mematikan suite integrasi (21 September 2026)
+>
+> Backend v1.2.0 (commit `17df39e`) membatasi endpoint auth. Lewat batas → `429` dengan `error.code = TOO_MANY_REQUESTS`:
+>
+> | endpoint | batas | jendela |
+> |---|---|---|
+> | `POST /auth/login` | **5× per email** | 15 menit |
+> | `POST /auth/login` | **20× per IP** | 15 menit |
+> | `POST /auth/resend-verification` | 3× per email | 1 jam |
+> | `POST /auth/forgot-password` | 3× per email | 1 jam |
+> | `POST /auth/reset-password` | 10× per IP | 1 jam |
+>
+> Sisi aplikasi sudah ditangani: `ApiErrorCode.tooManyRequests` dipetakan di `error_message.dart` jadi pesan tersendiri, dan **tidak ada retry otomatis** — satu-satunya retry di `auth_interceptor.dart` hanya menyala pada `401`. Pesannya sengaja tidak menyebut angka menit: server **tidak** mengirim `Retry-After` maupun sisa waktu di `details` (diperiksa ke seluruh kode API).
+>
+> 🔴 **Penghitungnya bertambah SEBELUM `password_verify`, jadi login yang BERHASIL pun dihitung.** Diuji langsung ke server: lima login berturut-turut dengan password yang **benar** lolos, yang keenam dibalas `429`. Ini bukan pertahanan brute-force — ia mengunci user yang tidak pernah salah password sekali pun. Dipatok di `test/integration/auth_service_test.dart`.
+>
+> Dampaknya melampaui test. Batas **20× per IP** yang juga menghitung keberhasilan berarti satu IP CGNAT operator seluler — yang di Indonesia dibagi ribuan pelanggan — bisa mengunci pengguna yang tidak berbuat apa-apa. Perbaikan lazimnya: hitung percobaan **gagal** saja, lalu kosongkan penghitung begitu login berhasil.
+>
+> **Akibatnya untuk `test/integration/`**: suite ini punya ~135 test yang masing-masing mendaftar + login di `setUp`, jadi ia menembus batas per-IP di sekitar test ke-21 — **100 dari 140 test merah**, semuanya `429`. Tidak ada cara mengakalinya dari sisi FE: `register` tidak mengembalikan token, `verify-email` juga tidak, dan `proxy_ips` kosong sehingga `X-Forwarded-For` diabaikan. Suite **sengaja tidak ditulis ulang** supaya muat di 20 login — lihat alasannya di `test/integration/support/test_account.dart`. Sampai backend memperbaikinya:
+>
+> ```bash
+> # kosongkan penghitung di DB dev sebelum/selama menjalankan suite
+> mysql -u root --socket=/Applications/XAMPP/xamppfiles/var/mysql/mysql.sock \
+>   marketplace -e "DELETE FROM auth_rate_limits;"
+> ```
+>
+> `registerAndLogin`/`loginAs` di `test/integration/support/test_account.dart` mengubah kegagalan berantai itu jadi **satu pesan yang menyebut sebab dan jalan keluarnya**, bukan 100 error tanpa konteks.
 >
 > ### 🔁 Backend ganti total pada 13 September 2026
 >
@@ -201,7 +234,7 @@ Current state: `en` and `ar` are complete (284 keys) and selectable. `fr` appear
 >
 > ### ⚠️ `docker compose up` TIDAK jalan — API dijalankan dengan `php -S`
 >
-> Catatan sebelumnya di file ini yang menyarankan `docker compose up -d` **salah**. `Dockerfile` menyalin `infra/docker/nginx.conf` yang tidak ada di repo, dan stage runtime-nya nginx tanpa php-fpm. Cara yang benar ada di panduan 19 §1: siapkan MySQL, jalankan `database/schema/*.sql` lalu `database/seeds/*.sql`, kemudian `php -S 127.0.0.1:8000 -t . router.php` dengan `router.php` yang isinya diberikan di panduan itu (tidak ada di repo).
+> Catatan sebelumnya di file ini yang menyarankan `docker compose up -d` **salah**. `Dockerfile` menyalin `infra/docker/nginx.conf` yang tidak ada di repo, dan stage runtime-nya nginx tanpa php-fpm. Cara yang benar ada di panduan 20 §1: siapkan MySQL, jalankan `database/schema/*.sql` lalu `database/seeds/*.sql`, kemudian `php -S 127.0.0.1:8000 -t . router.php` dengan `router.php` yang isinya diberikan di panduan itu (tidak ada di repo).
 >
 > Konsekuensinya untuk `/search/*`: **Elasticsearch/OpenSearch di 9200 tidak punya cara mudah dinyalakan**, jadi anggap search mati secara default dan pakai fallback yang dijelaskan di bawah.
 >
@@ -262,7 +295,7 @@ Current state: `en` and `ar` are complete (284 keys) and selectable. `fr` appear
 - **Notification domain** — `lib/core/…/notification/` + `lib/ui/main/notification/`; lihat "Domain notifikasi" di bawah
 - **Reward domain** — `lib/core/…/reward/` + `lib/ui/main/reward/`; lihat "Domain reward" di bawah
 - **Chat domain** — `lib/core/…/chat/` + `lib/ui/main/chat/`; lihat "Domain chat" di bawah
-- Tests: `test/util/` (17, murni), `test/data/` (158, fake service/store + parsing JSON asli), `test/ui/` (138, fake repository), `test/integration/` (140, butuh backend hidup — **jalankan `--concurrency=1`**) — **453 total, semuanya lulus**
+- Tests: `test/util/` (17, murni), `test/data/` (162, fake service/store + parsing JSON asli), `test/ui/` (142, fake repository), `test/integration/` (141, butuh backend hidup — **jalankan `--concurrency=1`**, dan kosongkan `auth_rate_limits` dulu) — **462 total, semuanya lulus**
 - **`integration_test/`** — app sungguhan di perangkat sungguhan, **di luar `flutter test`**; lihat "Test app sungguhan" di bawah
 
 Still absent: Firebase and `lib/firebase_options.dart`.
@@ -406,7 +439,7 @@ Yang paling menjebak, karena **balasan `PATCH .../shipping` mengirim field berna
 #### Perilaku lain yang dipatok test
 
 - **Alamat tanpa validasi**: `POST /me/addresses` dengan seluruh field kosong dibalas `201` dan tersimpan. Kelengkapan divalidasi `AddressCubit` + formulir; `AddressModel.isComplete` yang jadi acuan, dan checkout hanya menawarkan alamat yang lolos.
-- **Nama field alamat**: `full_address` dan `is_primary`. Nama ala Markas (`address_line`, `district`, `is_default`) membuat server membalas **500 HTML**, bukan `VALIDATION_ERROR`.
+- **Nama field alamat**: `full_address` dan `is_primary`. ⚠️ Nama ala Markas (`address_line`, `district`, `is_default`) dulu membuat server membalas **500 HTML**; sejak commit `a1ef5ec` field asing **dibuang diam-diam** dan responsnya `201`. Gagalnya jadi lebih senyap, bukan hilang — lihat catatan whitelist di bawah.
 - **Boleh ada beberapa alamat "utama" sekaligus** — menyetel `is_primary` pada alamat kedua tidak melepas tanda pada yang pertama. Karena itu ada `primaryAddressOf` (pemilihan deterministik) dan `AddressRepositoryImpl.setPrimary` yang melepas tanda lama satu per satu.
 - **Sesi yang dibatalkan berstatus `expired`**, bukan `cancelled` — sama dengan sesi yang lewat tenggat.
 - **`order_ids` berupa array**: keranjang multi-toko pecah jadi satu order per toko, tapi tetap satu `payment_transaction_id`.
@@ -480,11 +513,16 @@ Konsekuensi untuk pengujian: **alur ulas tidak bisa dijalankan ujung ke ujung da
 
 #### Yang TIDAK dikirim daftar ulasan, walau tabelnya ada
 
-`list_for_product` hanya `SELECT *` dari tabel `reviews`, jadi responsnya **tidak membawa**:
+`list_for_product` masih menyisakan dua lubang, jadi responsnya **tidak membawa**:
 
 - **nama pengulas** — hanya `user_id`, dan tidak ada endpoint publik untuk menukarnya jadi nama. `ReviewModel.displayName` karena itu selalu `'Pembeli'`, dan `is_anonymous` praktis tidak berpengaruh apa pun.
 - **foto/video** — tabel `review_media` ada dan `POST` menerimanya, tapi tidak ikut di daftar.
-- **balasan penjual** — tabel `review_replies` dan endpoint `reply` ada, isinya juga tidak ikut.
+
+✅ **Balasan penjual kini IKUT** (commit `d614bd8`). Sebelumnya `list_for_product` hanya `SELECT *` dari tabel `reviews`, sehingga balasan yang sudah tersimpan lewat `POST /reviews/{id}/reply` tidak pernah sampai ke siapa pun — bukan ke pembeli, bukan pula ke penjualnya sendiri. Sekarang ada LEFT JOIN ke `review_replies`, aman karena `review_id`-nya UNIQUE.
+
+Bentuknya **objek bersarang** `{reply_text, created_at}` atau `null` — bukan string JSON seperti `data` di notifikasi dan `selected_couriers` di sesi checkout, karena server merakitnya sendiri di PHP. Dimodelkan `ReviewReplyModel`, dan `ReviewModel.hasReply` sengaja memeriksa isinya: endpoint balasan tidak memvalidasi panjang, jadi `reply` bisa ada tapi hampa. ⚠️ **Tanpa nama penjual** — nama tokonya harus diambil dari konteks halaman produk.
+
+⚠️ Belum teramati di server: tidak ada ulasan yang di-seed (`GET /products/1/reviews` → `[]`), jadi bentuknya diturunkan dari kode backend dan dipatok di `test/data/`, bukan dari respons sungguhan. Layar ulasan **belum menampilkannya** — modelnya siap, widgetnya belum.
 
 #### Hal-hal yang di sini justru berjalan benar
 
@@ -854,7 +892,11 @@ Semua di bawah ini hasil menembak server dengan token buyer, bukan membaca dokum
 5. **`POST /checkout/sessions/{id}/confirm` membalas `{"order_ids": [1], "payment_transaction_id": 1}`** — `order_ids` **array**, karena keranjang multi-toko pecah jadi beberapa order. Jangan modelkan sebagai satu order.
 6. **Order sekarang satu lapis.** `GET /orders/{id}` = order + `items[]` + `status_history[]` + `refund`. Tidak ada `sub_orders`, tidak ada `shipments`. Ongkir ada di order (`shipping_cost`, `courier_code`, `courier_service`, `tracking_number`).
 
-**Field alamat memakai nama lain dari app lama.** `POST /me/addresses` menerima `label`, `recipient_name`, `phone`, `full_address`, `city`, `province`, `postal_code`, `is_primary` (+ `latitude`/`longitude` opsional). Nama ala Markas — `address_line`, `district`, `is_default` — **tidak ada kolomnya**, dan mengirimnya membuat server membalas **500 halaman HTML**, bukan `VALIDATION_ERROR`: field yang tidak dikenal diteruskan mentah ke `INSERT`. Cek `database/schema/01_users_auth.sql` kalau ragu.
+**Field alamat memakai nama lain dari app lama.** `POST /me/addresses` menerima `label`, `recipient_name`, `phone`, `full_address`, `city`, `province`, `city_id`, `postal_code`, `is_primary` (+ `latitude`/`longitude` opsional). Cek `database/schema/01_users_auth.sql` kalau ragu.
+
+⚠️ **Field di luar daftar itu kini dibuang diam-diam** (commit `a1ef5ec`, 21 September 2026). Sebelumnya body request diteruskan mentah ke `INSERT`, sehingga nama ala Markas (`address_line`, `district`, `is_default`) memicu **500 halaman HTML**. Sekarang `create_address`/`update_address` menyaringnya lewat `array_intersect_key`, dan diverifikasi ke server: body berisi `address_line` + `is_default` dibalas **`201`** dengan id sungguhan.
+
+Perubahannya benar — client memang tidak boleh menyelipkan `id` atau `created_at` — tapi **mode gagalnya jadi lebih senyap**: salah nama field tidak lagi meledak, ia menyimpan alamat yang bolong. Aplikasi ini tidak terdampak (nama fieldnya sudah benar dan `AddressModel.isComplete` menyaring alamat tak lengkap sebelum checkout menawarkannya), tapi jangan lagi mengandalkan 500 sebagai tanda salah field. Catatan lain: `update_address` sekarang **tidak melakukan apa-apa** kalau seluruh field yang dikirim asing — `200` tanpa satu pun kolom berubah.
 
 **Tipe data umum:** hampir semua angka dan boolean datang sebagai **string** (`"id": "1"`, `"quantity": "2"`, `"is_active": "1"`, `"base_price": "75000.00"`) — ini perilaku driver MySQL PHP, bukan kesengajaan. Pengecualiannya justru yang penting: `GET /cart/summary` (`subtotal`, `item_count`), seluruh `shipping-options` (`cost`, `etd_*_days`), dan **`stock` di detail produk** datang sebagai **angka asli**. Jangan pernah mengetik field `int`/`bool` karena satu respons kebetulan begitu.
 
@@ -931,7 +973,7 @@ The kit's social-login buttons were dropped, not ported — the backend has no O
 
 A `@freezed` class with custom getters or methods **must** declare a private constructor (`const UserModel._();`), otherwise generation fails with `Getters require a MyClass._() constructor`. Also prefer getters **inside** the class over an `extension`: an extension is only in scope where its own library is imported, so `user.isVerified` silently fails to resolve in a file that imported the model only transitively.
 
-**Backend contract**: the member app talks to **marketplace-api** (CodeIgniter 3 modular HMVC + JWT), a multi-vendor marketplace. Reference material lives in that repo, not this one. Start at **`docs/19-frontend-integration-guide.md`** — it is written for exactly this app and marks which claims were tested against a running server. Then `docs/02-database-schema.md` + `database/schema/*.sql` for field shapes, `docs/04-rbac-permission-matrix.md` for roles, `docs/16-home-layout-cms.md` and `docs/17-campaign-engine.md` for the two newest modules, and `postman/Marketplace-API.postman_collection.json` (223 request, 32 folder) for request bodies.
+**Backend contract**: the member app talks to **marketplace-api** (CodeIgniter 3 modular HMVC + JWT), a multi-vendor marketplace. Reference material lives in that repo, not this one. Start at **`docs/20-frontend-integration-guide.md`** — it is written for exactly this app and marks which claims were tested against a running server. Then `docs/02-database-schema.md` + `database/schema/*.sql` for field shapes, `docs/04-rbac-permission-matrix.md` for roles, `docs/16-home-layout-cms.md` and `docs/17-campaign-engine.md` for the two newest modules, and `postman/Marketplace-API.postman_collection.json` (223 request, 32 folder) for request bodies.
 
 ⚠️ **Koleksi Postman-nya kini bentrok dengan data seed.** Variabel `store_id`/`product_id`/`warehouse_id` masih bernilai `1`, padahal id 1–8 sudah dipakai toko milik seller seed — menjalankan koleksinya apa adanya menghasilkan `403` berulang. Body request-nya tetap sahih; yang salah hanya nilai variabelnya.
 
@@ -1019,7 +1061,18 @@ Derived from the gap between Part 1 and Part 2. Steps 0-5 are done and the auth 
    - **`flash_sale` per varian** di `GET /products/{id}` (commit `ad270c3`) — key-nya sudah dikirim server tapi **`null` di seluruh seed**, jadi bentuknya belum bisa diamati. Sama seperti `store_couriers` dan home CMS: tunggu ada isinya.
    - **`GET /flash-sales/{id}/products`** (commit `9c5b9a7` + `1784186`) — kini membawa `product_id`, `image_url`, dan `original_price`.
 
-   **Sudah dicek cocok, tidak perlu pekerjaan:** seluruh 12 parameter `GET /products` di panduan §7 sudah dikirim `CatalogService`; jebakan §6 nomor 1, 2, 3, 5, dan 8 semuanya sudah ditangani dan dipatok test. Nomor 6 dan 7 khusus app seller.
+   **Ditambahkan 21 September 2026** (dari 25 commit backend `70ac372..90ab9db`, rilis v1.1.0 + v1.2.0):
+
+   - **Ikuti toko** — `POST/DELETE /stores/{id}/follow` + `GET /me/following` (commit `2ac6e9e`). Fitur member sungguhan yang belum ada di aplikasi sama sekali: belum ada tombol, model, maupun service.
+   - **Etalase toko** — `GET /stores/{id}/showcases` (publik) + `GET /showcases/{id}/products`. Hidup, tapi **`[]` di dev** karena belum ada seed. Sama seperti home CMS: tunggu ada isinya sebelum memodelkannya.
+   - **`POST /orders/{id}/rating`** (commit `987458c`) — rating **toko**, terpisah dari ulasan **produk** (`POST /order-items/{id}/review`). Maksimal sekali per order, dan menuntut status `completed`; ulangan dibalas `409 ORDER_ALREADY_RATED`, status lain `422 ORDER_NOT_COMPLETED`. ⚠️ **Tidak bisa diuji ujung ke ujung** — kendala yang sama dengan ulasan: tidak ada pesanan yang bisa mencapai `completed` di dev.
+   - **Master lokasi** — `GET /locations/provinces` dan `GET /locations/cities?province_id=` (commit `d025b40`), keduanya **publik dan sudah ada isinya**: 11 provinsi, 15 kota. Kolom alamat juga menerima **`city_id`** sekarang. Ini peluang nyata memperbaiki formulir alamat, yang hari ini masih mengetik `city`/`province` sebagai teks bebas — sumber ongkir salah kalau ejaannya meleset. ⚠️ Seednya masih tipis (15 kota untuk 11 provinsi), jadi dropdown murni akan memblokir user di kota yang belum terdaftar; sediakan jalan ketik-bebas sampai seednya lengkap. Perhatikan pula konvensi kolomnya **berbeda dari seluruh API**: `province_name`/`city_name`, `active`, `created_date` — bukan `name`, `is_active`, `created_at`.
+   - **Bundel produk** — `GET /stores/{id}/bundles`, `GET /bundles/{id}` (commit `53768d9`). ⚠️ **Butuh token** walau isinya katalog, berbeda dari `/products` yang publik.
+   - **Paginasi `/recommendations/personalized` dan `/trending`** (commit `9536015`) — sekarang menerima `page`/`per_page`. Aplikasi belum memakai endpoint rekomendasi mana pun.
+
+   **Sudah ditangani, tidak perlu pekerjaan lagi:** rate limit auth (lihat catatan tersendiri di atas), balasan penjual di daftar ulasan (`ReviewReplyModel`), dan whitelist field alamat. Seluruh 12 parameter `GET /products` di panduan §7 sudah dikirim `CatalogService`; jebakan §6 nomor 1, 2, 3, 5, dan 8 semuanya sudah ditangani dan dipatok test. Nomor 6 dan 7 khusus app seller.
+
+   **Tidak relevan untuk app member** (semuanya admin/seller): `GET /admin/dashboard/counts`, `/admin/reports/revenue-by-store`, `/admin/reports/store-signups`, `/admin/locations/*`, pembuatan etalase dan bundel, serta lima perbaikan audit keamanan selain rate limit — race condition dompet (`f6fc9b5`), IDOR laporan ulasan (`afe623f`), dan whitelist gudang (`f7a9670`) semuanya di sisi server.
 
 8. **In progress** (auth done). Convert the UI kit's marker states to `@freezed` unions and switch its cubits from public mutable fields to emitted state data — for whatever of `lib/features/` survives step 10.
 9. Split [app_routes.dart](lib/core/utils/app_routes.dart) into per-domain route files under `lib/config/route/`.

@@ -40,6 +40,12 @@ mixin _$ReviewModel {
   @JsonKey(name: 'created_at')
   DateTime? get createdAt;
 
+  /// Balasan penjual, atau `null` kalau belum dibalas.
+  ///
+  /// Dirakit server jadi objek bersarang — **bukan** string JSON seperti
+  /// `data` di notifikasi atau `selected_couriers` di sesi checkout.
+  ReviewReplyModel? get reply;
+
   /// Create a copy of ReviewModel
   /// with the given fields replaced by the non-null parameter values.
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -67,17 +73,18 @@ mixin _$ReviewModel {
                 other.isAnonymous == isAnonymous) &&
             (identical(other.status, status) || other.status == status) &&
             (identical(other.createdAt, createdAt) ||
-                other.createdAt == createdAt));
+                other.createdAt == createdAt) &&
+            (identical(other.reply, reply) || other.reply == reply));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
   int get hashCode => Object.hash(runtimeType, id, orderItemId, userId,
-      productId, rating, comment, isAnonymous, status, createdAt);
+      productId, rating, comment, isAnonymous, status, createdAt, reply);
 
   @override
   String toString() {
-    return 'ReviewModel(id: $id, orderItemId: $orderItemId, userId: $userId, productId: $productId, rating: $rating, comment: $comment, isAnonymous: $isAnonymous, status: $status, createdAt: $createdAt)';
+    return 'ReviewModel(id: $id, orderItemId: $orderItemId, userId: $userId, productId: $productId, rating: $rating, comment: $comment, isAnonymous: $isAnonymous, status: $status, createdAt: $createdAt, reply: $reply)';
   }
 }
 
@@ -96,7 +103,10 @@ abstract mixin class $ReviewModelCopyWith<$Res> {
       @StringOrNullJson() String? comment,
       @BoolJson() @JsonKey(name: 'is_anonymous') bool isAnonymous,
       @StringJson() String status,
-      @ServerDateTimeJson() @JsonKey(name: 'created_at') DateTime? createdAt});
+      @ServerDateTimeJson() @JsonKey(name: 'created_at') DateTime? createdAt,
+      ReviewReplyModel? reply});
+
+  $ReviewReplyModelCopyWith<$Res>? get reply;
 }
 
 /// @nodoc
@@ -120,6 +130,7 @@ class _$ReviewModelCopyWithImpl<$Res> implements $ReviewModelCopyWith<$Res> {
     Object? isAnonymous = null,
     Object? status = null,
     Object? createdAt = freezed,
+    Object? reply = freezed,
   }) {
     return _then(_self.copyWith(
       id: null == id
@@ -158,7 +169,25 @@ class _$ReviewModelCopyWithImpl<$Res> implements $ReviewModelCopyWith<$Res> {
           ? _self.createdAt
           : createdAt // ignore: cast_nullable_to_non_nullable
               as DateTime?,
+      reply: freezed == reply
+          ? _self.reply
+          : reply // ignore: cast_nullable_to_non_nullable
+              as ReviewReplyModel?,
     ));
+  }
+
+  /// Create a copy of ReviewModel
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $ReviewReplyModelCopyWith<$Res>? get reply {
+    if (_self.reply == null) {
+      return null;
+    }
+
+    return $ReviewReplyModelCopyWith<$Res>(_self.reply!, (value) {
+      return _then(_self.copyWith(reply: value));
+    });
   }
 }
 
@@ -266,7 +295,8 @@ extension ReviewModelPatterns on ReviewModel {
             @StringJson() String status,
             @ServerDateTimeJson()
             @JsonKey(name: 'created_at')
-            DateTime? createdAt)?
+            DateTime? createdAt,
+            ReviewReplyModel? reply)?
         $default, {
     required TResult orElse(),
   }) {
@@ -282,7 +312,8 @@ extension ReviewModelPatterns on ReviewModel {
             _that.comment,
             _that.isAnonymous,
             _that.status,
-            _that.createdAt);
+            _that.createdAt,
+            _that.reply);
       case _:
         return orElse();
     }
@@ -314,7 +345,8 @@ extension ReviewModelPatterns on ReviewModel {
             @StringJson() String status,
             @ServerDateTimeJson()
             @JsonKey(name: 'created_at')
-            DateTime? createdAt)
+            DateTime? createdAt,
+            ReviewReplyModel? reply)
         $default,
   ) {
     final _that = this;
@@ -329,7 +361,8 @@ extension ReviewModelPatterns on ReviewModel {
             _that.comment,
             _that.isAnonymous,
             _that.status,
-            _that.createdAt);
+            _that.createdAt,
+            _that.reply);
       case _:
         throw StateError('Unexpected subclass');
     }
@@ -360,7 +393,8 @@ extension ReviewModelPatterns on ReviewModel {
             @StringJson() String status,
             @ServerDateTimeJson()
             @JsonKey(name: 'created_at')
-            DateTime? createdAt)?
+            DateTime? createdAt,
+            ReviewReplyModel? reply)?
         $default,
   ) {
     final _that = this;
@@ -375,7 +409,8 @@ extension ReviewModelPatterns on ReviewModel {
             _that.comment,
             _that.isAnonymous,
             _that.status,
-            _that.createdAt);
+            _that.createdAt,
+            _that.reply);
       case _:
         return null;
     }
@@ -394,7 +429,8 @@ class _ReviewModel extends ReviewModel {
       @StringOrNullJson() this.comment,
       @BoolJson() @JsonKey(name: 'is_anonymous') this.isAnonymous = false,
       @StringJson() this.status = 'published',
-      @ServerDateTimeJson() @JsonKey(name: 'created_at') this.createdAt})
+      @ServerDateTimeJson() @JsonKey(name: 'created_at') this.createdAt,
+      this.reply})
       : super._();
   factory _ReviewModel.fromJson(Map<String, dynamic> json) =>
       _$ReviewModelFromJson(json);
@@ -436,6 +472,13 @@ class _ReviewModel extends ReviewModel {
   @JsonKey(name: 'created_at')
   final DateTime? createdAt;
 
+  /// Balasan penjual, atau `null` kalau belum dibalas.
+  ///
+  /// Dirakit server jadi objek bersarang — **bukan** string JSON seperti
+  /// `data` di notifikasi atau `selected_couriers` di sesi checkout.
+  @override
+  final ReviewReplyModel? reply;
+
   /// Create a copy of ReviewModel
   /// with the given fields replaced by the non-null parameter values.
   @override
@@ -468,17 +511,18 @@ class _ReviewModel extends ReviewModel {
                 other.isAnonymous == isAnonymous) &&
             (identical(other.status, status) || other.status == status) &&
             (identical(other.createdAt, createdAt) ||
-                other.createdAt == createdAt));
+                other.createdAt == createdAt) &&
+            (identical(other.reply, reply) || other.reply == reply));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
   int get hashCode => Object.hash(runtimeType, id, orderItemId, userId,
-      productId, rating, comment, isAnonymous, status, createdAt);
+      productId, rating, comment, isAnonymous, status, createdAt, reply);
 
   @override
   String toString() {
-    return 'ReviewModel(id: $id, orderItemId: $orderItemId, userId: $userId, productId: $productId, rating: $rating, comment: $comment, isAnonymous: $isAnonymous, status: $status, createdAt: $createdAt)';
+    return 'ReviewModel(id: $id, orderItemId: $orderItemId, userId: $userId, productId: $productId, rating: $rating, comment: $comment, isAnonymous: $isAnonymous, status: $status, createdAt: $createdAt, reply: $reply)';
   }
 }
 
@@ -499,7 +543,11 @@ abstract mixin class _$ReviewModelCopyWith<$Res>
       @StringOrNullJson() String? comment,
       @BoolJson() @JsonKey(name: 'is_anonymous') bool isAnonymous,
       @StringJson() String status,
-      @ServerDateTimeJson() @JsonKey(name: 'created_at') DateTime? createdAt});
+      @ServerDateTimeJson() @JsonKey(name: 'created_at') DateTime? createdAt,
+      ReviewReplyModel? reply});
+
+  @override
+  $ReviewReplyModelCopyWith<$Res>? get reply;
 }
 
 /// @nodoc
@@ -523,6 +571,7 @@ class __$ReviewModelCopyWithImpl<$Res> implements _$ReviewModelCopyWith<$Res> {
     Object? isAnonymous = null,
     Object? status = null,
     Object? createdAt = freezed,
+    Object? reply = freezed,
   }) {
     return _then(_ReviewModel(
       id: null == id
@@ -557,6 +606,374 @@ class __$ReviewModelCopyWithImpl<$Res> implements _$ReviewModelCopyWith<$Res> {
           ? _self.status
           : status // ignore: cast_nullable_to_non_nullable
               as String,
+      createdAt: freezed == createdAt
+          ? _self.createdAt
+          : createdAt // ignore: cast_nullable_to_non_nullable
+              as DateTime?,
+      reply: freezed == reply
+          ? _self.reply
+          : reply // ignore: cast_nullable_to_non_nullable
+              as ReviewReplyModel?,
+    ));
+  }
+
+  /// Create a copy of ReviewModel
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $ReviewReplyModelCopyWith<$Res>? get reply {
+    if (_self.reply == null) {
+      return null;
+    }
+
+    return $ReviewReplyModelCopyWith<$Res>(_self.reply!, (value) {
+      return _then(_self.copyWith(reply: value));
+    });
+  }
+}
+
+/// @nodoc
+mixin _$ReviewReplyModel {
+  @StringOrNullJson()
+  @JsonKey(name: 'reply_text')
+  String? get replyText;
+  @ServerDateTimeJson()
+  @JsonKey(name: 'created_at')
+  DateTime? get createdAt;
+
+  /// Create a copy of ReviewReplyModel
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  $ReviewReplyModelCopyWith<ReviewReplyModel> get copyWith =>
+      _$ReviewReplyModelCopyWithImpl<ReviewReplyModel>(
+          this as ReviewReplyModel, _$identity);
+
+  /// Serializes this ReviewReplyModel to a JSON map.
+  Map<String, dynamic> toJson();
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is ReviewReplyModel &&
+            (identical(other.replyText, replyText) ||
+                other.replyText == replyText) &&
+            (identical(other.createdAt, createdAt) ||
+                other.createdAt == createdAt));
+  }
+
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @override
+  int get hashCode => Object.hash(runtimeType, replyText, createdAt);
+
+  @override
+  String toString() {
+    return 'ReviewReplyModel(replyText: $replyText, createdAt: $createdAt)';
+  }
+}
+
+/// @nodoc
+abstract mixin class $ReviewReplyModelCopyWith<$Res> {
+  factory $ReviewReplyModelCopyWith(
+          ReviewReplyModel value, $Res Function(ReviewReplyModel) _then) =
+      _$ReviewReplyModelCopyWithImpl;
+  @useResult
+  $Res call(
+      {@StringOrNullJson() @JsonKey(name: 'reply_text') String? replyText,
+      @ServerDateTimeJson() @JsonKey(name: 'created_at') DateTime? createdAt});
+}
+
+/// @nodoc
+class _$ReviewReplyModelCopyWithImpl<$Res>
+    implements $ReviewReplyModelCopyWith<$Res> {
+  _$ReviewReplyModelCopyWithImpl(this._self, this._then);
+
+  final ReviewReplyModel _self;
+  final $Res Function(ReviewReplyModel) _then;
+
+  /// Create a copy of ReviewReplyModel
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? replyText = freezed,
+    Object? createdAt = freezed,
+  }) {
+    return _then(_self.copyWith(
+      replyText: freezed == replyText
+          ? _self.replyText
+          : replyText // ignore: cast_nullable_to_non_nullable
+              as String?,
+      createdAt: freezed == createdAt
+          ? _self.createdAt
+          : createdAt // ignore: cast_nullable_to_non_nullable
+              as DateTime?,
+    ));
+  }
+}
+
+/// Adds pattern-matching-related methods to [ReviewReplyModel].
+extension ReviewReplyModelPatterns on ReviewReplyModel {
+  /// A variant of `map` that fallback to returning `orElse`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult maybeMap<TResult extends Object?>(
+    TResult Function(_ReviewReplyModel value)? $default, {
+    required TResult orElse(),
+  }) {
+    final _that = this;
+    switch (_that) {
+      case _ReviewReplyModel() when $default != null:
+        return $default(_that);
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// Callbacks receives the raw object, upcasted.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case final Subclass2 value:
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult map<TResult extends Object?>(
+    TResult Function(_ReviewReplyModel value) $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _ReviewReplyModel():
+        return $default(_that);
+      case _:
+        throw StateError('Unexpected subclass');
+    }
+  }
+
+  /// A variant of `map` that fallback to returning `null`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? mapOrNull<TResult extends Object?>(
+    TResult? Function(_ReviewReplyModel value)? $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _ReviewReplyModel() when $default != null:
+        return $default(_that);
+      case _:
+        return null;
+    }
+  }
+
+  /// A variant of `when` that fallback to an `orElse` callback.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult maybeWhen<TResult extends Object?>(
+    TResult Function(
+            @StringOrNullJson() @JsonKey(name: 'reply_text') String? replyText,
+            @ServerDateTimeJson()
+            @JsonKey(name: 'created_at')
+            DateTime? createdAt)?
+        $default, {
+    required TResult orElse(),
+  }) {
+    final _that = this;
+    switch (_that) {
+      case _ReviewReplyModel() when $default != null:
+        return $default(_that.replyText, _that.createdAt);
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// As opposed to `map`, this offers destructuring.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case Subclass2(:final field2):
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult when<TResult extends Object?>(
+    TResult Function(
+            @StringOrNullJson() @JsonKey(name: 'reply_text') String? replyText,
+            @ServerDateTimeJson()
+            @JsonKey(name: 'created_at')
+            DateTime? createdAt)
+        $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _ReviewReplyModel():
+        return $default(_that.replyText, _that.createdAt);
+      case _:
+        throw StateError('Unexpected subclass');
+    }
+  }
+
+  /// A variant of `when` that fallback to returning `null`
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? whenOrNull<TResult extends Object?>(
+    TResult? Function(
+            @StringOrNullJson() @JsonKey(name: 'reply_text') String? replyText,
+            @ServerDateTimeJson()
+            @JsonKey(name: 'created_at')
+            DateTime? createdAt)?
+        $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _ReviewReplyModel() when $default != null:
+        return $default(_that.replyText, _that.createdAt);
+      case _:
+        return null;
+    }
+  }
+}
+
+/// @nodoc
+@JsonSerializable()
+class _ReviewReplyModel extends ReviewReplyModel {
+  const _ReviewReplyModel(
+      {@StringOrNullJson() @JsonKey(name: 'reply_text') this.replyText,
+      @ServerDateTimeJson() @JsonKey(name: 'created_at') this.createdAt})
+      : super._();
+  factory _ReviewReplyModel.fromJson(Map<String, dynamic> json) =>
+      _$ReviewReplyModelFromJson(json);
+
+  @override
+  @StringOrNullJson()
+  @JsonKey(name: 'reply_text')
+  final String? replyText;
+  @override
+  @ServerDateTimeJson()
+  @JsonKey(name: 'created_at')
+  final DateTime? createdAt;
+
+  /// Create a copy of ReviewReplyModel
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  _$ReviewReplyModelCopyWith<_ReviewReplyModel> get copyWith =>
+      __$ReviewReplyModelCopyWithImpl<_ReviewReplyModel>(this, _$identity);
+
+  @override
+  Map<String, dynamic> toJson() {
+    return _$ReviewReplyModelToJson(
+      this,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _ReviewReplyModel &&
+            (identical(other.replyText, replyText) ||
+                other.replyText == replyText) &&
+            (identical(other.createdAt, createdAt) ||
+                other.createdAt == createdAt));
+  }
+
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @override
+  int get hashCode => Object.hash(runtimeType, replyText, createdAt);
+
+  @override
+  String toString() {
+    return 'ReviewReplyModel(replyText: $replyText, createdAt: $createdAt)';
+  }
+}
+
+/// @nodoc
+abstract mixin class _$ReviewReplyModelCopyWith<$Res>
+    implements $ReviewReplyModelCopyWith<$Res> {
+  factory _$ReviewReplyModelCopyWith(
+          _ReviewReplyModel value, $Res Function(_ReviewReplyModel) _then) =
+      __$ReviewReplyModelCopyWithImpl;
+  @override
+  @useResult
+  $Res call(
+      {@StringOrNullJson() @JsonKey(name: 'reply_text') String? replyText,
+      @ServerDateTimeJson() @JsonKey(name: 'created_at') DateTime? createdAt});
+}
+
+/// @nodoc
+class __$ReviewReplyModelCopyWithImpl<$Res>
+    implements _$ReviewReplyModelCopyWith<$Res> {
+  __$ReviewReplyModelCopyWithImpl(this._self, this._then);
+
+  final _ReviewReplyModel _self;
+  final $Res Function(_ReviewReplyModel) _then;
+
+  /// Create a copy of ReviewReplyModel
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $Res call({
+    Object? replyText = freezed,
+    Object? createdAt = freezed,
+  }) {
+    return _then(_ReviewReplyModel(
+      replyText: freezed == replyText
+          ? _self.replyText
+          : replyText // ignore: cast_nullable_to_non_nullable
+              as String?,
       createdAt: freezed == createdAt
           ? _self.createdAt
           : createdAt // ignore: cast_nullable_to_non_nullable

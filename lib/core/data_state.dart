@@ -206,6 +206,14 @@ abstract final class ApiErrorCode {
   /// setara [forbidden] bagi user: keduanya berarti "tidak berhak".
   static const permissionDenied = 'PERMISSION_DENIED';
   static const accountSuspended = 'ACCOUNT_SUSPENDED';
+
+  /// Rate limit endpoint auth terlampaui (backend v1.2.0, `429`).
+  ///
+  /// 🔴 **Jangan pernah di-retry otomatis** dan jangan ditampilkan sebagai
+  /// "email/password salah" — batas per-email 5×/15 menit berarti user yang
+  /// benar-benar lupa sandinya akan terkunci justru saat ia paling mungkin
+  /// mencoba lagi, dan menyebutnya kredensial salah membuatnya terus mencoba.
+  static const tooManyRequests = 'TOO_MANY_REQUESTS';
   static const notFound = 'NOT_FOUND';
   static const conflict = 'CONFLICT';
   static const invalidState = 'INVALID_STATE';

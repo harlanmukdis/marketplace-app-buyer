@@ -18,6 +18,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:marketplace_app_member/config/env/env.dart';
 import 'package:marketplace_app_member/config/network/dio_client.dart';
 import 'package:marketplace_app_member/core/data/datasources/remote/service/auth_service.dart';
+import 'support/test_account.dart';
 import 'package:marketplace_app_member/core/data/datasources/remote/service/cart_service.dart';
 import 'package:marketplace_app_member/core/data/datasources/remote/service/catalog_service.dart';
 import 'package:marketplace_app_member/core/data/datasources/remote/service/reward_service.dart';
@@ -49,9 +50,7 @@ void main() {
       fullName: 'Uji Reward',
       phone: phone,
     );
-    final session = await auth.login(email: email, password: password);
-    dio.options.headers['Authorization'] =
-        'Bearer ${session.data.accessToken}';
+    await loginAs(dio, email: email, password: password);
   });
 
   tearDown(() => dio.close(force: true));
