@@ -20,7 +20,18 @@ import 'package:marketplace_app_member/config/env/env.dart';
 import 'package:marketplace_app_member/config/network/api_exception.dart';
 import 'package:marketplace_app_member/config/network/dio_client.dart';
 import 'package:marketplace_app_member/core/data/datasources/remote/service/auth_service.dart';
+import 'support/test_account.dart';
 import 'package:marketplace_app_member/core/data_state.dart';
+
+/// Test rate limit di bawah sengaja tidak ikut berjalan secara default: ia
+/// memakai enam login, sementara plafonnya dua puluh per IP per 15 menit untuk
+/// SELURUH suite. Jalankan sendiri saat perilakunya perlu diperiksa ulang:
+///
+/// ```bash
+/// flutter test test/integration/auth_service_test.dart \
+///   --dart-define=UJI_RATE_LIMIT=true --plain-name 'rate limit'
+/// ```
+const _jalankanUjiRateLimit = bool.fromEnvironment('UJI_RATE_LIMIT');
 
 void main() {
   late AuthService auth;
@@ -148,6 +159,11 @@ void main() {
     });
 
     test('🔴 login BERHASIL pun ikut dihitung rate limit — ke-6 dikunci',
+        skip: _jalankanUjiRateLimit
+            ? false
+            : 'menghabiskan 6 dari kuota 20 login per IP per 15 menit, '
+                'sehingga sisa suite ikut terkunci. Jalankan sendiri dengan '
+                '--dart-define=UJI_RATE_LIMIT=true',
         () async {
       // Backend v1.2.0 (commit `17df39e`) membatasi login 5x per email per 15
       // menit. Penghitungnya bertambah **sebelum** `password_verify`, jadi
@@ -211,16 +227,20 @@ void main() {
     });
 
     test('PATCH /me mengubah nama — profil tidak lagi read-only', () async {
-      await registerAndLogin();
+      // Akun bersama: yang diuji perubahannya tersimpan, bukan nama awalnya.
+      // Namanya dibuat unik tiap jalan supaya assertion-nya tetap bermakna
+      // walau akunnya sudah pernah diubah di putaran sebelumnya.
+      await sharedAccount(dio, purpose: 'auth-profil');
+      final nama = 'Pembeli Uji ${DateTime.now().microsecondsSinceEpoch}';
 
-      final env = await auth.updateProfile(fullName: 'Pembeli Uji Diubah');
+      final env = await auth.updateProfile(fullName: nama);
 
       // Responsnya `data: null` — tidak memantulkan user hasil perubahan.
       // Itu sebabnya repository membaca ulang /me setelah menyimpan.
       expect(env.data, isNull);
 
       final reread = await auth.me();
-      expect(reread.data.fullName, 'Pembeli Uji Diubah',
+      expect(reread.data.fullName, nama,
           reason: 'perubahannya harus benar-benar tersimpan');
     });
 
@@ -239,7 +259,8 @@ void main() {
       // "Authorization" persis yang diterima, sehingga seluruh Dart native
       // (yang melowercase nama header) tidak bisa memakai endpoint ber-token.
       // Kalau test ini merah, Android/iOS mati lagi.
-      final token = await registerAndLogin();
+      // Akun bersama: yang diuji ejaan headernya, bukan identitas akunnya.
+      final token = await sharedAccount(dio, purpose: 'auth-profil');
 
       for (final spelling in ['Authorization', 'authorization', 'AUTHORIZATION']) {
         final probe = DioClient.createBare(Env.apiBaseUrl);

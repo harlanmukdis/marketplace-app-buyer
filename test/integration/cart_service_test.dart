@@ -4,9 +4,10 @@
 /// flutter test test/integration/
 /// ```
 ///
-/// Butuh backend hidup dan database ter-seed. Test ini **mendaftarkan akun
-/// baru** setiap dijalankan supaya keranjangnya bersih dan tidak bertabrakan
-/// dengan sesi lain.
+/// Butuh backend hidup dan database ter-seed. Berkas ini memakai **satu akun
+/// bersama** yang keranjangnya dikosongkan tiap test — bukan akun baru per
+/// test, yang akan menembus plafon 20 login per IP per 15 menit. Lihat
+/// `support/test_account.dart`.
 ///
 /// Sebagian besar yang dipatok di sini adalah **kelonggaran server**, bukan
 /// fiturnya: kuantitas yang tidak divalidasi, mutasi ke baris asing yang tetap
@@ -19,7 +20,6 @@ import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:marketplace_app_member/config/env/env.dart';
 import 'package:marketplace_app_member/config/network/dio_client.dart';
-import 'package:marketplace_app_member/core/data/datasources/remote/service/auth_service.dart';
 import 'support/test_account.dart';
 import 'package:marketplace_app_member/core/data/datasources/remote/service/cart_service.dart';
 import 'package:marketplace_app_member/core/data/datasources/remote/service/catalog_service.dart';
@@ -34,25 +34,24 @@ void main() {
   /// Varian yang dipakai seluruh test; dicari yang masih berstok.
   late int variantId;
 
+  // Akun bersama, bukan akun baru per test — lihat `support/test_account.dart`
+  // untuk alasannya (plafon 20 login per IP per 15 menit).
+  //
+  // Keranjang **bisa dikosongkan** lewat API, jadi tiap test tetap mulai dari
+  // keadaan bersih. Tidak ada `/cart/clear` di backend ini — barisnya dihapus
+  // satu per satu, dan itu memang yang dilakukan aplikasi.
   setUp(() async {
     dio = DioClient.createBare(Env.apiBaseUrl);
-    final auth = AuthService(dio);
     catalog = CatalogService(dio);
     cart = CartService(dio);
 
-    final stamp = DateTime.now().microsecondsSinceEpoch;
-    final email = 'uji.cart.$stamp@marketplace.local';
-    final phone =
-        '08${stamp.toString().substring(stamp.toString().length - 10)}';
-    const password = 'RahasiaAman123';
+    await sharedAccount(dio, purpose: 'belanja');
 
-    await auth.register(
-      email: email,
-      password: password,
-      fullName: 'Uji Keranjang',
-      phone: phone,
-    );
-    await loginAs(dio, email: email, password: password);
+    for (final group in (await cart.fetchCart()).data) {
+      for (final item in group.items) {
+        await cart.removeItem(item.id);
+      }
+    }
 
     // Bukan produk pertama: test ini mengonsumsi stok setiap kali dijalankan,
     // jadi harus mencari varian yang masih tersedia.
@@ -61,7 +60,7 @@ void main() {
 
   tearDown(() => dio.close(force: true));
 
-  test('keranjang akun baru kosong', () async {
+  test('keranjang kosong mengembalikan daftar hampa', () async {
     final result = await cart.fetchCart();
     expect(result.data, isEmpty);
 

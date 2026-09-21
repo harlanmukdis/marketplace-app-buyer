@@ -10,75 +10,122 @@
 /// bukan hanya berkas ini. Perilakunya diukur manual dan dicatat di
 /// `ChatService`; mengulanginya di sini hanya akan melipatgandakan waktu
 /// suite demi fakta yang sudah terdokumentasi.
+///
+/// ## 🔴 Berkas ini memakai akun BARU tiap putaran, bukan akun bersama
+///
+/// Berbeda dari keranjang dan wishlist, chat **tidak punya endpoint hapus
+/// sama sekali** — percakapan maupun pesan tidak bisa dibersihkan lewat API.
+/// Jadi keadaan awal yang bersih hanya bisa didapat dari akun yang benar-benar
+/// baru; akun bersama lintas putaran akan menumpuk pesan sampai setiap
+/// assertion jumlah jadi salah.
+///
+/// Biayanya dijaga **satu login per putaran**, bukan satu per test (lihat
+/// plafon 20 login per IP di `support/test_account.dart`):
+///
+/// * satu akun dipakai bersama seluruh berkas, dan tiap test yang butuh
+///   percakapan perawan mengambil **toko yang berbeda** — `UNIQUE (buyer_id,
+///   store_id)` menjamin percakapannya terpisah, dan seed menyediakan 8 toko;
+/// * satu akun lagi khusus test "belum punya percakapan", supaya ia tidak
+///   bergantung pada urutan berjalannya test — yang ini boleh di-cache
+///   lintas putaran, karena tidak ada yang pernah membuka percakapan atasnya.
 library;
 
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:marketplace_app_member/config/env/env.dart';
 import 'package:marketplace_app_member/config/network/dio_client.dart';
-import 'package:marketplace_app_member/core/data/datasources/remote/service/auth_service.dart';
-import 'support/test_account.dart';
 import 'package:marketplace_app_member/core/data/datasources/remote/service/chat_service.dart';
 import 'package:marketplace_app_member/core/domain/model/chat/chat_models.dart';
+
+import 'support/test_account.dart';
+
+/// Seed menyediakan toko id 1..8 (panduan FE §3).
+const _seededStoreIds = [1, 2, 3, 4, 5, 6, 7, 8];
 
 void main() {
   late Dio dio;
   late ChatService chat;
+  late TestAccount account;
 
-  setUp(() async {
+  var storeCursor = 0;
+
+  /// Toko yang belum dipakai test lain di putaran ini, sehingga
+  /// `openConversation` menghasilkan percakapan yang benar-benar kosong.
+  int nextStore() {
+    final id = _seededStoreIds[storeCursor % _seededStoreIds.length];
+    storeCursor++;
+    return id;
+  }
+
+  setUpAll(() async {
+    final bootstrap = DioClient.createBare(Env.apiBaseUrl);
+    try {
+      account = await freshAccount(bootstrap, label: 'Chat');
+    } finally {
+      bootstrap.close(force: true);
+    }
+  });
+
+  setUp(() {
     dio = DioClient.createBare(Env.apiBaseUrl);
-    final auth = AuthService(dio);
+    dio.options.headers['Authorization'] = 'Bearer ${account.accessToken}';
     chat = ChatService(dio);
-
-    final stamp = DateTime.now().microsecondsSinceEpoch;
-    final email = 'uji.chat.$stamp@marketplace.local';
-    const password = 'RahasiaAman123';
-
-    await auth.register(
-      email: email,
-      password: password,
-      fullName: 'Uji Chat',
-      phone: '08${stamp.toString().substring(stamp.toString().length - 10)}',
-    );
-    await loginAs(dio, email: email, password: password);
   });
 
   tearDown(() => dio.close(force: true));
 
   group('percakapan', () {
     test('akun baru belum punya percakapan', () async {
-      final result = await chat.fetchConversations();
+      // Akunnya sendiri, bukan akun berkas ini: begitu test lain membuka satu
+      // percakapan, daftar milik akun bersama tidak kosong lagi. Dengan akun
+      // terpisah, test ini tidak bergantung pada urutan.
+      //
+      // Boleh di-cache lintas putaran justru karena tidak ada yang pernah
+      // membuka percakapan atasnya — kotaknya permanen kosong.
+      final solo = DioClient.createBare(Env.apiBaseUrl);
+      addTearDown(() => solo.close(force: true));
+      await sharedAccount(solo, purpose: 'kosong');
+
+      final result = await ChatService(solo).fetchConversations();
       expect(result.data, isEmpty);
     });
 
     test('membuka percakapan bersifat GET-OR-CREATE', () async {
       // Tabelnya punya UNIQUE (buyer_id, store_id), jadi tombol "Chat
       // penjual" aman ditekan berkali-kali.
-      final first = await chat.openConversation(storeId: 1);
-      final second = await chat.openConversation(storeId: 1);
+      final storeId = nextStore();
+      final first = await chat.openConversation(storeId: storeId);
+      final second = await chat.openConversation(storeId: storeId);
 
       expect(first.data, greaterThan(0));
       expect(second.data, first.data);
 
+      // Dicari menurut toko, bukan `.single`: akun ini dipakai bersama test
+      // lain di berkas yang sama.
       final list = await chat.fetchConversations();
-      expect(list.data, hasLength(1));
+      expect(list.data.where((c) => c.storeId == storeId), hasLength(1));
     });
 
     test('daftar membawa store_name dari join', () async {
       // Berarti daftar percakapan tidak perlu menembak /stores/{id} per baris.
-      await chat.openConversation(storeId: 1);
+      final storeId = nextStore();
+      await chat.openConversation(storeId: storeId);
 
-      final list = await chat.fetchConversations();
-      expect(list.data.single.storeName, isNotEmpty);
-      expect(list.data.single.storeId, 1);
+      final conversation = (await chat.fetchConversations())
+          .data
+          .firstWhere((c) => c.storeId == storeId);
+      expect(conversation.storeName, isNotEmpty);
     });
 
     test('percakapan baru belum punya last_message_at', () async {
       // Barisnya dibuat lebih dulu tanpa pesan — itu sebabnya ChatListCubit
       // mengurutkan memakai `sortedAt`, yang jatuh ke created_at.
-      await chat.openConversation(storeId: 1);
+      final storeId = nextStore();
+      await chat.openConversation(storeId: storeId);
 
-      final conversation = (await chat.fetchConversations()).data.single;
+      final conversation = (await chat.fetchConversations())
+          .data
+          .firstWhere((c) => c.storeId == storeId);
       expect(conversation.lastMessageAt, isNull);
       expect(conversation.isEmpty, isTrue);
       expect(conversation.sortedAt, isNotNull);
@@ -98,8 +145,10 @@ void main() {
   group('pesan', () {
     late int conversationId;
 
+    // Tiap test memakai toko yang berbeda, jadi percakapannya perawan dan
+    // assertion jumlah pesan tetap sah walau akunnya dipakai bersama.
     setUp(() async {
-      conversationId = (await chat.openConversation(storeId: 1)).data;
+      conversationId = (await chat.openConversation(storeId: nextStore())).data;
     });
 
     test('mengirim lalu membaca kembali', () async {
@@ -185,7 +234,9 @@ void main() {
       // Kolomnya ada, tapi tidak ada kode backend yang mengisinya.
       await chat.sendMessage(conversationId, content: 'Halo');
 
-      final conversation = (await chat.fetchConversations()).data.single;
+      final conversation = (await chat.fetchConversations())
+          .data
+          .firstWhere((c) => c.id == conversationId);
       expect(conversation.buyerUnreadCount, 0);
       expect(conversation.lastMessageAt, isNotNull,
           reason: 'yang diperbarui hanya last_message_at');

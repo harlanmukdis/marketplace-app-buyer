@@ -17,7 +17,6 @@ import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:marketplace_app_member/config/env/env.dart';
 import 'package:marketplace_app_member/config/network/dio_client.dart';
-import 'package:marketplace_app_member/core/data/datasources/remote/service/auth_service.dart';
 import 'support/test_account.dart';
 import 'package:marketplace_app_member/core/data/datasources/remote/service/cart_service.dart';
 import 'package:marketplace_app_member/core/data/datasources/remote/service/catalog_service.dart';
@@ -31,32 +30,39 @@ void main() {
   late CartService cart;
   late CatalogService catalog;
 
+  // Akun bersama, bukan akun baru per test — lihat `support/test_account.dart`
+  // untuk alasannya (plafon 20 login per IP per 15 menit).
+  //
+  // Saldo poin dan koin akun ini **tidak akan pernah tumbuh**: satu-satunya
+  // jalan menaikkannya adalah reward engine yang dipicu pesanan selesai, dan
+  // tidak ada pesanan yang bisa mencapai `completed` di dev. Jadi `balance == 0`
+  // tetap sah dipatok walau akunnya dipakai ulang lintas putaran.
+  //
+  // ⚠️ Kecuali lewat bug pencetak poin di `/me/points/redeem`. Karena itu
+  // grup redeem di bawah memakai akunnya SENDIRI — kalau tidak, poin yang
+  // terlanjur tercetak akan membuat test di grup ini merah pada putaran
+  // berikutnya.
   setUp(() async {
     dio = DioClient.createBare(Env.apiBaseUrl);
-    final auth = AuthService(dio);
     reward = RewardService(dio);
     cart = CartService(dio);
     catalog = CatalogService(dio);
 
-    final stamp = DateTime.now().microsecondsSinceEpoch;
-    final email = 'uji.reward.$stamp@marketplace.local';
-    final phone =
-        '08${stamp.toString().substring(stamp.toString().length - 10)}';
-    const password = 'RahasiaAman123';
+    await sharedAccount(dio, purpose: 'reward');
 
-    await auth.register(
-      email: email,
-      password: password,
-      fullName: 'Uji Reward',
-      phone: phone,
-    );
-    await loginAs(dio, email: email, password: password);
+    // `POST /checkout/calculate` membaca keranjang, jadi sisa isi dari test
+    // sebelumnya membuat "keranjang kosong" tidak lagi kosong.
+    for (final group in (await cart.fetchCart()).data) {
+      for (final item in group.items) {
+        await cart.removeItem(item.id);
+      }
+    }
   });
 
   tearDown(() => dio.close(force: true));
 
   group('saldo poin & koin', () {
-    test('dibuat otomatis untuk akun baru — bukan 404', () async {
+    test('dibuat otomatis saat pertama dibaca — bukan 404', () async {
       // Pola yang sama dengan dompet: barisnya lahir saat pertama dibaca.
       final points = await reward.fetchPoints();
       expect(points.data.balance, 0);
@@ -176,6 +182,13 @@ void main() {
   });
 
   group('🔴 POST /me/points/redeem — sengaja tidak dipakai aplikasi', () {
+    // Grup ini MENCETAK poin lewat bug server, jadi ia tidak boleh memakai
+    // akun yang sama dengan grup saldo di atas — saldonya tidak bisa
+    // dikembalikan ke nol lewat API mana pun.
+    setUp(() async {
+      await sharedAccount(dio, purpose: 'reward-redeem');
+    });
+
     test('nominal NEGATIF mencetak poin alih-alih ditolak', () async {
       // Penjaganya ditulis `if ($balance < $amount) throw`. Untuk
       // `amount = -1000` itu `0 < -1000` yang false, jadi lolos; lalu
@@ -184,8 +197,10 @@ void main() {
       //
       // Kalau backend memperbaikinya, test ini merah — dan method redeem bisa
       // dipertimbangkan lagi.
+      // Diukur sebagai SELISIH, bukan angka mutlak: akun ini dipakai ulang
+      // lintas putaran dan poin yang terlanjur tercetak tidak bisa dihapus
+      // lewat API mana pun.
       final before = (await reward.fetchPoints()).data.balance;
-      expect(before, 0);
 
       final response = await dio.post<dynamic>(
         '/me/points/redeem',
@@ -194,7 +209,7 @@ void main() {
       expect(response.statusCode, 200, reason: 'diterima, bukan ditolak');
 
       final after = (await reward.fetchPoints()).data.balance;
-      expect(after, 1000, reason: 'saldo justru BERTAMBAH');
+      expect(after - before, 1000, reason: 'saldo justru BERTAMBAH');
     });
 
     test('menukar poin tidak memberi imbalan apa pun', () async {
@@ -204,10 +219,11 @@ void main() {
       // poin user.
       await dio.post<dynamic>('/me/points/redeem', data: {'amount': -500});
       final coinsBefore = (await reward.fetchCoins()).data.balance;
+      final pointsBefore = (await reward.fetchPoints()).data.balance;
 
       await dio.post<dynamic>('/me/points/redeem', data: {'amount': 500});
 
-      expect((await reward.fetchPoints()).data.balance, 0,
+      expect((await reward.fetchPoints()).data.balance, pointsBefore - 500,
           reason: 'poinnya hilang');
       expect((await reward.fetchCoins()).data.balance, coinsBefore,
           reason: 'dan tidak ada koin yang masuk sebagai gantinya');

@@ -16,7 +16,6 @@ import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:marketplace_app_member/config/env/env.dart';
 import 'package:marketplace_app_member/config/network/dio_client.dart';
-import 'package:marketplace_app_member/core/data/datasources/remote/service/auth_service.dart';
 import 'support/test_account.dart';
 import 'package:marketplace_app_member/core/data/datasources/remote/service/payment_service.dart';
 import 'package:marketplace_app_member/core/data/datasources/remote/service/wallet_service.dart';
@@ -27,31 +26,25 @@ void main() {
   late WalletService wallet;
   late PaymentService payments;
 
+  // Satu akun bersama untuk seluruh berkas ini, dipakai ulang lintas putaran.
+  //
+  // Aman dipakai bersama karena **saldo tidak bisa tumbuh di dev**: satu-satunya
+  // jalan mengkredit dompet adalah callback penyedia pembayaran, yang menuntut
+  // HMAC dengan WEBHOOK_SIGNING_SECRET yang tidak ada di repo. Jadi saldonya
+  // tetap 0 berapa kali pun suite dijalankan, dan topup hanya menumpuk baris
+  // payment_transactions berstatus pending yang tidak dilihat test mana pun.
   setUp(() async {
     dio = DioClient.createBare(Env.apiBaseUrl);
-    final auth = AuthService(dio);
     wallet = WalletService(dio);
     payments = PaymentService(dio);
 
-    final stamp = DateTime.now().microsecondsSinceEpoch;
-    final email = 'uji.wallet.$stamp@marketplace.local';
-    final phone =
-        '08${stamp.toString().substring(stamp.toString().length - 10)}';
-    const password = 'RahasiaAman123';
-
-    await auth.register(
-      email: email,
-      password: password,
-      fullName: 'Uji Wallet',
-      phone: phone,
-    );
-    await loginAs(dio, email: email, password: password);
+    await sharedAccount(dio, purpose: 'ringan');
   });
 
   tearDown(() => dio.close(force: true));
 
   group('GET /wallet', () {
-    test('dompet dibuat otomatis untuk akun baru — bukan 404', () async {
+    test('dompet dibuat otomatis saat pertama dibaca — bukan 404', () async {
       final result = await wallet.fetchWallet();
 
       expect(result.statusCode, 200);

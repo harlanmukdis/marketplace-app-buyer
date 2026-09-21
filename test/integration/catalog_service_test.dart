@@ -18,7 +18,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:marketplace_app_member/config/env/env.dart';
 import 'package:marketplace_app_member/config/network/dio_client.dart';
 import 'package:marketplace_app_member/core/data/datasources/remote/service/address_service.dart';
-import 'package:marketplace_app_member/core/data/datasources/remote/service/auth_service.dart';
 import 'support/test_account.dart';
 import 'package:marketplace_app_member/core/data/datasources/remote/service/catalog_service.dart';
 import 'package:marketplace_app_member/core/domain/model/catalog/product_facets.dart';
@@ -67,14 +66,34 @@ void main() {
       // membawa gambar sama sekali, sehingga tiap kartu produk terpaksa
       // memakai placeholder — satu-satunya alternatifnya menembak detail per
       // kartu (N+1).
-      final result = await catalog.fetchProducts(perPage: 5);
-
+      final result = await catalog.fetchProducts(perPage: 20);
       expect(result.data, isNotEmpty);
+
+      // ⚠️ TIDAK "setiap item punya gambar": produk yang memang belum punya
+      // `product_images` sah mengembalikan `image_url: null`, dan seed sudah
+      // memuat beberapa (mis. "Produk Aktif BS"). Karena urutan defaultnya
+      // `latest`, produk tanpa gambar bisa muncul paling atas kapan saja —
+      // memaku "semuanya bergambar" membuat test ini merah tanpa ada yang
+      // rusak.
+      //
+      // Yang dibuktikan: untuk produk yang PUNYA gambar di detailnya,
+      // listingnya ikut membawanya — itulah isi commit `db8a626`.
+      ProductModel? berGambar;
       for (final product in result.data) {
-        expect(product.listingImageUrl, isNotNull);
-        // Dan getter bersama itu menyerapnya, bukan hanya `images[]`.
-        expect(product.primaryImageUrl, product.listingImageUrl);
+        final detail = await catalog.fetchProduct(product.id);
+        if (detail.data.images.isNotEmpty) {
+          berGambar = product;
+          break;
+        }
       }
+
+      expect(berGambar, isNotNull,
+          reason: 'tidak ada satu pun produk bergambar di katalog — seed ulang');
+      expect(berGambar!.listingImageUrl, isNotNull,
+          reason: 'detailnya punya images[], jadi listing wajib membawa '
+              'image_url');
+      // Dan getter bersama itu menyerapnya, bukan hanya `images[]`.
+      expect(berGambar.primaryImageUrl, berGambar.listingImageUrl);
     });
 
     test('facet rating selalu ada, dan `count`-nya integer', () async {
@@ -225,33 +244,30 @@ void main() {
     late CatalogService authedCatalog;
     late int addressId;
 
+    // Akun bersama — lihat `support/test_account.dart` (plafon 20 login per IP
+    // per 15 menit). Alamatnya ikut dipakai ulang: estimasi ongkir hanya
+    // membaca alamat, tidak mengubahnya, jadi tidak ada yang perlu dibersihkan.
     setUp(() async {
       authed = DioClient.createBare(Env.apiBaseUrl);
-      final auth = AuthService(authed);
       authedCatalog = CatalogService(authed);
 
-      final stamp = DateTime.now().microsecondsSinceEpoch;
-      final email = 'uji.ongkir.$stamp@marketplace.local';
-      const password = 'RahasiaAman123';
-      await auth.register(
-        email: email,
-        password: password,
-        fullName: 'Uji Ongkir',
-        phone: '08${stamp.toString().substring(stamp.toString().length - 10)}',
-      );
-      await loginAs(authed, email: email, password: password);
+      await sharedAccount(authed, purpose: 'ongkir');
 
-      addressId = (await AddressService(authed).create(
-        label: 'Rumah',
-        recipientName: 'Uji Ongkir',
-        phone: '081200000000',
-        fullAddress: 'Jl. Uji No. 1',
-        city: 'Jakarta Selatan',
-        province: 'DKI Jakarta',
-        postalCode: '12810',
-        isPrimary: true,
-      ))
-          .data;
+      final addresses = AddressService(authed);
+      final existing = (await addresses.list()).data;
+      addressId = existing.isNotEmpty
+          ? existing.first.id
+          : (await addresses.create(
+              label: 'Rumah',
+              recipientName: 'Uji Ongkir',
+              phone: '081200000000',
+              fullAddress: 'Jl. Uji No. 1',
+              city: 'Jakarta Selatan',
+              province: 'DKI Jakarta',
+              postalCode: '12810',
+              isPrimary: true,
+            ))
+              .data;
     });
 
     tearDown(() => authed.close(force: true));

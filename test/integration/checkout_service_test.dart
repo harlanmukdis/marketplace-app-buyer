@@ -21,7 +21,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:marketplace_app_member/config/env/env.dart';
 import 'package:marketplace_app_member/config/network/dio_client.dart';
 import 'package:marketplace_app_member/core/data/datasources/remote/service/address_service.dart';
-import 'package:marketplace_app_member/core/data/datasources/remote/service/auth_service.dart';
 import 'support/test_account.dart';
 import 'package:marketplace_app_member/core/data/datasources/remote/service/cart_service.dart';
 import 'package:marketplace_app_member/core/data/datasources/remote/service/catalog_service.dart';
@@ -39,27 +38,26 @@ void main() {
 
   late int variantId;
 
+  // Akun bersama, bukan akun baru per test — lihat `support/test_account.dart`
+  // untuk alasannya (plafon 20 login per IP per 15 menit).
+  //
+  // Keranjangnya dikosongkan tiap test karena sesi checkout dibangun dari isi
+  // keranjang. Sesi dan order yang tertinggal tidak perlu dibersihkan: tiap
+  // test memakai id sesi yang baru dibuatnya sendiri.
   setUp(() async {
     dio = DioClient.createBare(Env.apiBaseUrl);
-    final auth = AuthService(dio);
     addresses = AddressService(dio);
     cart = CartService(dio);
     catalog = CatalogService(dio);
     checkout = CheckoutService(dio);
 
-    final stamp = DateTime.now().microsecondsSinceEpoch;
-    final email = 'uji.checkout.$stamp@marketplace.local';
-    final phone =
-        '08${stamp.toString().substring(stamp.toString().length - 10)}';
-    const password = 'RahasiaAman123';
+    await sharedAccount(dio, purpose: 'belanja');
 
-    await auth.register(
-      email: email,
-      password: password,
-      fullName: 'Uji Checkout',
-      phone: phone,
-    );
-    await loginAs(dio, email: email, password: password);
+    for (final group in (await cart.fetchCart()).data) {
+      for (final item in group.items) {
+        await cart.removeItem(item.id);
+      }
+    }
 
     // Bukan produk pertama: test ini mengonsumsi stok setiap kali dijalankan,
     // jadi harus mencari varian yang masih tersedia.
@@ -308,10 +306,30 @@ void main() {
       await cart.addItem(productVariantId: variantId, quantity: 1);
 
       // Tambahkan satu baris lagi lalu lepas centangnya.
-      final listing = await catalog.fetchProducts(perPage: 5);
-      final otherDetail = await catalog.fetchProduct(listing.data.last.id);
-      final otherVariantId = otherDetail.data.variants.first.id;
-      await cart.addItem(productVariantId: otherVariantId, quantity: 1);
+      //
+      // Variannya harus benar-benar BERBEDA dari `variantId`: `POST
+      // /cart/items` untuk varian yang sama menggabungkan kuantitas ke baris
+      // lama alih-alih membuat baris baru, sehingga melepas centangnya akan
+      // mengosongkan seluruh pilihan dan `createSession` dibalas "cart
+      // kosong". Dulu ini kebetulan tidak pernah terjadi karena
+      // `findVariantWithStock` selalu menunjuk produk lain — tapi ia bergeser
+      // seiring stok terpakai, jadi kesamaannya harus dicegah eksplisit.
+      int? otherVariantId;
+      final listing = await catalog.fetchProducts(perPage: 20);
+      for (final product in listing.data.reversed) {
+        final detail = await catalog.fetchProduct(product.id);
+        final candidate = detail.data.variants
+            .where((v) => v.id != variantId && (v.stock ?? 0) > 0)
+            .firstOrNull;
+        if (candidate != null) {
+          otherVariantId = candidate.id;
+          break;
+        }
+      }
+      expect(otherVariantId, isNotNull,
+          reason: 'butuh dua varian berstok yang berbeda — seed ulang '
+              'databasenya kalau katalognya sudah habis');
+      await cart.addItem(productVariantId: otherVariantId!, quantity: 1);
 
       final before = (await cart.fetchCart()).data.expand((g) => g.items);
       final unselected =

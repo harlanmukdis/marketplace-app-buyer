@@ -10,7 +10,6 @@ import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:marketplace_app_member/config/env/env.dart';
 import 'package:marketplace_app_member/config/network/dio_client.dart';
-import 'package:marketplace_app_member/core/data/datasources/remote/service/auth_service.dart';
 import 'support/test_account.dart';
 import 'package:marketplace_app_member/core/data/datasources/remote/service/catalog_service.dart';
 import 'package:marketplace_app_member/core/data/datasources/remote/service/review_service.dart';
@@ -25,26 +24,25 @@ void main() {
 
   late List<int> productIds;
 
+  // Akun bersama, bukan akun baru per test — lihat `support/test_account.dart`
+  // untuk alasannya (plafon 20 login per IP per 15 menit).
+  //
+  // Wishlist **bisa dikosongkan** lewat API, jadi tiap test tetap mulai dari
+  // keadaan bersih tanpa perlu akun baru. Itu sebabnya berkas ini memakai
+  // sharedAccount, sementara chat dan notifikasi — yang sumber dayanya tidak
+  // punya endpoint hapus — terpaksa memakai akun baru.
   setUp(() async {
     dio = DioClient.createBare(Env.apiBaseUrl);
-    final auth = AuthService(dio);
     wishlist = WishlistService(dio);
     reviews = ReviewService(dio);
     catalog = CatalogService(dio);
 
-    final stamp = DateTime.now().microsecondsSinceEpoch;
-    final email = 'uji.wl.$stamp@marketplace.local';
-    final phone =
-        '08${stamp.toString().substring(stamp.toString().length - 10)}';
-    const password = 'RahasiaAman123';
+    await sharedAccount(dio, purpose: 'ringan');
 
-    await auth.register(
-      email: email,
-      password: password,
-      fullName: 'Uji Wishlist',
-      phone: phone,
-    );
-    await loginAs(dio, email: email, password: password);
+    final existing = await wishlist.fetch();
+    for (final item in existing.data) {
+      await wishlist.remove(item.productId);
+    }
 
     final listing = await catalog.fetchProducts(perPage: 5);
     productIds = listing.data.map((p) => p.id).toList();
@@ -53,18 +51,26 @@ void main() {
   tearDown(() => dio.close(force: true));
 
   group('wishlist', () {
-    test('akun baru punya wishlist kosong', () async {
+    test('wishlist kosong mengembalikan daftar hampa, bukan 404', () async {
       final result = await wishlist.fetch();
       expect(result.data, isEmpty);
     });
 
     test('menambah produk, dan barisnya membawa gambar', () async {
-      await wishlist.add(productIds.first);
+      // Produknya dipilih yang memang PUNYA gambar: seed memuat beberapa
+      // produk tanpa `product_images`, dan urutan default `latest` bisa
+      // menaruhnya paling atas kapan saja. Memakai `productIds.first` begitu
+      // saja membuat test ini merah tanpa ada yang rusak.
+      final listing = await catalog.fetchProducts(perPage: 20);
+      final bergambar = listing.data
+          .firstWhere((p) => p.listingImageUrl != null);
+
+      await wishlist.add(bergambar.id);
       final result = await wishlist.fetch();
 
       expect(result.data, hasLength(1));
       final item = result.data.single;
-      expect(item.productId, productIds.first);
+      expect(item.productId, bergambar.id);
       expect(item.name, isNotEmpty);
       // Wishlist membawa image_url, tidak seperti GET /products.
       expect(item.imageUrl, isNotNull);

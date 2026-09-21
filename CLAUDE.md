@@ -28,12 +28,10 @@ flutter pub get                       # install dependencies
 flutter run                           # run on connected device/emulator
 flutter analyze                       # static analysis (flutter_lints 4.0.0 via analysis_options.yaml)
 flutter test                          # run all tests (462; all pass)
-# Integrasi: butuh backend hidup, WAJIB serial — DAN penghitung rate limit auth
-# harus dikosongkan dulu, kalau tidak ~100 test merah dengan 429. Lihat
-# "Rate limit auth" di Part 2.
-mysql -u root --socket=/Applications/XAMPP/xamppfiles/var/mysql/mysql.sock \
-  marketplace -e "DELETE FROM auth_rate_limits;"
-flutter test test/integration --concurrency=1
+flutter test test/integration --concurrency=1   # integrasi: butuh backend hidup, WAJIB serial
+# ^ memakai 8 login; plafonnya 20 per IP per 15 menit, jadi maks DUA putaran
+#   beruntun. Lebih dari itu: DELETE FROM auth_rate_limits; (lihat "Rate limit
+#   auth" di Part 2)
 flutter test integration_test/member_journey_test.dart -d macos  # app sungguhan, satu berkas per invokasi
 flutter test test/data                # one directory
 flutter test test/data/auth_repository_impl_test.dart                       # single file
@@ -152,7 +150,7 @@ Current state: `en` and `ar` are complete (284 keys) and selectable. `fr` appear
 >
 > Urutan otoritas kalau sumber saling bertentangan: **`application/config/routes.php` > panduan 20 > Postman > docs lainnya.** Seluruh catatan di bawah ini sudah diselaraskan dengan panduan itu dan diverifikasi ulang ke server pada 14 September 2026.
 >
-> ### 🔴 Rate limit auth — dan kenapa ia mematikan suite integrasi (21 September 2026)
+> ### 🔴 Rate limit auth — dan bagaimana suite integrasi disesuaikan (21 September 2026)
 >
 > Backend v1.2.0 (commit `17df39e`) membatasi endpoint auth. Lewat batas → `429` dengan `error.code = TOO_MANY_REQUESTS`:
 >
@@ -170,15 +168,55 @@ Current state: `en` and `ar` are complete (284 keys) and selectable. `fr` appear
 >
 > Dampaknya melampaui test. Batas **20× per IP** yang juga menghitung keberhasilan berarti satu IP CGNAT operator seluler — yang di Indonesia dibagi ribuan pelanggan — bisa mengunci pengguna yang tidak berbuat apa-apa. Perbaikan lazimnya: hitung percobaan **gagal** saja, lalu kosongkan penghitung begitu login berhasil.
 >
-> **Akibatnya untuk `test/integration/`**: suite ini punya ~135 test yang masing-masing mendaftar + login di `setUp`, jadi ia menembus batas per-IP di sekitar test ke-21 — **100 dari 140 test merah**, semuanya `429`. Tidak ada cara mengakalinya dari sisi FE: `register` tidak mengembalikan token, `verify-email` juga tidak, dan `proxy_ips` kosong sehingga `X-Forwarded-For` diabaikan. Suite **sengaja tidak ditulis ulang** supaya muat di 20 login — lihat alasannya di `test/integration/support/test_account.dart`. Sampai backend memperbaikinya:
+> Keputusannya: **ikuti backend, sesuaikan suite** — bukan minta batasnya dilonggarkan. Perilaku di atas tetap dipatok test supaya tidak hilang dari ingatan, tapi batasnya diperlakukan sebagai kenyataan yang harus dihidupi.
+>
+> #### Suite integrasi: dari ~138 login jadi 8
+>
+> Versi lama mendaftar + login di `setUp`, yang berjalan **per test** — ~138 login per putaran, sehingga **100 dari 140 test merah** dengan `429`. Tidak ada jalan memutar: `register` maupun `verify-email` tidak mengembalikan token, dan `proxy_ips` kosong sehingga `X-Forwarded-For` diabaikan. **20 per IP adalah plafon mutlak.**
+>
+> Kuncinya: **`POST /auth/refresh` TIDAK dibatasi** (diverifikasi — tiga refresh beruntun `200`, refresh token dirotasi). Jadi akun yang sudah pernah login bisa dihidupkan selamanya tanpa menyentuh kuota. `test/integration/support/test_account.dart` menyediakan:
+>
+> | helper | biaya | untuk |
+> |---|---|---|
+> | `sharedAccount(dio, purpose:)` | **1 login seumur cache** | mayoritas berkas — akunnya disimpan ke berkas di temp dan diperpanjang lewat `/auth/refresh` |
+> | `freshAccount(dio)` | 1 login **tiap putaran** | hanya kalau keadaan "belum punya apa-apa" memang yang diuji |
+> | `loginAs(dio, email:)` | 1 login seumur cache | akun seed (8 penjual) |
+>
+> Konsekuensinya keadaan akun **menumpuk**, jadi tiap berkas menanganinya sesuai sumber dayanya:
+>
+> - **bisa dihapus lewat API** (keranjang, wishlist) → `sharedAccount` + pembersihan di `setUp`;
+> - **tidak bisa dihapus** (percakapan chat, notifikasi) → `freshAccount` sekali per *berkas* di `setUpAll`, lalu tiap test mengambil **toko yang berbeda** supaya percakapannya tetap perawan (`UNIQUE (buyer_id, store_id)`, seed punya 8 toko);
+> - **tidak perlu bersih** (pesanan) → `sharedAccount`, assertion-nya memang sudah relatif.
+>
+> Hasilnya, diukur: **8 login per putaran** (dari ~138), seluruh 140 test hijau, dan waktunya turun dari **2 menit 8 detik jadi 15 detik**. Saat cache **dingin** — clone baru, atau sesudah DB di-seed ulang — satu putaran memakai **18**, masih muat. Dua putaran hangat beruntun muat di satu jendela; yang **ketiga** menyentuh plafon:
 >
 > ```bash
-> # kosongkan penghitung di DB dev sebelum/selama menjalankan suite
+> # kalau perlu menjalankan lebih dari dua kali dalam 15 menit
 > mysql -u root --socket=/Applications/XAMPP/xamppfiles/var/mysql/mysql.sock \
 >   marketplace -e "DELETE FROM auth_rate_limits;"
 > ```
 >
-> `registerAndLogin`/`loginAs` di `test/integration/support/test_account.dart` mengubah kegagalan berantai itu jadi **satu pesan yang menyebut sebab dan jalan keluarnya**, bukan 100 error tanpa konteks.
+> Sisa 8 login itu **melekat pada apa yang diuji** dan tidak bisa dihapus: lima di `auth_service_test.dart` (menguji login memang menuntut login), satu untuk pembeli chat, satu untuk pembeli notifikasi, satu sisanya untuk akun bersama yang kebetulan baru lahir. Jumlah akun bersama sengaja ditekan dengan menggabungkan yang perilakunya sama — `belanja` dipakai bersama oleh keranjang, checkout, dan pesanan; `ringan` oleh dompet dan wishlist; `kosong` oleh chat dan notifikasi — dan test notifikasi cukup mengundang **tiga** penjual seed, bukan kedelapannya.
+>
+> Test yang membuktikan "login berhasil pun dihitung" memakai **enam** login sendirian, jadi ia **tidak ikut berjalan secara default**:
+>
+> ```bash
+> flutter test test/integration/auth_service_test.dart \
+>   --dart-define=UJI_RATE_LIMIT=true --plain-name 'rate limit'
+> ```
+>
+> Kalau `429` tetap muncul, helper-nya mengubahnya jadi **satu pesan yang menyebut sebab dan jalan keluarnya**, bukan 100 error tanpa konteks. Penyebab tersering: cache akun terhapus, DB baru di-seed ulang, atau suite dijalankan bersamaan dengan `integration_test/`. Cache-nya aman dihapus kapan saja — ia dibangun ulang sendiri:
+>
+> ```bash
+> rm "$TMPDIR/marketplace_member_it_accounts.json"
+> ```
+>
+> #### Dua kerapuhan laten yang ikut ketahuan
+>
+> Keduanya sudah ada sebelum rate limit, hanya belum pernah kebetulan terpicu:
+>
+> - **`GET /products` urutan `latest` bisa menaruh produk TANPA gambar paling atas.** Dua test memaku "item listing membawa `image_url`" dengan memakai produk pertama; begitu backend menambah `Produk Aktif BS`/`Produk Draf BS` (21 September, tanpa `product_images`), keduanya merah padahal tidak ada yang rusak — produk tanpa gambar memang sah mengembalikan `null`. Sekarang testnya mencari produk yang **detailnya punya `images[]`** lalu memastikan listingnya ikut membawanya; itu yang sebenarnya dijanjikan commit `db8a626`.
+> - **Test "checkout menghapus baris tercentang saja" bisa memilih varian yang sama dua kali.** `POST /cart/items` untuk varian yang sudah ada **menggabungkan** kuantitas alih-alih membuat baris baru, jadi melepas centangnya mengosongkan seluruh pilihan dan `createSession` dibalas "cart kosong". Dulu tidak pernah terjadi karena `findVariantWithStock` kebetulan selalu menunjuk produk lain — tapi ia bergeser seiring stok terpakai. Sekarang varian keduanya dijamin berbeda secara eksplisit.
 >
 > ### 🔁 Backend ganti total pada 13 September 2026
 >
@@ -295,7 +333,7 @@ Current state: `en` and `ar` are complete (284 keys) and selectable. `fr` appear
 - **Notification domain** — `lib/core/…/notification/` + `lib/ui/main/notification/`; lihat "Domain notifikasi" di bawah
 - **Reward domain** — `lib/core/…/reward/` + `lib/ui/main/reward/`; lihat "Domain reward" di bawah
 - **Chat domain** — `lib/core/…/chat/` + `lib/ui/main/chat/`; lihat "Domain chat" di bawah
-- Tests: `test/util/` (17, murni), `test/data/` (162, fake service/store + parsing JSON asli), `test/ui/` (142, fake repository), `test/integration/` (141, butuh backend hidup — **jalankan `--concurrency=1`**, dan kosongkan `auth_rate_limits` dulu) — **462 total, semuanya lulus**
+- Tests: `test/util/` (17, murni), `test/data/` (162, fake service/store + parsing JSON asli), `test/ui/` (142, fake repository), `test/integration/` (141 — 140 jalan + 1 opt-in; butuh backend hidup, **jalankan `--concurrency=1`**) — **462 total, semuanya lulus**
 - **`integration_test/`** — app sungguhan di perangkat sungguhan, **di luar `flutter test`**; lihat "Test app sungguhan" di bawah
 
 Still absent: Firebase and `lib/firebase_options.dart`.

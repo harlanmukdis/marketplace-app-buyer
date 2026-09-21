@@ -16,7 +16,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:marketplace_app_member/config/env/env.dart';
 import 'package:marketplace_app_member/config/network/dio_client.dart';
 import 'package:marketplace_app_member/core/data/datasources/remote/service/address_service.dart';
-import 'package:marketplace_app_member/core/data/datasources/remote/service/auth_service.dart';
 import 'support/test_account.dart';
 import 'package:marketplace_app_member/core/data/datasources/remote/service/cart_service.dart';
 import 'package:marketplace_app_member/core/data/datasources/remote/service/catalog_service.dart';
@@ -41,7 +40,6 @@ void main() {
 
   setUp(() async {
     dio = DioClient.createBare(Env.apiBaseUrl);
-    final auth = AuthService(dio);
     final addresses = AddressService(dio);
     cart = CartService(dio);
     catalog = CatalogService(dio);
@@ -49,35 +47,37 @@ void main() {
     orders = OrderService(dio);
     payments = PaymentService(dio);
 
-    final stamp = DateTime.now().microsecondsSinceEpoch;
-    final email = 'uji.order.$stamp@marketplace.local';
-    final phone =
-        '08${stamp.toString().substring(stamp.toString().length - 10)}';
-    const password = 'RahasiaAman123';
+    // Akun bersama — lihat `support/test_account.dart` (plafon 20 login per IP
+    // per 15 menit). Pesanan MENUMPUK di akun ini, dan itu tidak apa-apa:
+    // seluruh assertion di berkas ini relatif (`isNotEmpty`, "setiap baris
+    // begini", "mengandung status ini"), bukan jumlah mutlak. Pesanan juga
+    // memang tidak punya endpoint hapus.
+    await sharedAccount(dio, purpose: 'belanja');
 
-    await auth.register(
-      email: email,
-      password: password,
-      fullName: 'Uji Order',
-      phone: phone,
-    );
-    await loginAs(dio, email: email, password: password);
+    for (final group in (await cart.fetchCart()).data) {
+      for (final item in group.items) {
+        await cart.removeItem(item.id);
+      }
+    }
 
     // Bukan produk pertama: test ini mengonsumsi stok setiap kali dijalankan,
     // jadi harus mencari varian yang masih tersedia.
     variantId = (await findVariantWithStock(catalog)).variantId;
 
-    addressId = (await addresses.create(
-      label: 'Rumah',
-      recipientName: 'Uji Order',
-      phone: '081200000000',
-      fullAddress: 'Jl. Uji No. 1',
-      city: 'Jakarta Selatan',
-      province: 'DKI Jakarta',
-      postalCode: '12810',
-      isPrimary: true,
-    ))
-        .data;
+    final existing = (await addresses.list()).data;
+    addressId = existing.isNotEmpty
+        ? existing.first.id
+        : (await addresses.create(
+            label: 'Rumah',
+            recipientName: 'Uji Order',
+            phone: '081200000000',
+            fullAddress: 'Jl. Uji No. 1',
+            city: 'Jakarta Selatan',
+            province: 'DKI Jakarta',
+            postalCode: '12810',
+            isPrimary: true,
+          ))
+            .data;
   });
 
   tearDown(() => dio.close(force: true));
