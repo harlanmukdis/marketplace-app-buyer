@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+
+<html lang="id"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"/><meta content="mobile_blank" name="shell-type"/><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { colors: { "secondary-fixed": "#dce1ff", "on-error": "#ffffff", "primary-fixed": "#dce1ff", "text-placeholder": "#9CA3AF", "success": "#109553", "inverse-on-surface": "#edf0ff", "inverse-primary": "#b6c4ff", "surface-container": "#e9edff", "surface-container-highest": "#dce2f7", "signature-black": "#101014", "surface-container-lowest": "#ffffff", "tertiary-fixed": "#ffdbd1", "background": "#f9f9ff", "on-primary": "#ffffff", "on-primary-fixed-variant": "#003ab2", "outline": "#737688", "on-secondary-container": "#2e4387", "surface-container-high": "#e1e8fd", "surface-container-low": "#f1f3ff", "text-on-brand": "#FFFFFF", "on-tertiary": "#ffffff", "signature-gold": "#C9A227", "primary": "#0042c7", "on-primary-container": "#e3e7ff", "primary-container": "#0056fe", "brand-primary-pressed": "#0047D1", "surface-variant": "#dce2f7", "border-default": "#D1D5DB", "primary-fixed-dim": "#b6c4ff", "error-container": "#ffdad6", "border-strong": "#9CA3AF", "on-primary-fixed": "#001550", "tertiary-fixed-dim": "#ffb5a0", "on-secondary-fixed": "#00164f", "text-secondary": "#4B5563", "warning-subtle": "#FFF6E5", "surface": "#f9f9ff", "on-secondary": "#ffffff", "outline-variant": "#c3c5d9", "surface-dim": "#d3daef", "text-tertiary": "#6B7280", "on-surface-variant": "#434656", "bg-sunken": "#EFF1F4", "on-surface": "#141b2b", "success-subtle": "#E8F8EF", "tertiary": "#972600", "surface-bright": "#f9f9ff", "brand-subtle": "#EBF2FF", "danger": "#FB132D", "on-tertiary-fixed": "#3b0900", "warning": "#F59E0B", "on-secondary-fixed-variant": "#2d4286", "on-tertiary-fixed-variant": "#872100", "on-background": "#141b2b", "secondary-fixed-dim": "#b6c4ff", "on-tertiary-container": "#ffe2da", "secondary": "#465ba0", "surface-tint": "#004ee8", "border-subtle": "#E5E7EB", "bg-surface": "#FFFFFF", "bg-canvas": "#F7F8FA", "on-error-container": "#93000a", "text-primary": "#111827", "brand-navy": "#0F286C", "danger-subtle": "#FFECEE", "secondary-container": "#9fb3ff", "error": "#ba1a1a", "inverse-surface": "#293040", "tertiary-container": "#c13402", "brand-primary": "#0056FE" }, borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" }, spacing: { "space-md": "0.75rem", "space-sm": "0.5rem", "space-xl": "1.5rem", "gutter": "0.75rem", "space-lg": "1rem", "margin": "1rem", "space-xs": "0.25rem" }, fontFamily: { "price-sm": ["Inter"], "headline-xl": ["Inter"], "body-md": ["Inter"], "headline-md": ["Inter"], "label-sm": ["Inter"], "price-lg": ["Inter"], "label-md": ["Inter"], "label-lg": ["Inter"], "title-lg": ["Inter"], "title-md": ["Inter"], "price-md": ["Inter"], "body-lg": ["Inter"], "headline-lg": ["Inter"], "body-sm": ["Inter"], "caption": ["Inter"] }, fontSize: { "price-sm": ["14px", { lineHeight: "20px", fontWeight: "600" }], "headline-xl": ["24px", { lineHeight: "32px", fontWeight: "700" }], "body-md": ["14px", { lineHeight: "20px", fontWeight: "400" }], "headline-md": ["18px", { lineHeight: "26px", fontWeight: "600" }], "label-sm": ["11px", { lineHeight: "14px", fontWeight: "500" }], "price-lg": ["18px", { lineHeight: "24px", fontWeight: "700" }], "label-md": ["12px", { lineHeight: "16px", fontWeight: "500" }], "label-lg": ["14px", { lineHeight: "20px", fontWeight: "500" }], "title-lg": ["16px", { lineHeight: "24px", fontWeight: "600" }], "title-md": ["14px", { lineHeight: "20px", fontWeight: "600" }], "price-md": ["16px", { lineHeight: "22px", fontWeight: "700" }], "body-lg": ["16px", { lineHeight: "24px", fontWeight: "400" }], "headline-lg": ["20px", { lineHeight: "28px", fontWeight: "600" }], "body-sm": ["12px", { lineHeight: "18px", fontWeight: "400" }], "caption": ["11px", { lineHeight: "14px", fontWeight: "400" }] } } } };</script><style>@layer base{html,body{width:100%;margin:0;padding:0;}body{overscroll-behavior-y:none;-webkit-tap-highlight-color:transparent;}.pb-safe{padding-bottom:env(safe-area-inset-bottom,0px);}.pt-safe{padding-top:env(safe-area-inset-top,0px);}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style></head><body class="bg-signature-black/55 backdrop-blur-[2px] min-h-screen flex flex-col justify-end pt-safe"><main class="flex flex-col relative w-full max-w-[440px] mx-auto bg-bg-surface rounded-t-[1.25rem] shadow-[0_-8px_32px_rgba(17,24,39,0.16)] pb-safe overflow-hidden"><div class="flex flex-col w-full relative">
+<!-- Drag Handle Indicator for Native Bottom Sheet Feel -->
+<div class="w-full flex items-center justify-center pt-3 pb-2 cursor-grab active:cursor-grabbing">
+<div class="w-10 h-1 rounded-full bg-border-default/60"></div>
+</div>
+<!-- Header Section with Live Thumbnail, Pricing, and Stock Status -->
+<div class="px-margin pt-1 pb-space-lg flex items-start gap-space-md relative">
+<!-- Product Thumbnail with subtle rounded framing -->
+<div class="relative w-20 h-20 rounded-xl overflow-hidden bg-bg-sunken flex-shrink-0 shadow-sm">
+<img class="w-full h-full object-cover transition-transform duration-300 ease-out" data-alt="Studio product photograph of premium JBL Tune 770NC wireless over-ear headphones in sleek matte black finish with clean modern backdrop and studio reflections highlighting ergonomic leather earcups." id="variant-thumb" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAAsYhf5M4D5jUOlrUpcH77laKflUmilW6BREqfAa-794kcAhqS6a5BDB0CFQOE52Gm1NvCtOTJksfMECyYZGBXnFUbhb4FHDEODo32zii06jSI0nF973KZUDOYwkxCRpjNseYxsfzlyWRdflEnc10umFifJrg0y5ANyQx8vdWPuCSE39nlkM730raxdN0jx2sm1o88FZn0_yB-Gyb8D_3X2cqhQZZawHDkxndqEsUHQNIHD0e8fZDN"/>
+<!-- Dynamic Mini Accent Tag -->
+<span class="absolute bottom-1 left-1 bg-signature-black/80 backdrop-blur-xs text-text-on-brand font-caption text-caption px-1.5 py-0.5 rounded">
+        Ori
+      </span>
+</div>
+<!-- Header Details: Price, Dynamic Variant Summary & Stock Tag -->
+<div class="flex flex-col flex-1 min-w-0 pr-8">
+<div class="flex items-baseline gap-1.5 flex-wrap">
+<span class="font-price-lg text-price-lg text-brand-primary" id="product-price">Rp 1.399.000</span>
+<span class="font-body-sm text-body-sm text-text-tertiary line-through">Rp 1.899.000</span>
+</div>
+<!-- Stock Pill (Regional Indonesian Market Habit) -->
+<div class="flex items-center gap-1.5 mt-1">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-success-subtle text-success font-label-sm text-label-sm">
+<span class="w-1.5 h-1.5 rounded-full bg-success animate-pulse"></span>
+<span id="stock-count">Sisa Stok: 48 buah</span>
+</span>
+</div>
+<!-- Current Selected Descriptor -->
+<p class="font-body-sm text-body-sm text-text-secondary mt-1.5 truncate">
+        Varian: <span class="font-title-md text-text-primary" id="selected-summary">Hitam, Standard</span>
+</p>
+</div>
+<!-- Close Button Modal Dismissal -->
+<button aria-label="Tutup Pilihan Varian" class="absolute top-1 right-margin w-10 h-10 flex items-center justify-center rounded-full bg-bg-sunken text-text-secondary hover:text-text-primary transition-colors active:scale-95" id="btn-close-sheet" type="button">
+<span class="material-symbols-outlined text-[20px]">close</span>
+</button>
+</div>
+<!-- Divider Separation using Soft Background Band instead of raw borders -->
+<div class="w-full h-1.5 bg-bg-sunken"></div>
+<!-- Scrollable Option Stack -->
+<div class="px-margin py-space-lg flex flex-col gap-space-xl overflow-y-auto max-h-[52vh]">
+<!-- Variant Group 1: Warna -->
+<div class="flex flex-col gap-space-md">
+<div class="flex items-center justify-between">
+<label class="font-title-md text-title-md text-text-primary">Pilih Warna</label>
+<span class="font-caption text-caption text-text-tertiary">3 Pilihan</span>
+</div>
+<div aria-label="Pilih Warna Produk" class="flex flex-wrap gap-2.5" id="color-group" role="radiogroup">
+<!-- Chip 1: Hitam (Selected) -->
+<button aria-checked="true" class="variant-btn relative flex items-center gap-2 px-3.5 py-2 rounded-lg bg-brand-subtle text-brand-primary font-label-lg text-label-lg shadow-sm transition-all active:scale-95" data-image-alt="Studio product photograph of premium JBL Tune 770NC wireless over-ear headphones in sleek matte black finish." data-name="Hitam" data-type="color" type="button">
+<span class="w-3.5 h-3.5 rounded-full bg-signature-black shadow-inner"></span>
+<span>Hitam</span>
+<span class="material-symbols-outlined text-[16px] text-brand-primary checkmark">check</span>
+</button>
+<!-- Chip 2: Putih -->
+<button aria-checked="false" class="variant-btn relative flex items-center gap-2 px-3.5 py-2 rounded-lg bg-bg-sunken text-text-secondary font-label-lg text-label-lg transition-all active:scale-95" data-image-alt="Studio shot of modern wireless headphones in pure pearl white with brushed aluminum sliders and plush cushions." data-name="Putih" data-type="color" type="button">
+<span class="w-3.5 h-3.5 rounded-full bg-bg-surface shadow-sm"></span>
+<span>Putih</span>
+<span class="material-symbols-outlined text-[16px] text-brand-primary checkmark hidden">check</span>
+</button>
+<!-- Chip 3: Biru -->
+<button aria-checked="false" class="variant-btn relative flex items-center gap-2 px-3.5 py-2 rounded-lg bg-bg-sunken text-text-secondary font-label-lg text-label-lg transition-all active:scale-95" data-image-alt="Vibrant studio shot of wireless over-ear headphones in deep midnight blue tone with titanium hinge accents." data-name="Biru" data-type="color" type="button">
+<span class="w-3.5 h-3.5 rounded-full bg-brand-navy shadow-inner"></span>
+<span>Biru</span>
+<span class="material-symbols-outlined text-[16px] text-brand-primary checkmark hidden">check</span>
+</button>
+</div>
+</div>
+<!-- Variant Group 2: Tipe Paket -->
+<div class="flex flex-col gap-space-md">
+<div class="flex items-center justify-between">
+<label class="font-title-md text-title-md text-text-primary">Tipe Paket</label>
+<span class="font-label-sm text-label-sm text-brand-primary flex items-center gap-0.5">
+<span class="material-symbols-outlined text-[14px]">local_shipping</span> Garansi Resmi 1 Thn
+        </span>
+</div>
+<div aria-label="Tipe Paket" class="flex flex-col gap-2" id="bundle-group" role="radiogroup">
+<!-- Bundle 1: Standard (Selected) -->
+<button aria-checked="true" class="bundle-btn w-full flex items-center justify-between px-space-md py-2.5 rounded-lg bg-brand-subtle text-brand-primary transition-all active:scale-[0.99]" data-extra="0" data-name="Standard" data-type="bundle" type="button">
+<div class="flex items-center gap-2.5">
+<span class="material-symbols-outlined text-[18px] text-brand-primary checkmark">radio_button_checked</span>
+<span class="font-label-lg text-label-lg">Standard Unit Box</span>
+</div>
+<span class="font-body-sm text-body-sm font-semibold">Termasuk</span>
+</button>
+<!-- Bundle 2: Bundle Case -->
+<button aria-checked="false" class="bundle-btn w-full flex items-center justify-between px-space-md py-2.5 rounded-lg bg-bg-sunken text-text-secondary transition-all active:scale-[0.99]" data-extra="89000" data-name="Bundle Case" data-type="bundle" type="button">
+<div class="flex items-center gap-2.5">
+<span class="material-symbols-outlined text-[18px] text-text-tertiary checkmark">radio_button_unchecked</span>
+<span class="font-label-lg text-label-lg">Bundle Hard Case Protection</span>
+</div>
+<span class="font-body-sm text-body-sm text-text-primary font-medium">+Rp 89.000</span>
+</button>
+<!-- Bundle 3: Travel Pouch -->
+<button aria-checked="false" class="bundle-btn w-full flex items-center justify-between px-space-md py-2.5 rounded-lg bg-bg-sunken text-text-secondary transition-all active:scale-[0.99]" data-extra="50000" data-name="Travel Pouch" data-type="bundle" type="button">
+<div class="flex items-center gap-2.5">
+<span class="material-symbols-outlined text-[18px] text-text-tertiary checkmark">radio_button_unchecked</span>
+<span class="font-label-lg text-label-lg">Travel Velvet Pouch</span>
+</div>
+<span class="font-body-sm text-body-sm text-text-primary font-medium">+Rp 50.000</span>
+</button>
+</div>
+</div>
+<!-- Quantity Stepper Section -->
+<div class="flex items-center justify-between pt-1">
+<div class="flex flex-col">
+<label class="font-title-md text-title-md text-text-primary">Jumlah Pembelian</label>
+<span class="font-body-sm text-body-sm text-text-tertiary">Maksimal beli 5 unit per transaksi</span>
+</div>
+<!-- Compact 36dp Height Stepper Control -->
+<div class="flex items-center bg-bg-sunken rounded-lg p-0.5">
+<button aria-label="Kurangi Jumlah" class="w-9 h-9 flex items-center justify-center rounded text-text-tertiary disabled:opacity-40 transition-all active:scale-90" disabled="" id="btn-qty-minus" type="button">
+<span class="material-symbols-outlined text-[18px]">remove</span>
+</button>
+<span class="w-10 text-center font-price-sm text-price-sm text-text-primary select-none" id="qty-display">
+          1
+        </span>
+<button aria-label="Tambah Jumlah" class="w-9 h-9 flex items-center justify-center rounded text-text-primary hover:text-brand-primary transition-all active:scale-90" id="btn-qty-plus" type="button">
+<span class="material-symbols-outlined text-[18px]">add</span>
+</button>
+</div>
+</div>
+<!-- Delight Perk Notice: Free Ongkir Tier Highlight -->
+<div class="flex items-center gap-2.5 p-space-md rounded-xl bg-surface-container-high/60">
+<div class="w-8 h-8 rounded-full bg-brand-primary flex items-center justify-center flex-shrink-0 text-text-on-brand shadow-sm">
+<span class="material-symbols-outlined text-[16px]">local_shipping</span>
+</div>
+<div class="flex flex-col flex-1 min-w-0">
+<p class="font-label-md text-label-md text-text-primary">Bebas Ongkir Reguler ke Kotamu</p>
+<p class="font-caption text-caption text-text-secondary">Estimasi tiba dalam 1 - 2 hari kerja</p>
+</div>
+<span class="font-caption text-caption text-success font-semibold px-2 py-0.5 rounded bg-success-subtle">
+        Hemat Rp20rb
+      </span>
+</div>
+</div>
+<!-- Sticky Bottom Checkout Action Bar (Elevated Floating Ambient Shadow) -->
+<div class="w-full bg-bg-surface p-space-lg shadow-[0_-4px_16px_rgba(17,24,39,0.08)] flex gap-space-md items-center">
+<!-- Secondary Quick Cart Button (Touch target min 48dp) -->
+<button aria-label="Tambah ke Keranjang" class="h-[52px] px-4 rounded-lg bg-brand-subtle text-brand-primary flex items-center justify-center gap-1.5 transition-transform active:scale-95 flex-shrink-0" id="btn-add-cart" type="button">
+<span class="material-symbols-outlined text-[22px]">add_shopping_cart</span>
+<span class="font-label-lg text-label-lg hidden sm:inline">+ Keranjang</span>
+</button>
+<!-- Primary Purchase Button with Computed Total Amount (52px height) -->
+<button class="h-[52px] flex-1 rounded-lg bg-brand-primary text-text-on-brand flex items-center justify-center gap-2 font-headline-md text-headline-md shadow-md active:bg-brand-primary-pressed transition-all active:scale-[0.99]" id="btn-buy-now" type="button">
+<span>Beli Sekarang</span>
+<span class="opacity-60">•</span>
+<span class="font-price-md text-price-md" id="cta-total-price">Rp 1.399.000</span>
+</button>
+</div>
+</div>
+<script>
+  (() => {
+    // Pricing state & configuration
+    const BASE_PRICE = 1399000;
+    const MAX_STOCK = 5;
+    let selectedColor = 'Hitam';
+    let selectedBundle = 'Standard';
+    let bundleExtra = 0;
+    let currentQty = 1;
+
+    // Element bindings
+    const priceDisplay = document.getElementById('product-price');
+    const ctaPriceDisplay = document.getElementById('cta-total-price');
+    const summaryLabel = document.getElementById('selected-summary');
+    const qtyDisplay = document.getElementById('qty-display');
+    const minusBtn = document.getElementById('btn-qty-minus');
+    const plusBtn = document.getElementById('btn-qty-plus');
+    const colorButtons = document.querySelectorAll('#color-group .variant-btn');
+    const bundleButtons = document.querySelectorAll('#bundle-group .bundle-btn');
+    const closeBtn = document.getElementById('btn-close-sheet');
+    const buyBtn = document.getElementById('btn-buy-now');
+    const cartBtn = document.getElementById('btn-add-cart');
+
+    function formatRupiah(num) {
+      return 'Rp ' + num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    }
+
+    function updateTotal() {
+      const singleUnitPrice = BASE_PRICE + bundleExtra;
+      const grandTotal = singleUnitPrice * currentQty;
+
+      priceDisplay.textContent = formatRupiah(singleUnitPrice);
+      ctaPriceDisplay.textContent = formatRupiah(grandTotal);
+      summaryLabel.textContent = `${selectedColor}, ${selectedBundle}`;
+      qtyDisplay.textContent = currentQty;
+
+      minusBtn.disabled = currentQty <= 1;
+      plusBtn.disabled = currentQty >= MAX_STOCK;
+    }
+
+    // Color Selector Micro-Interactions
+    colorButtons.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        colorButtons.forEach((b) => {
+          b.setAttribute('aria-checked', 'false');
+          b.classList.remove('bg-brand-subtle', 'text-brand-primary', 'shadow-sm');
+          b.classList.add('bg-bg-sunken', 'text-text-secondary');
+          const tick = b.querySelector('.checkmark');
+          if (tick) tick.classList.add('hidden');
+        });
+
+        btn.setAttribute('aria-checked', 'true');
+        btn.classList.add('bg-brand-subtle', 'text-brand-primary', 'shadow-sm');
+        btn.classList.remove('bg-bg-sunken', 'text-text-secondary');
+        const activeTick = btn.querySelector('.checkmark');
+        if (activeTick) activeTick.classList.remove('hidden');
+
+        selectedColor = btn.dataset.name;
+        updateTotal();
+      });
+    });
+
+    // Bundle Selector Micro-Interactions
+    bundleButtons.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        bundleButtons.forEach((b) => {
+          b.setAttribute('aria-checked', 'false');
+          b.classList.remove('bg-brand-subtle', 'text-brand-primary');
+          b.classList.add('bg-bg-sunken', 'text-text-secondary');
+          const radioIcon = b.querySelector('.checkmark');
+          if (radioIcon) {
+            radioIcon.textContent = 'radio_button_unchecked';
+            radioIcon.classList.remove('text-brand-primary');
+            radioIcon.classList.add('text-text-tertiary');
+          }
+        });
+
+        btn.setAttribute('aria-checked', 'true');
+        btn.classList.add('bg-brand-subtle', 'text-brand-primary');
+        btn.classList.remove('bg-bg-sunken', 'text-text-secondary');
+        const activeRadio = btn.querySelector('.checkmark');
+        if (activeRadio) {
+          activeRadio.textContent = 'radio_button_checked';
+          activeRadio.classList.add('text-brand-primary');
+          activeRadio.classList.remove('text-text-tertiary');
+        }
+
+        selectedBundle = btn.dataset.name;
+        bundleExtra = parseInt(btn.dataset.extra || '0', 10);
+        updateTotal();
+      });
+    });
+
+    // Stepper Handlers
+    plusBtn.addEventListener('click', () => {
+      if (currentQty < MAX_STOCK) {
+        currentQty++;
+        updateTotal();
+      }
+    });
+
+    minusBtn.addEventListener('click', () => {
+      if (currentQty > 1) {
+        currentQty--;
+        updateTotal();
+      }
+    });
+
+    // Tactile Feedback for CTAs
+    closeBtn.addEventListener('click', () => {
+      const parentCard = closeBtn.closest('main');
+      if (parentCard) {
+        parentCard.style.transition = 'transform 0.25s ease-in, opacity 0.2s';
+        parentCard.style.transform = 'translateY(100%)';
+        parentCard.style.opacity = '0';
+      }
+    });
+
+    cartBtn.addEventListener('click', () => {
+      cartBtn.classList.add('scale-90');
+      setTimeout(() => cartBtn.classList.remove('scale-90'), 150);
+      const icon = cartBtn.querySelector('.material-symbols-outlined');
+      if (icon) {
+        icon.textContent = 'check_circle';
+        setTimeout(() => (icon.textContent = 'add_shopping_cart'), 1200);
+      }
+    });
+
+    buyBtn.addEventListener('click', () => {
+      buyBtn.classList.add('scale-95');
+      setTimeout(() => buyBtn.classList.remove('scale-95'), 120);
+    });
+
+    // Initial calculation run
+    updateTotal();
+  })();
+</script></main></body></html>

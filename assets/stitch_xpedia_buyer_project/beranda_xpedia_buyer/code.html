@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+
+<html lang="id" style="width: 390px; min-height: 100%;"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"/>
+<meta content="mobile_tab" name="shell-type"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "on-primary-fixed-variant": "#003ab2",
+            "on-tertiary-fixed-variant": "#872100",
+            "tertiary-fixed": "#ffdbd1",
+            "on-primary-fixed": "#001550",
+            "success-subtle": "#E8F8EF",
+            "border-strong": "#9CA3AF",
+            "brand-navy": "#0F286C",
+            "text-secondary": "#4B5563",
+            "surface-dim": "#d3daef",
+            "outline-variant": "#c3c5d9",
+            "primary": "#0042c7",
+            "brand-primary-pressed": "#0047D1",
+            "signature-gold": "#C9A227",
+            "on-surface-variant": "#434656",
+            "bg-canvas": "#F7F8FA",
+            "secondary": "#465ba0",
+            "primary-fixed-dim": "#b6c4ff",
+            "warning-subtle": "#FFF6E5",
+            "surface-container-lowest": "#ffffff",
+            "on-tertiary-fixed": "#3b0900",
+            "inverse-on-surface": "#edf0ff",
+            "secondary-fixed": "#dce1ff",
+            "tertiary": "#972600",
+            "on-tertiary-container": "#ffe2da",
+            "background": "#f9f9ff",
+            "surface-container": "#e9edff",
+            "success": "#109553",
+            "primary-fixed": "#dce1ff",
+            "surface-container-high": "#e1e8fd",
+            "tertiary-fixed-dim": "#ffb5a0",
+            "error-container": "#ffdad6",
+            "primary-container": "#0056fe",
+            "surface-container-highest": "#dce2f7",
+            "brand-subtle": "#EBF2FF",
+            "tertiary-container": "#c13402",
+            "on-background": "#141b2b",
+            "signature-black": "#101014",
+            "bg-surface": "#FFFFFF",
+            "brand-primary": "#0056FE",
+            "secondary-container": "#9fb3ff",
+            "on-secondary-container": "#2e4387",
+            "border-default": "#D1D5DB",
+            "on-primary-container": "#e3e7ff",
+            "on-tertiary": "#ffffff",
+            "outline": "#737688",
+            "secondary-fixed-dim": "#b6c4ff",
+            "text-primary": "#111827",
+            "inverse-primary": "#b6c4ff",
+            "on-secondary": "#ffffff",
+            "on-secondary-fixed": "#00164f",
+            "on-error-container": "#93000a",
+            "danger": "#FB132D",
+            "error": "#ba1a1a",
+            "border-subtle": "#E5E7EB",
+            "on-primary": "#ffffff",
+            "inverse-surface": "#293040",
+            "text-tertiary": "#6B7280",
+            "warning": "#F59E0B",
+            "surface-container-low": "#f1f3ff",
+            "text-on-brand": "#FFFFFF",
+            "surface-variant": "#dce2f7",
+            "surface-bright": "#f9f9ff",
+            "on-error": "#ffffff",
+            "on-secondary-fixed-variant": "#2d4286",
+            "surface-tint": "#004ee8",
+            "bg-sunken": "#EFF1F4",
+            "surface": "#f9f9ff",
+            "text-placeholder": "#9CA3AF",
+            "danger-subtle": "#FFECEE",
+            "on-surface": "#141b2b"
+          },
+          borderRadius: {
+            DEFAULT: "0.25rem",
+            lg: "0.5rem",
+            xl: "0.75rem",
+            full: "9999px"
+          },
+          fontFamily: {
+            sans: ["Inter", "sans-serif"],
+            body: ["Inter", "sans-serif"]
+          }
+        }
+      }
+    };
+  </script>
+<style>
+    @layer base {
+      html, body {
+        width: 100%;
+        margin: 0;
+        padding: 0;
+        background-color: #F7F8FA;
+        font-family: 'Inter', sans-serif;
+      }
+      body {
+        overscroll-behavior-y: none;
+        -webkit-tap-highlight-color: transparent;
+      }
+      .pb-safe {
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+      }
+      .pt-safe {
+        padding-top: env(safe-area-inset-top, 0px);
+      }
+    }
+    ::-webkit-scrollbar {
+      display: none;
+    }
+    * {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  </style>
+</head>
+<body class="bg-bg-canvas text-text-primary antialiased selection:bg-brand-subtle selection:text-brand-primary min-h-screen flex flex-col items-center">
+<div class="w-full max-w-[390px] min-h-screen bg-bg-canvas flex flex-col relative">
+<!-- 1. TOP APP BAR & SEARCH HEADER -->
+<header class="fixed top-0 max-w-[390px] w-full z-50 pt-safe bg-white border-b border-border-subtle shadow-[0_1px_4px_rgba(0,0,0,0.03)]">
+<!-- Main bar -->
+<div class="h-14 px-3 flex items-center gap-2">
+<a aria-label="Xpedia Home" class="shrink-0 flex items-center focus:outline-none" data-path="beranda" href="#">
+<span class="text-[20px] font-extrabold tracking-tight text-[#0056FE]">Xpedia</span>
+</a>
+<!-- Search Bar Input -->
+<div class="flex-1 min-w-0 flex items-center h-9 px-2.5 bg-bg-sunken rounded-lg gap-1.5 focus-within:ring-1 focus-within:ring-brand-primary/50 transition-all">
+<span class="material-symbols-outlined text-text-placeholder text-[18px] shrink-0">search</span>
+<input class="w-full bg-transparent text-[13px] text-text-primary placeholder:text-text-placeholder focus:outline-none truncate" placeholder="Cari di Xpedia..." type="search"/>
+</div>
+<!-- Action Icons: Support 911, Cart, Account -->
+<div class="flex items-center gap-1 shrink-0">
+<a aria-label="Xpedia 911 Bantuan" class="w-8 h-8 flex items-center justify-center rounded-lg text-text-secondary hover:text-brand-primary active:bg-bg-sunken transition-colors" data-path="xpedia-911-bantuan" href="#">
+<span class="material-symbols-outlined text-[20px]">support_agent</span>
+</a>
+<a aria-label="Keranjang Belanja" class="relative w-8 h-8 flex items-center justify-center rounded-lg text-text-secondary hover:text-brand-primary active:bg-bg-sunken transition-colors" data-path="keranjang" href="#">
+<span class="material-symbols-outlined text-[20px]">shopping_cart</span>
+<span class="absolute top-0.5 right-0.5 min-w-[15px] h-[15px] px-1 rounded-full bg-danger text-text-on-brand text-[10px] leading-none flex items-center justify-center font-bold">3</span>
+</a>
+<div class="w-7 h-7 rounded-full bg-primary flex items-center justify-center cursor-pointer shadow-xs ml-0.5">
+<span class="material-symbols-outlined text-on-primary text-[16px]">person</span>
+</div>
+</div>
+</div>
+<!-- Micro Address Strip -->
+<div class="px-3 pb-2 pt-0.5">
+<div class="flex items-center justify-between text-text-secondary bg-[#F1F3F9] py-1 px-2.5 rounded-md">
+<div class="flex items-center gap-1 min-w-0">
+<span class="material-symbols-outlined text-brand-primary text-[16px] shrink-0">location_on</span>
+<span class="text-[12px] text-text-tertiary shrink-0">Kirim ke</span>
+<span class="text-[12px] font-medium text-text-primary truncate max-w-[190px]">Jakarta Selatan, Kebayoran Baru</span>
+<span class="material-symbols-outlined text-text-tertiary text-[14px] shrink-0">keyboard_arrow_down</span>
+</div>
+<a class="text-[12px] text-brand-primary font-semibold shrink-0 active:opacity-75 pl-1.5" href="#">Ubah</a>
+</div>
+</div>
+</header>
+<!-- MAIN SCROLLABLE CONTENT (with pt-[98px] for fixed header and pb-20 for fixed bottom nav) -->
+<main class="flex-1 flex flex-col relative w-full pt-[98px] pb-20">
+<div class="flex flex-col w-full gap-5 mt-3">
+<!-- 2. QUICK WALLET CARD -->
+<section class="px-4">
+<div class="bg-gradient-to-r from-brand-navy via-[#112d7c] to-brand-primary rounded-xl p-3.5 text-text-on-brand shadow-sm flex items-center justify-between relative overflow-hidden">
+<div class="absolute -right-6 -bottom-6 w-24 h-24 rounded-full bg-brand-primary/20 pointer-events-none blur-xl"></div>
+<div class="flex items-center gap-3 z-10 min-w-0">
+<div class="w-10 h-10 rounded-lg bg-white/10 flex items-center justify-center backdrop-blur-md shrink-0 border border-white/10">
+<span class="material-symbols-outlined text-signature-gold text-[22px]">account_balance_wallet</span>
+</div>
+<div class="flex flex-col min-w-0">
+<div class="flex items-center gap-1">
+<span class="text-[11px] text-white/80 font-medium">Xpedia Wallet</span>
+<span class="material-symbols-outlined text-emerald-400 text-[13px]" style="font-variation-settings: 'FILL' 1;">verified</span>
+</div>
+<span class="text-[16px] font-bold tracking-tight text-white mt-0.5 whitespace-nowrap">Rp 750.000</span>
+</div>
+</div>
+<div class="flex items-center gap-2 z-10 shrink-0">
+<button class="h-8 px-3 rounded-lg bg-brand-primary text-white text-[12px] font-semibold flex items-center gap-1 active:bg-brand-primary-pressed transition-colors shadow-sm border border-white/20">
+<span class="material-symbols-outlined text-[15px]">add</span>
+<span>Top Up</span>
+</button>
+<button aria-label="Riwayat Transaksi" class="h-8 w-8 rounded-lg bg-white/10 text-white hover:bg-white/20 active:bg-white/25 transition-colors flex items-center justify-center border border-white/10">
+<span class="material-symbols-outlined text-[17px]">history</span>
+</button>
+</div>
+</div>
+</section>
+<!-- 3. HERO BANNER CAROUSEL -->
+<section class="px-4 flex flex-col gap-2">
+<div class="relative w-full rounded-xl overflow-hidden shadow-sm bg-surface-container-high aspect-[16/9] group cursor-pointer">
+<img alt="Indonesian e-commerce promotional campaign hero banner, modern vibrant advertising banner featuring an Indonesian woman holding colorful shopping bags with a joyful smile, bright background with soft gradient blue and sunny accents, high commercial advertising photography quality, e-commerce sale promo banner" class="w-full h-full object-cover object-center group-hover:scale-102 transition-transform duration-500 ease-out" src="https://lh3.googleusercontent.com/aida/AEtjO1Xdnx3_XFiFb-HndXLEGfDZ4hTStYKPZwEr_baZiZ2p7Iu3HqCWYOtPDO2cXOLueyYduD02LD0_6HwzsBneMQm73595EdZlbEWYVHYlZX1iPpg5l_Xb9T9dKw1RiSkO7Szbcnkc0T9avnnz--AmwCzp5xB5EbdJMjNiYFJnNGlLlBn2ePg3o9LPREtyUMMswWc9402IAyySnlDwjDWvjpkQn9TEvhZsUVsL-Llk4LBxCBumT8a-iUAb7w"/>
+<!-- Bottom subtle banner ribbon -->
+<div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent p-2.5 flex items-center justify-between">
+<div class="flex items-center gap-1.5 bg-black/40 backdrop-blur-md px-2 py-0.5 rounded-full text-white text-[11px] font-medium">
+<span class="material-symbols-outlined text-signature-gold text-[13px]" style="font-variation-settings: 'FILL' 1;">local_fire_department</span>
+<span>Diskon Hingga 90% Promo Spesial</span>
+</div>
+<span class="h-6 px-2.5 bg-white text-brand-primary text-[11px] rounded-full font-bold flex items-center gap-0.5 shadow-sm">
+<span>Klaim</span>
+<span class="material-symbols-outlined text-[13px]">arrow_forward</span>
+</span>
+</div>
+</div>
+<!-- Carousel Indicators -->
+<div class="flex items-center justify-center gap-1.5 mt-0.5">
+<span class="w-5 h-1.5 rounded-full bg-brand-primary transition-all"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-border-strong/40"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-border-strong/40"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-border-strong/40"></span>
+</div>
+</section>
+<!-- 4. FEATURE / SERVICE QUICK ICONS (Clean 5-Column Grid, No Overlap) -->
+<section class="px-4">
+<div class="bg-white rounded-xl p-3 shadow-xs border border-border-subtle/60">
+<div class="grid grid-cols-5 gap-1 text-center">
+<a class="flex flex-col items-center group focus:outline-none" href="#">
+<div class="w-11 h-11 rounded-full bg-red-50 flex items-center justify-center text-danger group-active:scale-95 transition-transform mb-1.5">
+<span class="material-symbols-outlined text-[22px]">restaurant</span>
+</div>
+<span class="text-[11px] leading-tight text-gray-700 font-medium truncate w-full text-center">XpediaFood</span>
+</a>
+<a class="flex flex-col items-center group focus:outline-none" href="#">
+<div class="w-11 h-11 rounded-full bg-blue-50 flex items-center justify-center text-brand-primary group-active:scale-95 transition-transform mb-1.5">
+<span class="material-symbols-outlined text-[22px]">two_wheeler</span>
+</div>
+<span class="text-[11px] leading-tight text-gray-700 font-medium truncate w-full text-center">XpediaRide</span>
+</a>
+<a class="flex flex-col items-center group focus:outline-none" href="#">
+<div class="w-11 h-11 rounded-full bg-emerald-50 flex items-center justify-center text-success group-active:scale-95 transition-transform mb-1.5">
+<span class="material-symbols-outlined text-[22px]">local_mall</span>
+</div>
+<span class="text-[11px] leading-tight text-gray-700 font-medium truncate w-full text-center">XpediaMart</span>
+</a>
+<a class="flex flex-col items-center group focus:outline-none" href="#">
+<div class="w-11 h-11 rounded-full bg-amber-50 flex items-center justify-center text-warning group-active:scale-95 transition-transform mb-1.5">
+<span class="material-symbols-outlined text-[22px]">receipt_long</span>
+</div>
+<span class="text-[11px] leading-tight text-gray-700 font-medium truncate w-full text-center">Tagihan</span>
+</a>
+<a class="flex flex-col items-center group focus:outline-none" href="#">
+<div class="w-11 h-11 rounded-full bg-indigo-50 flex items-center justify-center text-signature-gold group-active:scale-95 transition-transform mb-1.5">
+<span class="material-symbols-outlined text-[22px]" style="font-variation-settings: 'FILL' 1;">stars</span>
+</div>
+<span class="text-[11px] leading-tight text-gray-700 font-medium truncate w-full text-center">Signature</span>
+</a>
+</div>
+</div>
+</section>
+<!-- 5. LIVE NOW STRIP (Xpedia Live Interaktif) -->
+<section class="flex flex-col gap-2.5">
+<div class="px-4 flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-danger text-white text-[10px] font-bold tracking-wide animate-pulse">
+<span class="w-1.5 h-1.5 rounded-full bg-white"></span>
+                LIVE NOW
+              </span>
+<h3 class="text-[15px] font-bold text-gray-900">Xpedia Live Interaktif</h3>
+</div>
+<a class="text-[12px] text-brand-primary font-semibold flex items-center gap-0.5" href="#">
+              Lihat Semua
+              <span class="material-symbols-outlined text-[15px]">chevron_right</span>
+</a>
+</div>
+<!-- Horizontal Cards -->
+<div class="flex gap-3 overflow-x-auto px-4 pb-1 pt-0.5 scrollbar-none">
+<!-- Live 1 -->
+<div class="min-w-[144px] w-[144px] bg-white rounded-xl overflow-hidden shadow-xs flex flex-col shrink-0 border border-gray-100">
+<div class="relative h-40 w-full bg-surface-dim">
+<img alt="Live Skincare" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCH87gXbPcJHNEWld7IOhDsYEkqkxMMFoDI8rYpTxXX6z6ZLFEEO5vE0jCA4hQofbs8-PQ3jWWMB-ZteiVqNUeJ-RhGuCh4u0vimleEfQHRoNMPd_h53HOK8H-FMgARkc10i4Lm9Lwqxmu9_BLFqyQ5qw-kOXWo3Et8GnMCzJGL6UYVcsyqsH8ZZ7jocetNnZJt--wAXxD7WhXlmt1ZZU4euAkrxHyiboXrCWT0lBh0Sv8dHY53WVjl"/>
+<div class="absolute top-2 left-2 flex items-center gap-1 bg-black/60 backdrop-blur-sm text-white px-1.5 py-0.5 rounded text-[10px] font-semibold">
+<span class="material-symbols-outlined text-[10px] text-danger" style="font-variation-settings: 'FILL' 1;">fiber_manual_record</span>
+<span>12,4k</span>
+</div>
+<div class="absolute bottom-1.5 inset-x-1.5 bg-gradient-to-t from-black/85 via-black/50 to-transparent p-1.5 rounded text-white">
+<p class="text-[11px] font-bold truncate">Skincare Glow Up</p>
+<p class="text-[10px] text-white/80 flex items-center gap-0.5 mt-0.5 truncate">
+<span class="material-symbols-outlined text-[11px] text-blue-400">verified</span>
+                    BeautyOfficial
+                  </p>
+</div>
+</div>
+<div class="p-2 flex items-center justify-between bg-white">
+<span class="text-[11px] text-danger font-bold">Diskon 50%</span>
+<span class="text-[10px] text-gray-500">436 sold</span>
+</div>
+</div>
+<!-- Live 2 -->
+<div class="min-w-[144px] w-[144px] bg-white rounded-xl overflow-hidden shadow-xs flex flex-col shrink-0 border border-gray-100">
+<div class="relative h-40 w-full bg-surface-dim">
+<img alt="Live Sneakers" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCAi9dw8dj_8l14qwL5hQ0y99bjzUhuC2uOxaAksBCvqoeBGcIPRc1xLmhHfBrEBOAB2dMZtYCZv6_xtg9SOYoSRTNFvhLLS2IxFUIYXpKZ-Rn1AL62H_FZv2819erXPszv6Y8eU6ClCakuTqfcWnUaMStxlybJ8BGAWB1h3jcmhbj_q12mh0DsSpMceB1c0Tq9VNr8HzRwnn0geGyjn31zSXayo8bZ2YW-KZzlA7YBzSmj3WfMLOqn"/>
+<div class="absolute top-2 left-2 flex items-center gap-1 bg-black/60 backdrop-blur-sm text-white px-1.5 py-0.5 rounded text-[10px] font-semibold">
+<span class="material-symbols-outlined text-[10px] text-danger" style="font-variation-settings: 'FILL' 1;">fiber_manual_record</span>
+<span>8,9k</span>
+</div>
+<div class="absolute bottom-1.5 inset-x-1.5 bg-gradient-to-t from-black/85 via-black/50 to-transparent p-1.5 rounded text-white">
+<p class="text-[11px] font-bold truncate">Sneakers Drop Ori</p>
+<p class="text-[10px] text-white/80 flex items-center gap-0.5 mt-0.5 truncate">
+<span class="material-symbols-outlined text-[11px] text-blue-400">verified</span>
+                    UrbanSneakers
+                  </p>
+</div>
+</div>
+<div class="p-2 flex items-center justify-between bg-white">
+<span class="text-[11px] text-danger font-bold">Flash Deal</span>
+<span class="text-[10px] text-gray-500">320 sold</span>
+</div>
+</div>
+<!-- Live 3 -->
+<div class="min-w-[144px] w-[144px] bg-white rounded-xl overflow-hidden shadow-xs flex flex-col shrink-0 border border-gray-100">
+<div class="relative h-40 w-full bg-surface-dim">
+<img alt="Live Kitchen Tools" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDtxX0i0N8PfFhVi8JYIfk6CBngeyOxsmMqUijmzeiYRloVgtxYZVt_juYrtNdAsIOi7iqk0T84K_ELFLjZDifqgOT6NSDsYKIlyLy0qVlUcHlH0uOYxKSdGjYAfJ8qX-fYFK6h36xCSeidZDwnKMeWbOfEwLV9y5LpEV7nJNCEmiBGHReHeLZ23rrcpZjxdyBWpEPjR8fGgqjAayLLIkBqhYEAmiSu0Wz1vD1nvsqFjGUNYXFg9Dc5"/>
+<div class="absolute top-2 left-2 flex items-center gap-1 bg-black/60 backdrop-blur-sm text-white px-1.5 py-0.5 rounded text-[10px] font-semibold">
+<span class="material-symbols-outlined text-[10px] text-danger" style="font-variation-settings: 'FILL' 1;">fiber_manual_record</span>
+<span>6,1k</span>
+</div>
+<div class="absolute bottom-1.5 inset-x-1.5 bg-gradient-to-t from-black/85 via-black/50 to-transparent p-1.5 rounded text-white">
+<p class="text-[11px] font-bold truncate">Peralatan Dapur</p>
+<p class="text-[10px] text-white/80 flex items-center gap-0.5 mt-0.5 truncate">
+<span class="material-symbols-outlined text-[11px] text-blue-400">verified</span>
+                    HappyHome ID
+                  </p>
+</div>
+</div>
+<div class="p-2 flex items-center justify-between bg-white">
+<span class="text-[11px] text-danger font-bold">Voucher 20k</span>
+<span class="text-[10px] text-gray-500">278 sold</span>
+</div>
+</div>
+</div>
+</section>
+<!-- 6. REKOMENDASI SPESIAL & PRODUCT GRID (2 Columns) -->
+<section class="px-4 flex flex-col">
+<div class="mb-3">
+<h3 class="text-[18px] font-bold text-gray-900 leading-tight">Rekomendasi Spesial</h3>
+<p class="text-[12px] text-gray-500 mt-0.5">Pilihan terbaik dikurasi khusus untukmu</p>
+</div>
+<div class="grid grid-cols-2 gap-3">
+<!-- Product Card 1 -->
+<div class="bg-white rounded-xl p-3 shadow-xs flex flex-col justify-between border border-gray-100 group">
+<div>
+<div class="relative w-full aspect-square bg-gray-50 rounded-lg overflow-hidden mb-2.5">
+<img alt="TWS Wireless Earphone" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCGi_S-txNdCzrIE_Ey7a6eRGlkKOQcnZfOqlB3hSx-L1XtEG2UjFhRQMWpcCvE_t_eV3KT-hdm93ITdTwL8TYsyMjygaGOIol4Bk5DWnW8rCV-w15t4710LVToQXZwe1-tcCFJiZUdQa2TdofdPc4x-HNCYyXrMBAGOot8XYpEniWUZMr8Gb3IfWzVROuNYFNDjuPJB0MnZISXGO-FDWOuiWJ8Qbviqwo8DimQ5jL9imumpa15_k06"/>
+<button aria-label="Tambah ke Wishlist" class="absolute top-2 right-2 w-7 h-7 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center text-text-secondary active:text-danger active:scale-90 transition-all shadow-xs">
+<span class="material-symbols-outlined text-[16px]">favorite</span>
+</button>
+</div>
+<div class="mb-1.5 flex">
+<span class="h-[22px] px-2 rounded flex items-center text-[11px] font-semibold bg-[#E8F8EF] text-[#0C7A44]">Ready Stok</span>
+</div>
+<h4 class="text-[14px] font-semibold text-gray-900 line-clamp-2 h-10 mb-1 leading-snug">
+                  TWS Wireless ANC Earphone Pro Spatial Audio HiFi
+                </h4>
+</div>
+<div class="mt-1 pt-1 flex flex-col">
+<span class="text-[16px] font-bold text-gray-900 mb-1">Rp 299.000</span>
+<div class="flex items-center gap-1 text-[11px] text-gray-500 mb-1.5">
+<span class="material-symbols-outlined text-amber-400 text-[14px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="font-bold text-gray-800">4.9</span>
+<span>(1,2rb terjual)</span>
+</div>
+<div class="flex items-center gap-1 text-[12px] text-gray-600 truncate">
+<span class="material-symbols-outlined text-brand-primary text-[14px]" style="font-variation-settings: 'FILL' 1;">verified</span>
+<span class="truncate">Acoustic Audio Store</span>
+</div>
+</div>
+</div>
+<!-- Product Card 2 -->
+<div class="bg-white rounded-xl p-3 shadow-xs flex flex-col justify-between border border-gray-100 group">
+<div>
+<div class="relative w-full aspect-square bg-gray-50 rounded-lg overflow-hidden mb-2.5">
+<img alt="Sneakers Pria Streetwear" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBJ1KPQlO0Rb0FWtwrMZTsQ9UbRkPp0fEzGLCuJHw6qXbY2TdVI44bZq4AHoCg9coUl9YUffCk_jOl310Yf0X108RYltkMBTujbwqQZZsO7ONi8W8zskWl3BlYEcm4KOWStPpx7kZ-3vgkKXnUOfUt6tgurT7D7a1-3ekTgPR169M_8wuTo-Vi0n5JRbwCMZaoyDlE7AUpZe6_VuyRF4jql9g4fjf9XrXcrZXq90Y65vU30QmJ9AfTx"/>
+<button aria-label="Tambah ke Wishlist" class="absolute top-2 right-2 w-7 h-7 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center text-text-secondary active:text-danger active:scale-90 transition-all shadow-xs">
+<span class="material-symbols-outlined text-[16px]">favorite</span>
+</button>
+</div>
+<div class="mb-1.5 flex">
+<span class="h-[22px] px-2 rounded flex items-center text-[11px] font-semibold bg-[#F1EEFE] text-[#6344D6]">Pre-Order</span>
+</div>
+<h4 class="text-[14px] font-semibold text-gray-900 line-clamp-2 h-10 mb-1 leading-snug">
+                  Sepatu Sneakers Pria Streetwear Edition Low Khaki
+                </h4>
+</div>
+<div class="mt-1 pt-1 flex flex-col">
+<span class="text-[16px] font-bold text-gray-900 mb-1">Rp 1.399.000</span>
+<div class="flex items-center gap-1 text-[11px] text-gray-500 mb-1.5">
+<span class="material-symbols-outlined text-amber-400 text-[14px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="font-bold text-gray-800">4.9</span>
+<span>(3,1rb terjual)</span>
+</div>
+<div class="flex items-center gap-1 text-[12px] text-gray-600 truncate">
+<span class="material-symbols-outlined text-brand-primary text-[14px]" style="font-variation-settings: 'FILL' 1;">verified</span>
+<span class="truncate">Urban Footwear ID</span>
+</div>
+</div>
+</div>
+<!-- Product Card 3 -->
+<div class="bg-white rounded-xl p-3 shadow-xs flex flex-col justify-between border border-gray-100 group">
+<div>
+<div class="relative w-full aspect-square bg-gray-50 rounded-lg overflow-hidden mb-2.5">
+<img alt="Smartwatch AMOLED Display" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA5fDEJgpXHigtxRF7LBeRNkNjlj2k1lRCM99J8qQ5fKpYncBC2Nevs6opwar49ohOPEkB2mkbAhIeyhxZMjROJPUNMWoolMiuzbfUWetlY05Gi-6pr6tMiDfBuiRwQ9qXALlrixvMs73CLHrPSAHIxXarvCfXh8gvaAdC5Z8qQ8gn4uPKbCryp2yhUzTVYL0MaXBw6TWZ3ZaFn4bTQ7l8q3QktLzUnzCMHO_MSDU2MlwFRE4MgrKJU"/>
+<button aria-label="Tambah ke Wishlist" class="absolute top-2 right-2 w-7 h-7 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center text-text-secondary active:text-danger active:scale-90 transition-all shadow-xs">
+<span class="material-symbols-outlined text-[16px]">favorite</span>
+</button>
+</div>
+<div class="mb-1.5 flex">
+<span class="h-[22px] px-2 rounded flex items-center text-[11px] font-semibold bg-[#E8F8EF] text-[#0C7A44]">Ready Stok</span>
+</div>
+<h4 class="text-[14px] font-semibold text-gray-900 line-clamp-2 h-10 mb-1 leading-snug">
+                  Smartwatch AMOLED Display 1.43 Waterproof Sensor
+                </h4>
+</div>
+<div class="mt-1 pt-1 flex flex-col">
+<span class="text-[16px] font-bold text-gray-900 mb-1">Rp 599.000</span>
+<div class="flex items-center gap-1 text-[11px] text-gray-500 mb-1.5">
+<span class="material-symbols-outlined text-amber-400 text-[14px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="font-bold text-gray-800">4.9</span>
+<span>(2,4rb terjual)</span>
+</div>
+<div class="flex items-center gap-1 text-[12px] text-gray-600 truncate">
+<span class="material-symbols-outlined text-brand-primary text-[14px]" style="font-variation-settings: 'FILL' 1;">verified</span>
+<span class="truncate">TechNova Gadget</span>
+</div>
+</div>
+</div>
+<!-- Product Card 4 -->
+<div class="bg-white rounded-xl p-3 shadow-xs flex flex-col justify-between border border-gray-100 group">
+<div>
+<div class="relative w-full aspect-square bg-gray-50 rounded-lg overflow-hidden mb-2.5">
+<img alt="Skincare Brightening Serum" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCFvlwkHt1O8N7KcRkyWOlQS2ihBHP98YxDEBcaBLgHY3-r2syGEDI4xxSpK3p4odB6prcILjIuDwVgkavsp5G4jI1Ij5BSbckyUx7Ho7sdistwo6frVAz4QpMMb-zyHONQhdzSxSBie_2w70-UqM89YvUTycljgIF-ghijhKBe1hy39mLqX7sxjprf1ERlksetw2DqxEK7PhBJwRda89FxUVF6Xuof9IOsuCxFlYGI0Wk9PlJkhBHe"/>
+<button aria-label="Tambah ke Wishlist" class="absolute top-2 right-2 w-7 h-7 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center text-text-secondary active:text-danger active:scale-90 transition-all shadow-xs">
+<span class="material-symbols-outlined text-[16px]">favorite</span>
+</button>
+</div>
+<div class="mb-1.5 flex">
+<span class="h-[22px] px-2 rounded flex items-center text-[11px] font-semibold bg-[#E8F8EF] text-[#0C7A44]">Ready Stok</span>
+</div>
+<h4 class="text-[14px] font-semibold text-gray-900 line-clamp-2 h-10 mb-1 leading-snug">
+                  Skincare Brightening Serum &amp; Daily Cream Glow
+                </h4>
+</div>
+<div class="mt-1 pt-1 flex flex-col">
+<span class="text-[16px] font-bold text-gray-900 mb-1">Rp 249.000</span>
+<div class="flex items-center gap-1 text-[11px] text-gray-500 mb-1.5">
+<span class="material-symbols-outlined text-amber-400 text-[14px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="font-bold text-gray-800">4.9</span>
+<span>(1,6rb terjual)</span>
+</div>
+<div class="flex items-center gap-1 text-[12px] text-gray-600 truncate">
+<span class="material-symbols-outlined text-brand-primary text-[14px]" style="font-variation-settings: 'FILL' 1;">verified</span>
+<span class="truncate">Beauty Glow Lab</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- 7. TRUST & REASSURANCE GUARANTEE BANNER -->
+<section class="px-4 mb-4">
+<div class="p-3.5 bg-blue-50/60 rounded-xl border border-blue-100/70 flex items-center gap-3">
+<div class="w-9 h-9 rounded-full bg-brand-primary flex items-center justify-center text-white shrink-0 shadow-xs">
+<span class="material-symbols-outlined text-[19px]">verified_user</span>
+</div>
+<div class="min-w-0">
+<h5 class="text-[13px] font-bold text-gray-900">Transaksi 100% Aman &amp; Terlindungi</h5>
+<p class="text-[11px] text-gray-600 mt-0.5 leading-tight">Garansi uang kembali &amp; pengiriman tepat waktu dengan Xpedia Care</p>
+</div>
+</div>
+</section>
+</div>
+</main>
+<!-- 8. PERSISTENT 5 BOTTOM NAVIGATION BAR -->
+<nav class="fixed bottom-0 left-0 right-0 max-w-[390px] mx-auto bg-white border-t border-gray-200 h-16 flex items-center justify-around z-50 pb-safe">
+<a aria-current="page" class="flex flex-col items-center justify-center flex-1 h-full gap-0.5 text-brand-primary font-semibold" data-path="beranda" href="#">
+<span class="material-symbols-outlined text-[22px]">home</span>
+<span class="text-[11px] tracking-tight">Beranda</span>
+</a>
+<a class="flex flex-col items-center justify-center flex-1 h-full gap-0.5 text-gray-500 hover:text-brand-primary transition-colors" data-path="wishlist" href="#">
+<span class="material-symbols-outlined text-[22px]">favorite</span>
+<span class="text-[11px] tracking-tight">Wishlist</span>
+</a>
+<a class="flex flex-col items-center justify-center flex-1 h-full gap-0.5 text-gray-500 hover:text-brand-primary transition-colors" data-path="pesanan-saya" href="#">
+<span class="material-symbols-outlined text-[22px]">inventory_2</span>
+<span class="text-[11px] tracking-tight">Pesanan Saya</span>
+</a>
+<a class="flex flex-col items-center justify-center flex-1 h-full gap-0.5 text-gray-500 hover:text-brand-primary transition-colors" data-path="chat" href="#">
+<span class="material-symbols-outlined text-[22px]">chat</span>
+<span class="text-[11px] tracking-tight">Chat</span>
+</a>
+<a class="flex flex-col items-center justify-center flex-1 h-full gap-0.5 text-gray-500 hover:text-brand-primary transition-colors" data-path="my-xpedia" href="#">
+<span class="material-symbols-outlined text-[22px]">person</span>
+<span class="text-[11px] tracking-tight">My Xpedia</span>
+</a>
+</nav>
+</div>
+<script>
+    // Micro-interaction untuk tombol wishlist heart
+    document.querySelectorAll('button[aria-label="Tambah ke Wishlist"]').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const icon = btn.querySelector('.material-symbols-outlined');
+        if (icon) {
+          const isFilled = icon.style.fontVariationSettings?.includes("'FILL' 1");
+          if (isFilled) {
+            icon.style.fontVariationSettings = "'FILL' 0";
+            btn.classList.remove('text-danger');
+            btn.classList.add('text-text-secondary');
+          } else {
+            icon.style.fontVariationSettings = "'FILL' 1";
+            btn.classList.add('text-danger');
+            btn.classList.remove('text-text-secondary');
+          }
+        }
+      });
+    });
+  </script>
+</body></html>

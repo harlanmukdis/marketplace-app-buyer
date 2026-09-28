@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+
+<html lang="id"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"/><meta content="mobile_stack" name="shell-type"/><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config={darkMode:"class",theme:{extend:{colors:{"on-primary-fixed-variant":"#003ab2","on-tertiary-fixed-variant":"#872100","tertiary-fixed":"#ffdbd1","on-primary-fixed":"#001550","success-subtle":"#E8F8EF","border-strong":"#9CA3AF","brand-navy":"#0F286C","text-secondary":"#4B5563","surface-dim":"#d3daef","outline-variant":"#c3c5d9","primary":"#0042c7","brand-primary-pressed":"#0047D1","signature-gold":"#C9A227","on-surface-variant":"#434656","bg-canvas":"#F7F8FA","secondary":"#465ba0","primary-fixed-dim":"#b6c4ff","warning-subtle":"#FFF6E5","surface-container-lowest":"#ffffff","on-tertiary-fixed":"#3b0900","inverse-on-surface":"#edf0ff","secondary-fixed":"#dce1ff","tertiary":"#972600","on-tertiary-container":"#ffe2da","background":"#f9f9ff","surface-container":"#e9edff","success":"#109553","primary-fixed":"#dce1ff","surface-container-high":"#e1e8fd","tertiary-fixed-dim":"#ffb5a0","error-container":"#ffdad6","primary-container":"#0056fe","surface-container-highest":"#dce2f7","brand-subtle":"#EBF2FF","tertiary-container":"#c13402","on-background":"#141b2b","signature-black":"#101014","bg-surface":"#FFFFFF","brand-primary":"#0056FE","secondary-container":"#9fb3ff","on-secondary-container":"#2e4387","border-default":"#D1D5DB","on-primary-container":"#e3e7ff","on-tertiary":"#ffffff","outline":"#737688","secondary-fixed-dim":"#b6c4ff","text-primary":"#111827","inverse-primary":"#b6c4ff","on-secondary":"#ffffff","on-secondary-fixed":"#00164f","on-error-container":"#93000a","danger":"#FB132D","error":"#ba1a1a","border-subtle":"#E5E7EB","on-primary":"#ffffff","inverse-surface":"#293040","text-tertiary":"#6B7280","warning":"#F59E0B","surface-container-low":"#f1f3ff","text-on-brand":"#FFFFFF","surface-variant":"#dce2f7","surface-bright":"#f9f9ff","on-error":"#ffffff","on-secondary-fixed-variant":"#2d4286","surface-tint":"#004ee8","bg-sunken":"#EFF1F4","surface":"#f9f9ff","text-placeholder":"#9CA3AF","danger-subtle":"#FFECEE","on-surface":"#141b2b"},borderRadius:{DEFAULT:"0.25rem",lg:"0.5rem",xl:"0.75rem",full:"9999px"},spacing:{"margin":"1rem","space-md":"0.75rem","space-sm":"0.5rem","space-lg":"1rem","space-xl":"1.5rem","gutter":"0.75rem","space-xs":"0.25rem"},fontFamily:{"title-md":["Inter"],"label-sm":["Inter"],"headline-xl":["Inter"],"caption":["Inter"],"title-lg":["Inter"],"price-lg":["Inter"],"body-md":["Inter"],"label-md":["Inter"],"body-sm":["Inter"],"label-lg":["Inter"],"headline-lg":["Inter"],"price-md":["Inter"],"headline-md":["Inter"],"price-sm":["Inter"],"body-lg":["Inter"]},fontSize:{"title-md":["14px",{lineHeight:"20px",fontWeight:"600"}],"label-sm":["11px",{lineHeight:"14px",fontWeight:"500"}],"headline-xl":["24px",{lineHeight:"32px",fontWeight:"700"}],"caption":["11px",{lineHeight:"14px",fontWeight:"400"}],"title-lg":["16px",{lineHeight:"24px",fontWeight:"600"}],"price-lg":["18px",{lineHeight:"24px",fontWeight:"700"}],"body-md":["14px",{lineHeight:"20px",fontWeight:"400"}],"label-md":["12px",{lineHeight:"16px",fontWeight:"500"}],"body-sm":["12px",{lineHeight:"18px",fontWeight:"400"}],"label-lg":["14px",{lineHeight:"20px",fontWeight:"500"}],"headline-lg":["20px",{lineHeight:"28px",fontWeight:"600"}],"price-md":["16px",{lineHeight:"22px",fontWeight:"700"}],"headline-md":["18px",{lineHeight:"26px",fontWeight:"600"}],"price-sm":["14px",{lineHeight:"20px",fontWeight:"600"}],"body-lg":["16px",{lineHeight:"24px",fontWeight:"400"}]}}}</script><style>@layer base{html,body{width:100%;margin:0;padding:0;background-color:#F7F8FA;}body{overscroll-behavior-y:none;-webkit-tap-highlight-color:transparent;}.pb-safe{padding-bottom:env(safe-area-inset-bottom,0px);}.pt-safe{padding-top:env(safe-area-inset-top,0px);}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}*{-ms-overflow-style:none;scrollbar-width:none;}</style><style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head><body class="bg-bg-canvas font-body-md text-text-primary antialiased selection:bg-brand-subtle selection:text-brand-primary min-h-screen flex flex-col"><header class="fixed top-0 w-full z-50 pt-safe bg-bg-surface/90 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)]"><div class="h-14 px-4 flex items-center justify-between gap-2"><div class="flex items-center gap-2 min-w-0"><button aria-label="Kembali" class="w-10 h-10 flex items-center justify-center rounded-lg text-text-primary hover:text-brand-primary active:bg-bg-sunken transition-colors shrink-0" onclick="history.back()"><span class="material-symbols-outlined text-[24px]">arrow_back</span></button><h1 class="font-title-lg text-title-lg text-text-primary truncate font-semibold">Detail Produk</h1></div><div class="flex items-center gap-1 shrink-0"><button aria-label="Bagikan" class="w-10 h-10 flex items-center justify-center rounded-lg text-text-secondary hover:text-brand-primary active:bg-bg-sunken transition-colors"><span class="material-symbols-outlined text-[22px]">share</span></button><a aria-label="Keranjang Belanja" class="relative w-10 h-10 flex items-center justify-center rounded-lg text-text-secondary hover:text-brand-primary active:bg-bg-sunken transition-colors" data-path="keranjang" href="#"><span class="material-symbols-outlined text-[22px]">shopping_cart</span><span class="absolute top-1 right-1 min-w-[16px] h-4 px-1 rounded-full bg-danger text-text-on-brand font-label-sm text-[10px] leading-none flex items-center justify-center font-bold">3</span></a></div></div></header><main class="flex-1 flex flex-col relative w-full pt-14 pb-safe bg-bg-canvas"><div class="flex flex-col w-full" style="padding-bottom: 7rem;"><!-- Galeri Foto Produk & Media Header with Wishlist heart & Badges -->
+<div class="relative w-full bg-surface-container-lowest border-b border-border-subtle">
+<div class="relative w-full aspect-square flex items-center justify-center p-6 bg-surface-container-lowest">
+<img class="w-full h-full object-contain mix-blend-multiply" data-alt="Studio product photography of sleek matte black JBL Tune 770NC over-ear wireless headphones floating against a soft gradient grey background, crisp studio lighting highlighting the ergonomic memory foam earcups and embossed JBL logo with pure modern tech aesthetic" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA3rM2I1qaQ09A5-OhL2tYl-iqxAvdAyc4X6TxXE9NaaBx5SoV2qsZ9sFtjLGROpo5GMEqVaXTLM9Tq1yT_urzB7NS-sdJ1L8KkauJUbWrI9KY9iZkQAK8N20BAevWeDuHZ1Tlqhnk_rZvOP4J-2EKP5b4JsAqYGHsoXKpyv6CtcJEH0huTSp3osSl5lVwkQ9nQ7WLxzTXQK9-3Jy7m9WvAz8Xnw6we64-suW2AY2L1Qz9IVSF_xbtY"/>
+<!-- Floating Wishlist Toggle -->
+<button aria-label="Favoritkan Produk" class="absolute top-4 right-4 z-10 w-9 h-9 rounded-full bg-surface-container-lowest/90 backdrop-blur-md shadow-sm border border-border-subtle flex items-center justify-center text-text-secondary active:text-danger hover:text-danger transition-colors" id="top-wishlist-btn" type="button">
+<span class="material-symbols-outlined text-[20px]" id="top-wishlist-icon">favorite_border</span>
+</button>
+<!-- Pill Counter -->
+<div class="absolute bottom-3 right-4 z-10 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-signature-black/60 backdrop-blur-md text-text-on-brand font-label-sm text-caption">
+<span class="material-symbols-outlined text-[14px]">photo_library</span>
+<span>1/6</span>
+</div>
+</div>
+</div>
+<!-- Pricing, Badges, Title & Social Proof Block -->
+<div class="bg-surface-container-lowest px-4 py-4 border-b border-border-subtle flex flex-col gap-2.5">
+<!-- Stock chip & official badge -->
+<div class="flex items-center gap-2">
+<span class="inline-flex items-center px-2 py-0.5 rounded-full bg-success-subtle text-success font-label-sm text-[11px] font-medium leading-normal">Ready Stok</span>
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-brand-subtle text-brand-primary font-label-sm text-[11px] font-medium leading-normal">
+<span class="material-symbols-outlined text-[13px]" style="font-variation-settings: 'FILL' 1;">verified</span>
+      Official 100%
+    </span>
+</div>
+<!-- Price Row with Discount -->
+<div class="flex items-baseline gap-2 mt-0.5">
+<span class="text-text-primary font-headline-xl text-headline-xl font-bold tracking-tight">Rp 1.399.000</span>
+<span class="text-text-placeholder font-body-sm text-xs line-through">Rp 1.699.000</span>
+<span class="px-1.5 py-0.5 rounded bg-danger-subtle text-danger font-label-sm text-xs font-semibold">-18%</span>
+</div>
+<!-- Full Product Title -->
+<h1 class="font-title-md text-[15px] text-text-primary leading-snug font-medium">
+    JBL Tune 770NC Wireless Over-Ear Headphone with Adaptive ANC
+  </h1>
+<!-- Social Proof Rating & Sales -->
+<div class="flex items-center gap-2 pt-0.5 text-text-secondary font-body-sm text-xs">
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-warning text-[17px] leading-none" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="font-title-md text-text-primary font-bold">4.9</span>
+</div>
+<span class="text-border-strong text-caption">•</span>
+<span>1.286 Ulasan</span>
+<span class="text-border-strong text-caption">•</span>
+<span>5,8rb Terjual</span>
+</div>
+<!-- Quick USPs Grid -->
+<div class="grid grid-cols-4 gap-2 p-2.5 bg-surface-container-low rounded-xl border border-border-subtle mt-1">
+<div class="flex flex-col items-center justify-center text-center p-1">
+<span class="material-symbols-outlined text-brand-primary text-[20px]">graphic_eq</span>
+<span class="font-caption text-[11px] text-text-secondary mt-1 font-medium leading-tight">Adaptive ANC</span>
+</div>
+<div class="flex flex-col items-center justify-center text-center p-1">
+<span class="material-symbols-outlined text-brand-primary text-[20px]">battery_charging_full</span>
+<span class="font-caption text-[11px] text-text-secondary mt-1 font-medium leading-tight">70 Jam Baterai</span>
+</div>
+<div class="flex flex-col items-center justify-center text-center p-1">
+<span class="material-symbols-outlined text-brand-primary text-[20px]">devices</span>
+<span class="font-caption text-[11px] text-text-secondary mt-1 font-medium leading-tight">Multi-Point</span>
+</div>
+<div class="flex flex-col items-center justify-center text-center p-1">
+<span class="material-symbols-outlined text-brand-primary text-[20px]">equalizer</span>
+<span class="font-caption text-[11px] text-text-secondary mt-1 font-medium leading-tight">Pure Bass</span>
+</div>
+</div>
+</div>
+<!-- Shipping / Ongkir Bar (Clickable Card) -->
+<div class="px-4 mt-3">
+<div class="bg-surface-container-lowest px-3.5 py-3 rounded-xl border border-border-subtle shadow-sm flex items-center justify-between cursor-pointer active:bg-bg-sunken transition-colors">
+<div class="flex items-center gap-3">
+<div class="w-9 h-9 rounded-full bg-brand-subtle flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-brand-primary text-[20px]">local_shipping</span>
+</div>
+<div class="flex flex-col">
+<span class="font-label-md text-label-md text-text-primary font-semibold">Gratis Ongkir ke Seluruh Indonesia</span>
+<span class="font-caption text-caption text-text-secondary mt-0.5">Min. belanja Rp 0 • Estimasi 1-2 hari</span>
+</div>
+</div>
+<span class="material-symbols-outlined text-text-placeholder text-[20px]">chevron_right</span>
+</div>
+</div>
+<!-- Pilihan Varian Produk & Kuantitas Card -->
+<div class="px-4 mt-3">
+<div class="bg-surface-container-lowest p-4 rounded-xl border border-border-subtle shadow-sm flex flex-col gap-4">
+<!-- Varian Warna -->
+<div class="flex flex-col gap-2">
+<div class="flex items-center justify-between">
+<span class="font-title-md text-title-md text-text-primary font-semibold">Pilih Warna</span>
+<span class="font-body-sm text-body-sm text-text-secondary" id="selected-color-label">Hitam (Black)</span>
+</div>
+<div class="flex items-center gap-2">
+<button class="variant-color-btn flex items-center gap-2 px-3 py-2 rounded-lg bg-brand-subtle border border-brand-primary text-brand-primary font-label-md text-label-md font-medium transition-all" type="button">
+<span class="w-3.5 h-3.5 rounded-full bg-signature-black border border-border-subtle"></span>
+<span>Black</span>
+</button>
+<button class="variant-color-btn flex items-center gap-2 px-3 py-2 rounded-lg bg-bg-sunken border border-transparent text-text-secondary font-label-md text-label-md transition-all" type="button">
+<span class="w-3.5 h-3.5 rounded-full bg-surface-container-lowest border border-border-default shadow-sm"></span>
+<span>White</span>
+</button>
+<button class="variant-color-btn flex items-center gap-2 px-3 py-2 rounded-lg bg-bg-sunken border border-transparent text-text-secondary font-label-md text-label-md transition-all" type="button">
+<span class="w-3.5 h-3.5 rounded-full bg-brand-primary"></span>
+<span>Blue</span>
+</button>
+</div>
+</div>
+<!-- Varian Paket -->
+<div class="flex flex-col gap-2">
+<span class="font-title-md text-title-md text-text-primary font-semibold">Paket Pembelian</span>
+<div class="flex items-center gap-2 flex-wrap">
+<button class="variant-type-btn px-3.5 py-2 rounded-lg bg-brand-subtle border border-brand-primary text-brand-primary font-label-md text-label-md font-medium transition-all" type="button">
+          Standard
+        </button>
+<button class="variant-type-btn px-3.5 py-2 rounded-lg bg-bg-sunken border border-transparent text-text-secondary font-label-md text-label-md transition-all" type="button">
+          Bundle Case
+        </button>
+<button class="px-3.5 py-2 rounded-lg bg-surface-dim text-text-placeholder font-label-md text-label-md opacity-60 cursor-not-allowed border border-transparent" disabled="" type="button">
+          Travel Kit (Habis)
+        </button>
+</div>
+</div>
+<!-- Stepper Kuantitas -->
+<div class="flex items-center justify-between pt-2 border-t border-border-subtle">
+<div>
+<span class="font-title-md text-title-md text-text-primary font-semibold">Jumlah</span>
+<p class="font-caption text-caption text-text-secondary mt-0.5">Sisa 50+ unit tersedia</p>
+</div>
+<div class="flex items-center rounded-lg bg-bg-sunken p-1 border border-border-subtle">
+<button aria-label="Kurangi Kuantitas" class="w-8 h-8 rounded flex items-center justify-center text-text-secondary hover:text-brand-primary active:bg-surface-container-highest transition-colors" id="qty-minus" type="button">
+<span class="material-symbols-outlined text-[18px]">remove</span>
+</button>
+<span class="w-10 text-center font-title-md text-title-md text-text-primary font-semibold" id="qty-val">1</span>
+<button aria-label="Tambah Kuantitas" class="w-8 h-8 rounded flex items-center justify-center text-text-secondary hover:text-brand-primary active:bg-surface-container-highest transition-colors" id="qty-plus" type="button">
+<span class="material-symbols-outlined text-[18px]">add</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Profil Toko & Verifikasi Seller Widget -->
+<div class="px-4 mt-3">
+<div class="bg-surface-container-lowest p-4 rounded-xl border border-border-subtle shadow-sm flex flex-col gap-3.5">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="w-12 h-12 rounded-full bg-signature-black flex items-center justify-center overflow-hidden shadow-sm shrink-0">
+<span class="font-headline-md text-text-on-brand font-bold tracking-wider">JBL</span>
+</div>
+<div class="flex flex-col">
+<div class="flex items-center gap-1.5">
+<h2 class="font-title-lg text-title-lg text-text-primary font-semibold">JBL Official Store</h2>
+<span class="material-symbols-outlined text-brand-primary text-[18px]" style="font-variation-settings: 'FILL' 1;">verified</span>
+</div>
+<div class="flex items-center gap-2 mt-0.5">
+<span class="font-caption text-caption text-success font-medium">Online</span>
+<span class="w-1 h-1 rounded-full bg-outline-variant"></span>
+<span class="font-caption text-caption text-text-secondary">Jakarta Pusat</span>
+</div>
+</div>
+</div>
+</div>
+<div class="grid grid-cols-3 gap-2 py-2 px-1 bg-surface-container-low rounded-lg text-center border border-border-subtle">
+<div class="flex flex-col p-1">
+<span class="font-label-md text-label-md text-text-primary font-bold">4.9 / 5.0</span>
+<span class="font-caption text-[11px] text-text-secondary mt-0.5">Rating Toko</span>
+</div>
+<div class="flex flex-col p-1 border-x border-border-subtle">
+<span class="font-label-md text-label-md text-text-primary font-bold">± 4 Menit</span>
+<span class="font-caption text-[11px] text-text-secondary mt-0.5">Balas Cepat</span>
+</div>
+<div class="flex flex-col p-1">
+<span class="font-label-md text-label-md text-text-primary font-bold">98.7%</span>
+<span class="font-caption text-[11px] text-text-secondary mt-0.5">Transaksi Sukses</span>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-2.5 pt-0.5">
+<button class="w-full h-9 rounded-lg bg-surface-container-lowest border border-border-default text-text-primary font-label-md text-label-md font-medium flex items-center justify-center gap-1.5 active:bg-bg-sunken transition-colors" type="button">
+<span class="material-symbols-outlined text-[18px] text-text-secondary">chat</span>
+<span>Chat Penjual</span>
+</button>
+<button class="w-full h-9 rounded-lg bg-surface-container-lowest border border-border-default text-text-primary font-label-md text-label-md font-medium flex items-center justify-center gap-1.5 active:bg-bg-sunken transition-colors" type="button">
+<span class="material-symbols-outlined text-[18px] text-text-secondary">storefront</span>
+<span>Kunjungi Toko</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Xpedia Trust & Guarantee Section -->
+<div class="px-4 mt-3">
+<div class="bg-[#F1F3FF] border border-[#dce1ff] rounded-xl p-3.5 shadow-sm">
+<h3 class="font-label-lg text-label-lg text-brand-navy mb-3 flex items-center gap-1.5 font-semibold">
+<span class="material-symbols-outlined text-signature-gold text-[20px]" style="font-variation-settings: 'FILL' 1;">verified_user</span>
+      Jaminan Belanja Xpedia Guarantee
+    </h3>
+<div class="grid grid-cols-3 gap-2">
+<div class="flex flex-col items-center text-center p-2 rounded-lg bg-surface-container-lowest border border-border-subtle">
+<span class="material-symbols-outlined text-brand-primary text-[22px]">shield</span>
+<span class="font-label-sm text-label-sm text-text-primary mt-1 font-semibold leading-tight">100% Original</span>
+<span class="font-caption text-[10px] text-text-secondary mt-0.5">Pasti Asli Resmi</span>
+</div>
+<div class="flex flex-col items-center text-center p-2 rounded-lg bg-surface-container-lowest border border-border-subtle">
+<span class="material-symbols-outlined text-brand-primary text-[22px]">lock_reset</span>
+<span class="font-label-sm text-label-sm text-text-primary mt-1 font-semibold leading-tight">Dana Terlindungi</span>
+<span class="font-caption text-[10px] text-text-secondary mt-0.5">Sampai Diterima</span>
+</div>
+<div class="flex flex-col items-center text-center p-2 rounded-lg bg-surface-container-lowest border border-border-subtle">
+<span class="material-symbols-outlined text-brand-primary text-[22px]">assignment_return</span>
+<span class="font-label-sm text-label-sm text-text-primary mt-1 font-semibold leading-tight">Bebas Retur</span>
+<span class="font-caption text-[10px] text-text-secondary mt-0.5">Sesuai Syarat</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Detail Deskripsi & Spesifikasi Produk Card -->
+<div class="px-4 mt-3">
+<div class="bg-surface-container-lowest p-4 rounded-xl border border-border-subtle shadow-sm flex flex-col gap-3">
+<div class="flex items-center gap-5 border-b border-border-subtle pb-2.5">
+<button class="font-title-md text-title-md text-brand-primary font-semibold border-b-2 border-brand-primary pb-1 -mb-3" type="button">
+        Deskripsi
+      </button>
+<button class="font-title-md text-title-md text-text-tertiary font-medium pb-1" type="button">
+        Spesifikasi
+      </button>
+<button class="font-title-md text-title-md text-text-tertiary font-medium pb-1" type="button">
+        Panduan Garansi
+      </button>
+</div>
+<p class="font-body-md text-body-md text-text-secondary leading-relaxed pt-1">
+      Nikmati kualitas suara luar biasa dengan JBL Tune 770NC, headphone nirkabel dengan fitur Adaptive Noise Cancelling yang memblokir kebisingan sekitar. Dilengkapi JBL Pure Bass Sound, daya baterai hingga 70 jam, dan koneksi multi-point untuk kemudahan berpindah perangkat.
+    </p>
+<!-- Bullet Keunggulan -->
+<div class="flex flex-col gap-2 mt-1">
+<span class="font-title-md text-title-md text-text-primary font-semibold">Dalam Kemasan:</span>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-success text-[18px]">check_circle</span>
+<span class="font-body-sm text-body-sm text-text-secondary">1x JBL Tune 770NC Wireless Headphone</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-success text-[18px]">check_circle</span>
+<span class="font-body-sm text-body-sm text-text-secondary">1x Kabel Pengisian Daya USB Type-C</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-success text-[18px]">check_circle</span>
+<span class="font-body-sm text-body-sm text-text-secondary">1x Kabel Audio Jack 3.5mm Detachable</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-success text-[18px]">check_circle</span>
+<span class="font-body-sm text-body-sm text-text-secondary">1x Kartu Garansi Resmi &amp; Buku Panduan</span>
+</div>
+</div>
+<!-- Spesifikasi Table Compact -->
+<div class="mt-2 rounded-lg bg-surface-container-low p-3 flex flex-col gap-2 border border-border-subtle">
+<span class="font-title-md text-title-md text-text-primary font-semibold mb-1">Spesifikasi Singkat</span>
+<div class="flex items-center justify-between text-body-sm">
+<span class="text-text-secondary">Merek</span>
+<span class="font-medium text-text-primary">JBL</span>
+</div>
+<div class="flex items-center justify-between text-body-sm">
+<span class="text-text-secondary">Konektivitas</span>
+<span class="font-medium text-text-primary">Bluetooth 5.3 / AUX 3.5mm</span>
+</div>
+<div class="flex items-center justify-between text-body-sm">
+<span class="text-text-secondary">Daya Baterai</span>
+<span class="font-medium text-text-primary">Hingga 70 Jam (ANC Nonaktif)</span>
+</div>
+<div class="flex items-center justify-between text-body-sm">
+<span class="text-text-secondary">Bobot</span>
+<span class="font-medium text-text-primary">232 Gram</span>
+</div>
+<div class="flex items-center justify-between text-body-sm">
+<span class="text-text-secondary">Garansi Resmi</span>
+<span class="font-medium text-text-primary">1 Tahun JBL Indonesia</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Ulasan Pembeli Ringkasan Card -->
+<div class="px-4 mt-3">
+<div class="bg-surface-container-lowest p-4 rounded-xl border border-border-subtle shadow-sm flex flex-col gap-3">
+<div class="flex items-center justify-between border-b border-border-subtle pb-3">
+<div class="flex items-center gap-2">
+<h3 class="font-title-lg text-title-lg text-text-primary font-semibold">Ulasan Pembeli</h3>
+<span class="px-2 py-0.5 rounded-full bg-brand-subtle text-brand-primary font-label-sm text-label-sm font-bold">4.9 / 5.0</span>
+</div>
+<button class="text-brand-primary font-label-md text-label-md font-medium flex items-center gap-0.5" type="button">
+<span>Lihat Semua</span>
+<span class="material-symbols-outlined text-[16px]">chevron_right</span>
+</button>
+</div>
+<!-- Review Card 1 -->
+<div class="p-3 rounded-lg bg-surface-container-low border border-border-subtle flex flex-col gap-2">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<div class="w-7 h-7 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center font-bold text-xs">
+            AP
+          </div>
+<div>
+<span class="font-label-md text-label-md text-text-primary font-semibold block leading-tight">Andi P***</span>
+<span class="font-caption text-[11px] text-text-tertiary">Varian: Black • 3 hari lalu</span>
+</div>
+</div>
+<div class="flex items-center text-warning">
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">star</span>
+</div>
+</div>
+<p class="font-body-sm text-body-sm text-text-secondary leading-relaxed">
+        Suara bass-nya mantap, ANC-nya berfungsi dengan sangat baik saat di kantor. Pengiriman cepat dan packaging aman berlapis bubble tebal!
+      </p>
+</div>
+<!-- Review Card 2 -->
+<div class="p-3 rounded-lg bg-surface-container-low border border-border-subtle flex flex-col gap-2">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<div class="w-7 h-7 rounded-full bg-tertiary-fixed text-on-tertiary-fixed flex items-center justify-center font-bold text-xs">
+            SN
+          </div>
+<div>
+<span class="font-label-md text-label-md text-text-primary font-semibold block leading-tight">Siti N***</span>
+<span class="font-caption text-[11px] text-text-tertiary">Varian: Blue • 1 minggu lalu</span>
+</div>
+</div>
+<div class="flex items-center text-warning">
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">star</span>
+</div>
+</div>
+<p class="font-body-sm text-body-sm text-text-secondary leading-relaxed">
+        Headphone-nya nyaman banget dipakai seharian, gak bikin telinga sakit. Kualitas audio jernih dan daya baterainya benar-benar awet.
+      </p>
+</div>
+</div>
+</div>
+<!-- Produk Terkait Card -->
+<div class="px-4 mt-3 mb-4">
+<div class="bg-surface-container-lowest p-4 rounded-xl border border-border-subtle shadow-sm flex flex-col gap-3">
+<div class="flex items-center justify-between">
+<h3 class="font-title-md text-title-md text-text-primary font-semibold">Produk Terkait dari Toko Ini</h3>
+<span class="material-symbols-outlined text-text-placeholder text-[20px]">chevron_right</span>
+</div>
+<div class="flex gap-3 overflow-x-auto pb-1 -mx-2 px-2">
+<!-- Item Mini 1 -->
+<div class="w-36 shrink-0 bg-surface-container-low rounded-lg p-2.5 flex flex-col border border-border-subtle">
+<img class="w-full h-24 object-contain rounded mb-2 mix-blend-multiply" data-alt="Compact portable JBL Flip 6 Bluetooth speaker in matte black, rugged waterproof fabric texture, vibrant studio lighting on clean backdrop" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDQtM-he8nMY28-IBA514CGh-lhs8yFVA9v13Jsz_t25uQRgBQOqFrgqo9MTmCG4-H1uA82zp1nkz0icEtjSBH-ER9n3Ml9uNea6wbDnTTC58dnATLo2dTBBln8B9n9qO7mt22IS1TxeYsGCLs_GWzl9Dr9pCdENCQtz8oAatFcXO6Ly2LfAzv2VwgwPSylOWrqTTq-WVB7zl1uGXobAvmG-DDu1DTuFm7LLWR1sGkjKdiufIR_AaIw"/>
+<span class="font-label-sm text-label-sm text-text-primary truncate font-medium">JBL Flip 6 Portable</span>
+<span class="font-price-sm text-price-sm text-danger mt-1 font-bold">Rp 1.799.000</span>
+</div>
+<!-- Item Mini 2 -->
+<div class="w-36 shrink-0 bg-surface-container-low rounded-lg p-2.5 flex flex-col border border-border-subtle">
+<img class="w-full h-24 object-contain rounded mb-2 mix-blend-multiply" data-alt="Modern JBL Wave Beam true wireless earbuds in white charging case, high key clean lighting, isolated studio product shot" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBS5DW0m89-0T8l6lzFFjWOPOTrQVSf8xEn6iUhU6m_MGs16tZnmH1VlG9zuaQXIIQ650N9VzleRpIfbcB7E8WCmlFBMA6FbAd1XG7UIEwDPqJFElJcrZeO0AwSUmTZ_nmEfdgTyDfWc3mEEN8jKWTBTzfLN_frMEhtk3JLamY3crmMzq2qbQsSx0g8-36di_AwO5ac3Gj8YqRgKkYu_rqQUzt3jUpprTNKD-b6NqYX5mkp7LgH6L_6"/>
+<span class="font-label-sm text-label-sm text-text-primary truncate font-medium">JBL Wave Beam TWS</span>
+<span class="font-price-sm text-price-sm text-danger mt-1 font-bold">Rp 699.000</span>
+</div>
+<!-- Item Mini 3 -->
+<div class="w-36 shrink-0 bg-surface-container-low rounded-lg p-2.5 flex flex-col border border-border-subtle">
+<img class="w-full h-24 object-contain rounded mb-2 mix-blend-multiply" data-alt="Heavy duty JBL Charge 5 wireless speaker with rugged camouflage pattern and rubber bumper edges, crisp studio product visualization" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB5pw87FpmIWXlMobngGZ6t-JxU3Fbz17NZpAKpXDeapKh0p1x6xaFzqAJiuCuAPnKPVDxMfgYXrc7qtp-iPJ828A9kPbAZ_77V1gMn2akgSGJSyTGx9hPtXvWVsQtfmWfQoXn0GcscXxsUy4l1isoqZWdmskZ-2OL3U4fNQzThI8CNpfNd0x7kvnPEPWkStHlZGHnHZrZPaLKtpMBsC4b7yj4qsybqaQERbr2n4TlRBeZfkXpljiBG"/>
+<span class="font-label-sm text-label-sm text-text-primary truncate font-medium">JBL Charge 5 Speaker</span>
+<span class="font-price-sm text-price-sm text-danger mt-1 font-bold">Rp 2.199.000</span>
+</div>
+</div>
+</div>
+</div></div>
+<script>
+  // Simple micro-interactions for PDP
+  const qtyVal = document.getElementById('qty-val');
+  const minusBtn = document.getElementById('qty-minus');
+  const plusBtn = document.getElementById('qty-plus');
+  const wishlistBtn = document.getElementById('wishlist-btn');
+  const wishlistIcon = document.getElementById('wishlist-icon');
+  const colorLabel = document.getElementById('selected-color-label');
+
+  let currentQty = 1;
+  let isWishlisted = false;
+
+  minusBtn?.addEventListener('click', () => {
+    if (currentQty > 1) {
+      currentQty--;
+      qtyVal.textContent = currentQty;
+    }
+  });
+
+  plusBtn?.addEventListener('click', () => {
+    if (currentQty < 50) {
+      currentQty++;
+      qtyVal.textContent = currentQty;
+    }
+  });
+
+  wishlistBtn?.addEventListener('click', () => {
+    isWishlisted = !isWishlisted;
+    if (isWishlisted) {
+      wishlistIcon.textContent = 'favorite';
+      wishlistIcon.style.fontVariationSettings = "'FILL' 1";
+      wishlistBtn.classList.add('text-danger');
+    } else {
+      wishlistIcon.textContent = 'favorite_border';
+      wishlistIcon.style.fontVariationSettings = "'FILL' 0";
+      wishlistBtn.classList.remove('text-danger');
+    }
+  });
+
+  // Color selection active toggle
+  const colorButtons = document.querySelectorAll('.variant-color-btn');
+  colorButtons.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      colorButtons.forEach(b => {
+        b.classList.remove('bg-brand-subtle', 'text-brand-primary');
+        b.classList.add('bg-bg-sunken', 'text-text-secondary');
+      });
+      btn.classList.add('bg-brand-subtle', 'text-brand-primary');
+      btn.classList.remove('bg-bg-sunken', 'text-text-secondary');
+      
+      const textSpan = btn.querySelector('span:last-child');
+      if (textSpan && colorLabel) {
+        colorLabel.textContent = textSpan.textContent;
+      }
+    });
+  });
+
+  // Package Type selection active toggle
+  const typeButtons = document.querySelectorAll('.variant-type-btn');
+  typeButtons.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      typeButtons.forEach(b => {
+        b.classList.remove('bg-brand-subtle', 'text-brand-primary');
+        b.classList.add('bg-bg-sunken', 'text-text-secondary');
+      });
+      btn.classList.add('bg-brand-subtle', 'text-brand-primary');
+      btn.classList.remove('bg-bg-sunken', 'text-text-secondary');
+    });
+  });
+</script></main>
+</body></html>

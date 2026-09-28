@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+
+<html lang="id"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"/><meta content="mobile_tab" name="shell-type"/><link href="https://fonts.googleapis.com" rel="preconnect"/><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { colors: { "primary-container": "#0056fe", "outline-variant": "#c3c5d9", "bg-surface": "#FFFFFF", "primary-fixed-dim": "#b6c4ff", "border-default": "#D1D5DB", "brand-primary-pressed": "#0047D1", "surface-variant": "#dce2f7", "warning-subtle": "#FFF6E5", "on-primary": "#ffffff", "text-primary": "#111827", "brand-navy": "#0F286C", "tertiary-fixed": "#ffdbd1", "tertiary-fixed-dim": "#ffb5a0", "surface-container-lowest": "#ffffff", "secondary-fixed-dim": "#b6c4ff", "text-on-brand": "#FFFFFF", "surface-container-highest": "#dce2f7", "text-secondary": "#4B5563", "secondary": "#465ba0", "bg-sunken": "#EFF1F4", "danger": "#FB132D", "on-background": "#141b2b", "on-secondary": "#ffffff", "surface-container-low": "#f1f3ff", "on-error": "#ffffff", "brand-primary": "#0056FE", "outline": "#737688", "on-tertiary": "#ffffff", "error": "#ba1a1a", "secondary-fixed": "#dce1ff", "text-tertiary": "#6B7280", "warning": "#F59E0B", "inverse-surface": "#293040", "surface-dim": "#d3daef", "surface-container-high": "#e1e8fd", "tertiary": "#972600", "surface": "#f9f9ff", "on-error-container": "#93000a", "text-placeholder": "#9CA3AF", "border-strong": "#9CA3AF", "secondary-container": "#9fb3ff", "error-container": "#ffdad6", "on-surface": "#141b2b", "surface-tint": "#004ee8", "surface-bright": "#f9f9ff", "bg-canvas": "#F7F8FA", "success": "#109553", "border-subtle": "#E5E7EB", "on-primary-fixed-variant": "#003ab2", "signature-black": "#101014", "on-tertiary-fixed": "#3b0900", "on-primary-fixed": "#001550", "background": "#f9f9ff", "on-secondary-fixed": "#00164f", "inverse-primary": "#b6c4ff", "brand-subtle": "#EBF2FF", "on-primary-container": "#e3e7ff", "on-secondary-container": "#2e4387", "on-tertiary-fixed-variant": "#872100", "signature-gold": "#C9A227", "primary-fixed": "#dce1ff", "on-tertiary-container": "#ffe2da", "surface-container": "#e9edff", "success-subtle": "#E8F8EF", "primary": "#0042c7", "inverse-on-surface": "#edf0ff", "danger-subtle": "#FFECEE", "on-secondary-fixed-variant": "#2d4286", "tertiary-container": "#c13402", "on-surface-variant": "#434656" }, spacing: { "space-sm": "0.5rem", "space-lg": "1rem", "gutter": "0.75rem", "space-xl": "1.5rem", "space-md": "0.75rem", "space-xs": "0.25rem", "margin": "1rem" }, fontFamily: { "price-sm": ["Inter"], "title-md": ["Inter"], "label-sm": ["Inter"], "label-lg": ["Inter"], "headline-lg": ["Inter"], "price-lg": ["Inter"], "body-sm": ["Inter"], "caption": ["Inter"], "body-md": ["Inter"], "headline-xl": ["Inter"], "headline-md": ["Inter"], "price-md": ["Inter"], "body-lg": ["Inter"], "title-lg": ["Inter"], "label-md": ["Inter"] }, fontSize: { "price-sm": ["14px", { lineHeight: "20px", fontWeight: "600" }], "title-md": ["14px", { lineHeight: "20px", fontWeight: "600" }], "label-sm": ["11px", { lineHeight: "14px", fontWeight: "500" }], "label-lg": ["14px", { lineHeight: "20px", fontWeight: "500" }], "headline-lg": ["20px", { lineHeight: "28px", fontWeight: "600" }], "price-lg": ["18px", { lineHeight: "24px", fontWeight: "700" }], "body-sm": ["12px", { lineHeight: "18px", fontWeight: "400" }], "caption": ["11px", { lineHeight: "14px", fontWeight: "400" }], "body-md": ["14px", { lineHeight: "20px", fontWeight: "400" }], "headline-xl": ["24px", { lineHeight: "32px", fontWeight: "700" }], "headline-md": ["18px", { lineHeight: "26px", fontWeight: "600" }], "price-md": ["16px", { lineHeight: "22px", fontWeight: "700" }], "body-lg": ["16px", { lineHeight: "24px", fontWeight: "400" }], "title-lg": ["16px", { lineHeight: "24px", fontWeight: "600" }], "label-md": ["12px", { lineHeight: "16px", fontWeight: "500" }] } } } };</script><style>@layer base{html,body{width:100%;margin:0;padding:0;background-color:#F7F8FA;}body{overscroll-behavior-y:none;-webkit-tap-highlight-color:transparent;}.pb-safe{padding-bottom:env(safe-area-inset-bottom,0px);}.pt-safe{padding-top:env(safe-area-inset-top,0px);}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style></head><body class="bg-bg-canvas text-text-primary flex flex-col min-h-screen antialiased selection:bg-brand-primary selection:text-white"><header class="fixed top-0 w-full z-50 pt-safe bg-bg-surface/90 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)]"><div class="h-14 px-margin flex items-center justify-between"><div class="flex items-center gap-space-sm"><div class="w-8 h-8 rounded-lg bg-brand-primary flex items-center justify-center"><span class="text-white font-headline-md font-bold">X</span></div><span class="font-title-lg text-title-lg text-brand-navy tracking-tight">Wishlist</span></div><div class="flex items-center gap-space-xs"><button aria-label="Pemberitahuan" class="w-11 h-11 flex items-center justify-center rounded-full text-text-secondary hover:text-text-primary transition-colors"><span class="material-symbols-outlined text-[24px]">notifications</span></button><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div></div></div></header><main class="flex-1 flex flex-col relative w-full pt-14 pb-20 bg-bg-canvas"><div class="flex flex-col w-full pb-24">
+<!-- Wishlist Summary & Sub-header Notification Banner -->
+<section class="px-margin pt-space-md pb-space-sm bg-bg-surface shadow-sm">
+<div class="flex items-center justify-between">
+<div>
+<div class="flex items-baseline gap-space-xs">
+<h1 class="font-headline-lg text-headline-lg text-text-primary">Wishlist Saya</h1>
+<span class="font-label-md text-label-md text-text-tertiary">(8 produk)</span>
+</div>
+<p class="font-body-sm text-body-sm text-text-secondary mt-0.5">Dapatkan notifikasi instan saat harga turun</p>
+</div>
+<!-- Quick Action: Price Drop Notification Toggle -->
+<button aria-label="Nyalakan notifikasi promo" class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-brand-subtle text-brand-primary active:scale-95 transition-transform" id="notif-toggle-btn">
+<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">notifications_active</span>
+<span class="font-label-sm text-label-sm">Aktif</span>
+</button>
+</div>
+<!-- Category Filter Horizontal Scroll Tabs -->
+<div class="flex items-center gap-space-xs overflow-x-auto no-scrollbar pt-space-md pb-space-xs -mx-margin px-margin">
+<button class="filter-chip whitespace-nowrap px-3.5 py-1.5 rounded-full bg-brand-subtle text-brand-primary font-label-md text-label-md transition-colors" data-cat="all">
+        Semua (8)
+      </button>
+<button class="filter-chip whitespace-nowrap px-3.5 py-1.5 rounded-full bg-bg-sunken text-text-secondary font-label-md text-label-md transition-colors" data-cat="gadget">
+        Gadget (3)
+      </button>
+<button class="filter-chip whitespace-nowrap px-3.5 py-1.5 rounded-full bg-bg-sunken text-text-secondary font-label-md text-label-md transition-colors" data-cat="fashion">
+        Fashion (2)
+      </button>
+<button class="filter-chip whitespace-nowrap px-3.5 py-1.5 rounded-full bg-bg-sunken text-text-secondary font-label-md text-label-md transition-colors" data-cat="home">
+        Rumah Tangga (2)
+      </button>
+<button class="filter-chip whitespace-nowrap px-3.5 py-1.5 rounded-full bg-bg-sunken text-text-secondary font-label-md text-label-md transition-colors" data-cat="promo">
+        Promo Menipis (1)
+      </button>
+</div>
+</section>
+<!-- Product Cards Grid: Strict 2 Columns Mobile Hierarchy -->
+<section class="px-margin pt-space-md">
+<div class="grid grid-cols-2 gap-space-sm" id="wishlist-grid">
+<!-- Item 1: iPhone 17 -->
+<article class="product-card flex flex-col justify-between bg-bg-surface rounded-lg p-2 shadow-sm relative group" data-cat="gadget">
+<div>
+<!-- Image Container with Heart and Bell Overlay -->
+<div class="relative w-full aspect-square rounded-lg bg-bg-sunken overflow-hidden mb-2">
+<img class="w-full h-full object-cover" data-alt="High tech minimalist studio shot of a modern lavender Apple iPhone 17 smartphone, crisp back dual camera module, glossy sleek metallic frame against clean white gradient studio setup." src="https://lh3.googleusercontent.com/aida-public/AB6AXuADWaXEXjRadtI-DBgZqKo2tMEHAaOD20vKwbL7p1Ndfl1PYs8iCK_3nSbJwxz8wLvPYYY2E52VbWoAzjpUxyIxxPKS703Xf3FzTgGf96FTrcDjv1Xxz5Kl4bD-XXQ1P2RCfzDdwXDv-JQvKej81oxnVybTZ1hOfwKI4-lsxeMfpjg3xb8R8ISklbNgZ236WcwlgQJ8aRB_TVfTaz3kpGUJlndHJWIDnfkBvB5sFujLyzah23As6xlM"/>
+<!-- Wishlist Heart Trigger Active -->
+<button aria-label="Hapus dari wishlist" class="wishlist-btn absolute top-1.5 right-1.5 w-7 h-7 rounded-full bg-bg-surface/90 backdrop-blur-md flex items-center justify-center text-danger shadow-sm active:scale-90 transition-transform">
+<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">favorite</span>
+</button>
+<!-- Price alert indicator -->
+<div class="absolute bottom-1.5 left-1.5 px-1.5 py-0.5 rounded bg-signature-black/75 backdrop-blur-sm text-text-on-brand flex items-center gap-0.5">
+<span class="material-symbols-outlined text-[12px] text-signature-gold" style="font-variation-settings: 'FILL' 1;">notifications</span>
+<span class="font-caption text-[10px] leading-tight">Pantau</span>
+</div>
+</div>
+<!-- Product Details -->
+<h2 class="font-title-md text-title-md text-text-primary line-clamp-2 min-h-[40px] leading-snug">Apple iPhone 17 256GB (5G) Garansi Resmi</h2>
+<div class="mt-1 flex flex-col">
+<div class="flex items-center gap-1">
+<span class="font-caption text-caption text-text-tertiary line-through">Rp 17.499.000</span>
+<span class="px-1 py-0.2 rounded bg-danger-subtle text-danger font-label-sm text-[10px] font-bold">-3%</span>
+</div>
+<span class="font-price-md text-price-md text-brand-primary">Rp 16.999.000</span>
+</div>
+<!-- Rating & Sales Row -->
+<div class="flex items-center gap-1 mt-1 text-text-secondary">
+<span class="material-symbols-outlined text-[14px] text-warning" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="font-label-sm text-label-sm font-semibold text-text-primary">4.9</span>
+<span class="font-caption text-caption text-text-tertiary">(1.2k)</span>
+<span class="text-text-placeholder font-caption">•</span>
+<span class="font-caption text-caption text-text-tertiary">12.3k terjual</span>
+</div>
+<!-- Stock Chip & Condition -->
+<div class="flex items-center gap-1.5 mt-2">
+<span class="px-2 py-0.5 rounded bg-success-subtle text-success font-label-sm text-label-sm font-medium">Ready Stok</span>
+<span class="px-1.5 py-0.5 rounded bg-bg-sunken text-text-secondary font-label-sm text-[10px]">Baru</span>
+</div>
+<!-- Merchant Tag -->
+<div class="flex items-center gap-1 mt-2.5">
+<span class="material-symbols-outlined text-[14px] text-brand-primary" style="font-variation-settings: 'FILL' 1;">verified</span>
+<span class="font-caption text-caption text-text-secondary truncate">Apple Official Store</span>
+</div>
+</div>
+<!-- Add to Cart CTA -->
+<button aria-label="Tambah ke Keranjang" class="cart-btn mt-3 w-full h-9 rounded-lg bg-brand-primary active:bg-brand-primary-pressed text-white flex items-center justify-center gap-1.5 transition-colors shadow-sm">
+<span class="material-symbols-outlined text-[16px]">shopping_cart</span>
+<span class="font-label-md text-label-md font-semibold">+ Keranjang</span>
+</button>
+</article>
+<!-- Item 2: Nike Air Force 1 -->
+<article class="product-card flex flex-col justify-between bg-bg-surface rounded-lg p-2 shadow-sm relative group" data-cat="fashion">
+<div>
+<!-- Image Container -->
+<div class="relative w-full aspect-square rounded-lg bg-bg-sunken overflow-hidden mb-2">
+<img class="w-full h-full object-cover" data-alt="Stylish Nike Air Force 1 07 low women sneaker in neutral sail peach colorway, pristine product photography, soft studio floor lighting, crisp details." src="https://lh3.googleusercontent.com/aida-public/AB6AXuD6u-iIy9E2EONmNARUdfAaCTV3vdsb0BM41BqF9tz7CDj_MNYlKFY1gW3kS17iqXTbYgrEBVizGixqcyMl1DuiXpn3_iHjTGiXpQd6CoBicoJPrhOLE6f0-Wn8e-kdIIv0FAHR8Yre73RjMd1qDlSrhC5lPru08KQCqTrTx5tk_jwsvKhNP0LLiPtifPcxNIjH8P-dhgV84ZfO8nrpd63Pi0FvQYDKQfDqk8y8Lr9maGksKZamx1bg"/>
+<button aria-label="Hapus dari wishlist" class="wishlist-btn absolute top-1.5 right-1.5 w-7 h-7 rounded-full bg-bg-surface/90 backdrop-blur-md flex items-center justify-center text-danger shadow-sm active:scale-90 transition-transform">
+<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">favorite</span>
+</button>
+<div class="absolute bottom-1.5 left-1.5 px-1.5 py-0.5 rounded bg-signature-black/75 backdrop-blur-sm text-text-on-brand flex items-center gap-0.5">
+<span class="material-symbols-outlined text-[12px] text-signature-gold" style="font-variation-settings: 'FILL' 1;">notifications</span>
+<span class="font-caption text-[10px] leading-tight">Pantau</span>
+</div>
+</div>
+<!-- Product Details -->
+<h2 class="font-title-md text-title-md text-text-primary line-clamp-2 min-h-[40px] leading-snug">Nike Air Force 1 '07 Women's Shoes - Sail Peach</h2>
+<div class="mt-1 flex flex-col">
+<span class="font-price-md text-price-md text-brand-primary">Rp 1.299.000</span>
+</div>
+<!-- Rating & Sales Row -->
+<div class="flex items-center gap-1 mt-1 text-text-secondary">
+<span class="material-symbols-outlined text-[14px] text-warning" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="font-label-sm text-label-sm font-semibold text-text-primary">4.9</span>
+<span class="font-caption text-caption text-text-tertiary">(919)</span>
+<span class="text-text-placeholder font-caption">•</span>
+<span class="font-caption text-caption text-text-tertiary">3.1k terjual</span>
+</div>
+<!-- Stock Chip & Condition -->
+<div class="flex items-center gap-1.5 mt-2">
+<span class="px-2 py-0.5 rounded bg-success-subtle text-success font-label-sm text-label-sm font-medium">Ready Stok</span>
+<span class="px-1.5 py-0.5 rounded bg-bg-sunken text-text-secondary font-label-sm text-[10px]">Baru</span>
+</div>
+<!-- Merchant Tag -->
+<div class="flex items-center gap-1 mt-2.5">
+<span class="material-symbols-outlined text-[14px] text-brand-primary" style="font-variation-settings: 'FILL' 1;">verified</span>
+<span class="font-caption text-caption text-text-secondary truncate">Nike Official Store</span>
+</div>
+</div>
+<!-- Add to Cart CTA -->
+<button aria-label="Tambah ke Keranjang" class="cart-btn mt-3 w-full h-9 rounded-lg bg-brand-primary active:bg-brand-primary-pressed text-white flex items-center justify-center gap-1.5 transition-colors shadow-sm">
+<span class="material-symbols-outlined text-[16px]">shopping_cart</span>
+<span class="font-label-md text-label-md font-semibold">+ Keranjang</span>
+</button>
+</article>
+<!-- Item 3: Jotun Paint (Home) -->
+<article class="product-card flex flex-col justify-between bg-bg-surface rounded-lg p-2 shadow-sm relative group" data-cat="home">
+<div>
+<!-- Image Container -->
+<div class="relative w-full aspect-square rounded-lg bg-bg-sunken overflow-hidden mb-2">
+<img class="w-full h-full object-cover" data-alt="Jotun Jotashield Colour Extreme 5 Liters exterior paint tin container, professional studio commercial lighting with subtle architectural mock background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAdAws3VE7Sc9t0e-5AySE8Xy6ynK35VMt8w-WKxYjjjbGkXGbXmWhmexVUTQ8nKe4DsyVwSTK5dxt9LkrCovqDCciCLJLxssHxdfsBtjXsP6cr5fjIXBJdP3VioEC325aofbMHufO2lrtRbczo1Z_EyFQ11otuQrmWzj6BrDuZs39WK1Ewm48BSRiCwO2Zax-JLDo2swULogt3lTiAL8DVuzZQVtAv8bmSSPyvnfETsN3a8FDBEUAI"/>
+<button aria-label="Hapus dari wishlist" class="wishlist-btn absolute top-1.5 right-1.5 w-7 h-7 rounded-full bg-bg-surface/90 backdrop-blur-md flex items-center justify-center text-danger shadow-sm active:scale-90 transition-transform">
+<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">favorite</span>
+</button>
+</div>
+<!-- Product Details -->
+<h2 class="font-title-md text-title-md text-text-primary line-clamp-2 min-h-[40px] leading-snug">Jotun Jotashield Colour Extreme 5L Cat Eksterior</h2>
+<div class="mt-1 flex flex-col">
+<span class="font-price-md text-price-md text-brand-primary">Rp 589.000</span>
+</div>
+<!-- Rating & Sales Row -->
+<div class="flex items-center gap-1 mt-1 text-text-secondary">
+<span class="material-symbols-outlined text-[14px] text-warning" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="font-label-sm text-label-sm font-semibold text-text-primary">4.8</span>
+<span class="font-caption text-caption text-text-tertiary">(320)</span>
+<span class="text-text-placeholder font-caption">•</span>
+<span class="font-caption text-caption text-text-tertiary">2.1k terjual</span>
+</div>
+<!-- Stock Chip & Condition -->
+<div class="flex items-center gap-1.5 mt-2">
+<span class="px-2 py-0.5 rounded bg-success-subtle text-success font-label-sm text-label-sm font-medium">Ready Stok</span>
+<span class="px-1.5 py-0.5 rounded bg-bg-sunken text-text-secondary font-label-sm text-[10px]">Baru</span>
+</div>
+<!-- Merchant Tag -->
+<div class="flex items-center gap-1 mt-2.5">
+<span class="material-symbols-outlined text-[14px] text-brand-primary" style="font-variation-settings: 'FILL' 1;">verified</span>
+<span class="font-caption text-caption text-text-secondary truncate">Jotun Official Store</span>
+</div>
+</div>
+<!-- Add to Cart CTA -->
+<button aria-label="Tambah ke Keranjang" class="cart-btn mt-3 w-full h-9 rounded-lg bg-brand-primary active:bg-brand-primary-pressed text-white flex items-center justify-center gap-1.5 transition-colors shadow-sm">
+<span class="material-symbols-outlined text-[16px]">shopping_cart</span>
+<span class="font-label-md text-label-md font-semibold">+ Keranjang</span>
+</button>
+</article>
+<!-- Item 4: Apple AirPods 4 -->
+<article class="product-card flex flex-col justify-between bg-bg-surface rounded-lg p-2 shadow-sm relative group" data-cat="gadget">
+<div>
+<!-- Image Container -->
+<div class="relative w-full aspect-square rounded-lg bg-bg-sunken overflow-hidden mb-2">
+<img class="w-full h-full object-cover" data-alt="Official pristine Apple AirPods 4 white wireless earbuds in an open charging case showing sleek contours against a clean studio gradient backdrop." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBhx4V5ODjrE19ITrXuWPmj6ugtXxZUR-g5Iv5a57N4T_t1FaSThD8L9XluT-YjJCAdXVE0QcDKuf98sp2UkQPEpQtQfD4I83T74DH5wEhZnMUdeH6quMp6Dz1LxJWfVYRt0oeoVtl5rv-hbAxaMi8DE4jux3LV5JpPjadwpTHJUXw904z5NpLa21ED-_n5pUgewv0-QZnyc4aJYN1ezozN-Ri5FVEZ0G90k1enn_zTO_gGo1w3heNq"/>
+<button aria-label="Hapus dari wishlist" class="wishlist-btn absolute top-1.5 right-1.5 w-7 h-7 rounded-full bg-bg-surface/90 backdrop-blur-md flex items-center justify-center text-danger shadow-sm active:scale-90 transition-transform">
+<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">favorite</span>
+</button>
+<div class="absolute bottom-1.5 left-1.5 px-1.5 py-0.5 rounded bg-signature-black/75 backdrop-blur-sm text-text-on-brand flex items-center gap-0.5">
+<span class="material-symbols-outlined text-[12px] text-signature-gold" style="font-variation-settings: 'FILL' 1;">notifications</span>
+<span class="font-caption text-[10px] leading-tight">Pantau</span>
+</div>
+</div>
+<!-- Product Details -->
+<h2 class="font-title-md text-title-md text-text-primary line-clamp-2 min-h-[40px] leading-snug">Apple AirPods 4 (USB-C) Active Noise Cancellation</h2>
+<div class="mt-1 flex flex-col">
+<span class="font-price-md text-price-md text-brand-primary">Rp 2.499.000</span>
+</div>
+<!-- Rating & Sales Row -->
+<div class="flex items-center gap-1 mt-1 text-text-secondary">
+<span class="material-symbols-outlined text-[14px] text-warning" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="font-label-sm text-label-sm font-semibold text-text-primary">4.9</span>
+<span class="font-caption text-caption text-text-tertiary">(1.5k)</span>
+<span class="text-text-placeholder font-caption">•</span>
+<span class="font-caption text-caption text-text-tertiary">10.2k terjual</span>
+</div>
+<!-- Stock Chip & Condition -->
+<div class="flex items-center gap-1.5 mt-2">
+<span class="px-2 py-0.5 rounded bg-success-subtle text-success font-label-sm text-label-sm font-medium">Ready Stok</span>
+<span class="px-1.5 py-0.5 rounded bg-bg-sunken text-text-secondary font-label-sm text-[10px]">Baru</span>
+</div>
+<!-- Merchant Tag -->
+<div class="flex items-center gap-1 mt-2.5">
+<span class="material-symbols-outlined text-[14px] text-brand-primary" style="font-variation-settings: 'FILL' 1;">verified</span>
+<span class="font-caption text-caption text-text-secondary truncate">Apple Official Store</span>
+</div>
+</div>
+<!-- Add to Cart CTA -->
+<button aria-label="Tambah ke Keranjang" class="cart-btn mt-3 w-full h-9 rounded-lg bg-brand-primary active:bg-brand-primary-pressed text-white flex items-center justify-center gap-1.5 transition-colors shadow-sm">
+<span class="material-symbols-outlined text-[16px]">shopping_cart</span>
+<span class="font-label-md text-label-md font-semibold">+ Keranjang</span>
+</button>
+</article>
+<!-- Item 5: Asus Vivobook (Promo Menipis example) -->
+<article class="product-card flex flex-col justify-between bg-bg-surface rounded-lg p-2 shadow-sm relative group" data-cat="gadget promo">
+<div>
+<!-- Image Container -->
+<div class="relative w-full aspect-square rounded-lg bg-bg-sunken overflow-hidden mb-2">
+<img class="w-full h-full object-cover" data-alt="Modern ultra-slim ASUS Vivobook 14 OLED laptop open angled view displaying vibrant rainbow desktop wallpaper, premium silver aluminum body." src="https://lh3.googleusercontent.com/aida-public/AB6AXuByOF9PI_NEAMRp3RIE9VLLIYAaZT0KsP9EJ-nsm_Jip9gL2b7TmcQmSee8POWDESEoP24vVGApFlxRJUeb1fxUezhW91LeKbtdmW6JTdaIFzzlpdVJFwTqUuvZMBO3C6qTODekKtBqG7sIn8DpGkKkjIDk2cKWwy0TfduyLEGbjWlsCSU8k1JudLz34unSijKBNgUFMxm6IF3E7egTshtTAixuJD1WZY2XLOnsSW0kuS8HOqU_vn28"/>
+<button aria-label="Hapus dari wishlist" class="wishlist-btn absolute top-1.5 right-1.5 w-7 h-7 rounded-full bg-bg-surface/90 backdrop-blur-md flex items-center justify-center text-danger shadow-sm active:scale-90 transition-transform">
+<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">favorite</span>
+</button>
+<div class="absolute bottom-1.5 left-1.5 px-1.5 py-0.5 rounded bg-signature-black/75 backdrop-blur-sm text-text-on-brand flex items-center gap-0.5">
+<span class="material-symbols-outlined text-[12px] text-signature-gold" style="font-variation-settings: 'FILL' 1;">notifications</span>
+<span class="font-caption text-[10px] leading-tight">Pantau</span>
+</div>
+</div>
+<!-- Product Details -->
+<h2 class="font-title-md text-title-md text-text-primary line-clamp-2 min-h-[40px] leading-snug">Laptop Asus Vivobook 14 A1404VA OLED i5 16GB</h2>
+<div class="mt-1 flex flex-col">
+<div class="flex items-center gap-1">
+<span class="font-caption text-caption text-text-tertiary line-through">Rp 9.499.000</span>
+<span class="px-1 py-0.2 rounded bg-danger-subtle text-danger font-label-sm text-[10px] font-bold">-5%</span>
+</div>
+<span class="font-price-md text-price-md text-brand-primary">Rp 8.999.000</span>
+</div>
+<!-- Rating & Sales Row -->
+<div class="flex items-center gap-1 mt-1 text-text-secondary">
+<span class="material-symbols-outlined text-[14px] text-warning" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="font-label-sm text-label-sm font-semibold text-text-primary">4.8</span>
+<span class="font-caption text-caption text-text-tertiary">(436)</span>
+<span class="text-text-placeholder font-caption">•</span>
+<span class="font-caption text-caption text-text-tertiary">2.8k terjual</span>
+</div>
+<!-- Stock Chip & Condition: Stok Menipis -->
+<div class="flex items-center gap-1.5 mt-2">
+<span class="px-2 py-0.5 rounded bg-warning-subtle text-warning font-label-sm text-label-sm font-semibold">Sisa 3</span>
+<span class="px-1.5 py-0.5 rounded bg-bg-sunken text-text-secondary font-label-sm text-[10px]">Baru</span>
+</div>
+<!-- Merchant Tag -->
+<div class="flex items-center gap-1 mt-2.5">
+<span class="material-symbols-outlined text-[14px] text-brand-primary" style="font-variation-settings: 'FILL' 1;">verified</span>
+<span class="font-caption text-caption text-text-secondary truncate">ASUS Official Store</span>
+</div>
+</div>
+<!-- Add to Cart CTA -->
+<button aria-label="Tambah ke Keranjang" class="cart-btn mt-3 w-full h-9 rounded-lg bg-brand-primary active:bg-brand-primary-pressed text-white flex items-center justify-center gap-1.5 transition-colors shadow-sm">
+<span class="material-symbols-outlined text-[16px]">shopping_cart</span>
+<span class="font-label-md text-label-md font-semibold">+ Keranjang</span>
+</button>
+</article>
+<!-- Item 6: Eiger Wanderpack (Fashion/Outdoor) -->
+<article class="product-card flex flex-col justify-between bg-bg-surface rounded-lg p-2 shadow-sm relative group" data-cat="fashion">
+<div>
+<!-- Image Container -->
+<div class="relative w-full aspect-square rounded-lg bg-bg-sunken overflow-hidden mb-2">
+<img class="w-full h-full object-cover" data-alt="Eiger Wanderpack outdoor commuting 25L canvas laptop backpack in beige earth tone color, cleanly set on a studio display plinth." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAjXanb-D6MJQMqKuUcXhg7cTMuuj5aGBVzPEIHkqJzpV7bsgOpeHE5wm9rtsExwB500P81XvIuuWF82xwZ-kVUtB5yHSTNBDBwbo2AXVTlUUd_lc6YPehtldQAs0jGG4a7XEptqrz4VEHOPC3pzHH3RQg7oiSlXKT_DzfHJ7iSANfjSK8rW1Vp2fbfjXkul2UPdTuyKSLVFnXVWdOUplXu7ZerSL_ddAlal6AHtq05sx-zRpBTK_SO"/>
+<button aria-label="Hapus dari wishlist" class="wishlist-btn absolute top-1.5 right-1.5 w-7 h-7 rounded-full bg-bg-surface/90 backdrop-blur-md flex items-center justify-center text-danger shadow-sm active:scale-90 transition-transform">
+<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">favorite</span>
+</button>
+</div>
+<!-- Product Details -->
+<h2 class="font-title-md text-title-md text-text-primary line-clamp-2 min-h-[40px] leading-snug">Eiger Wanderpack Laptop Backpack 25L Water-repellent</h2>
+<div class="mt-1 flex flex-col">
+<span class="font-price-md text-price-md text-brand-primary">Rp 719.000</span>
+</div>
+<!-- Rating & Sales Row -->
+<div class="flex items-center gap-1 mt-1 text-text-secondary">
+<span class="material-symbols-outlined text-[14px] text-warning" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="font-label-sm text-label-sm font-semibold text-text-primary">4.8</span>
+<span class="font-caption text-caption text-text-tertiary">(312)</span>
+<span class="text-text-placeholder font-caption">•</span>
+<span class="font-caption text-caption text-text-tertiary">1.9k terjual</span>
+</div>
+<!-- Stock Chip & Condition: Pre-Order -->
+<div class="flex items-center gap-1.5 mt-2">
+<span class="px-2 py-0.5 rounded bg-brand-subtle text-brand-primary font-label-sm text-label-sm font-medium">Pre-Order</span>
+<span class="px-1.5 py-0.5 rounded bg-bg-sunken text-text-secondary font-label-sm text-[10px]">Baru</span>
+</div>
+<!-- Merchant Tag -->
+<div class="flex items-center gap-1 mt-2.5">
+<span class="material-symbols-outlined text-[14px] text-brand-primary" style="font-variation-settings: 'FILL' 1;">verified</span>
+<span class="font-caption text-caption text-text-secondary truncate">Eiger Official Store</span>
+</div>
+</div>
+<!-- Add to Cart CTA -->
+<button aria-label="Tambah ke Keranjang" class="cart-btn mt-3 w-full h-9 rounded-lg bg-brand-primary active:bg-brand-primary-pressed text-white flex items-center justify-center gap-1.5 transition-colors shadow-sm">
+<span class="material-symbols-outlined text-[16px]">shopping_cart</span>
+<span class="font-label-md text-label-md font-semibold">+ Keranjang</span>
+</button>
+</article>
+</div>
+</section>
+<!-- Empty state container (dynamically toggled if all filtered out) -->
+<div class="hidden flex flex-col items-center justify-center text-center px-margin py-16" id="empty-state">
+<div class="w-20 h-20 rounded-full bg-brand-subtle flex items-center justify-center text-brand-primary mb-4">
+<span class="material-symbols-outlined text-[40px]">favorite_border</span>
+</div>
+<h3 class="font-headline-md text-headline-md text-text-primary mb-1">Wishlist Belum Ada</h3>
+<p class="font-body-sm text-body-sm text-text-secondary max-w-xs mb-6">Simpan barang idamanmu agar tidak terlewat promo dan diskon spesial dari Xpedia.</p>
+<a class="px-6 py-2.5 rounded-lg bg-brand-primary text-white font-label-lg text-label-lg active:scale-95 transition-transform" href="#">
+      Mulai Cari Produk
+    </a>
+</div>
+<!-- Reassurance Footnote Banner -->
+<section class="mx-margin mt-space-xl p-space-md rounded-lg bg-brand-navy text-text-on-brand flex items-center justify-between shadow-sm">
+<div class="flex items-center gap-space-sm">
+<div class="w-10 h-10 rounded-full bg-signature-gold/20 flex items-center justify-center flex-shrink-0 text-signature-gold">
+<span class="material-symbols-outlined text-[22px]">price_check</span>
+</div>
+<div>
+<p class="font-title-md text-title-md font-bold text-text-on-brand">Jaminan Harga Termurah</p>
+<p class="font-body-sm text-[11px] text-surface-container-highest opacity-90">Klaim voucher cashback jika menemukan harga lebih hemat di tempat lain.</p>
+</div>
+</div>
+</section>
+<!-- Toast notification component for micro-interactions -->
+<div class="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 bg-signature-black/90 text-text-on-brand text-label-md px-4 py-2 rounded-full shadow-lg opacity-0 pointer-events-none transition-all duration-300 flex items-center gap-2" id="toast">
+<span class="material-symbols-outlined text-[18px] text-success" id="toast-icon">check_circle</span>
+<span id="toast-msg">Berhasil ditambahkan ke Keranjang</span>
+</div>
+</div>
+<script>
+  // Highlight active Wishlist bottom tab if shell has tab bar
+  const navWishlistTab = document.querySelector('nav a[data-path="wishlist"]');
+  if (navWishlistTab) {
+    document.querySelectorAll('nav a').forEach(el => {
+      el.classList.remove('text-brand-primary', 'font-label-md');
+      el.classList.add('text-text-tertiary');
+    });
+    navWishlistTab.classList.remove('text-text-tertiary');
+    navWishlistTab.classList.add('text-brand-primary', 'font-semibold');
+  }
+
+  // Toast micro-interaction helper
+  const toast = document.getElementById('toast');
+  const toastMsg = document.getElementById('toast-msg');
+  const toastIcon = document.getElementById('toast-icon');
+  let toastTimeout;
+
+  function showToast(message, isSuccess = true) {
+    clearTimeout(toastTimeout);
+    toastMsg.textContent = message;
+    toastIcon.textContent = isSuccess ? 'check_circle' : 'info';
+    toastIcon.className = `material-symbols-outlined text-[18px] ${isSuccess ? 'text-success' : 'text-warning'}`;
+    toast.classList.remove('opacity-0', 'pointer-events-none', '-translate-y-2');
+    toast.classList.add('opacity-100', 'translate-y-0');
+    toastTimeout = setTimeout(() => {
+      toast.classList.add('opacity-0', 'pointer-events-none');
+      toast.classList.remove('opacity-100');
+    }, 2400);
+  }
+
+  // Cart button micro-interactions
+  document.querySelectorAll('.cart-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const card = btn.closest('.product-card');
+      const title = card ? card.querySelector('h2').textContent.trim() : 'Produk';
+      showToast(`+1 ${title.substring(0, 18)}... dimasukkan keranjang`);
+    });
+  });
+
+  // Heart toggle interaction
+  document.querySelectorAll('.wishlist-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const icon = btn.querySelector('.material-symbols-outlined');
+      if (btn.classList.contains('text-danger')) {
+        btn.classList.remove('text-danger');
+        btn.classList.add('text-text-placeholder');
+        icon.style.fontVariationSettings = "'FILL' 0";
+        showToast('Dihapus dari Wishlist', false);
+      } else {
+        btn.classList.add('text-danger');
+        btn.classList.remove('text-text-placeholder');
+        icon.style.fontVariationSettings = "'FILL' 1";
+        showToast('Disimpan kembali ke Wishlist');
+      }
+    });
+  });
+
+  // Filter chips interaction
+  const filterChips = document.querySelectorAll('.filter-chip');
+  const productCards = document.querySelectorAll('.product-card');
+  const emptyState = document.getElementById('empty-state');
+  const wishlistGrid = document.getElementById('wishlist-grid');
+
+  filterChips.forEach(chip => {
+    chip.addEventListener('click', () => {
+      filterChips.forEach(c => {
+        c.classList.remove('bg-brand-subtle', 'text-brand-primary');
+        c.classList.add('bg-bg-sunken', 'text-text-secondary');
+      });
+      chip.classList.remove('bg-bg-sunken', 'text-text-secondary');
+      chip.classList.add('bg-brand-subtle', 'text-brand-primary');
+
+      const targetCat = chip.getAttribute('data-cat');
+      let visibleCount = 0;
+
+      productCards.forEach(card => {
+        const itemCategories = card.getAttribute('data-cat') || '';
+        if (targetCat === 'all' || itemCategories.includes(targetCat)) {
+          card.classList.remove('hidden');
+          visibleCount++;
+        } else {
+          card.classList.add('hidden');
+        }
+      });
+
+      if (visibleCount === 0) {
+        emptyState.classList.remove('hidden');
+        wishlistGrid.classList.add('hidden');
+      } else {
+        emptyState.classList.add('hidden');
+        wishlistGrid.classList.remove('hidden');
+      }
+    });
+  });
+
+  // Price Drop Notification Global Toggle
+  const notifBtn = document.getElementById('notif-toggle-btn');
+  if (notifBtn) {
+    notifBtn.addEventListener('click', () => {
+      const isCurrentlyActive = notifBtn.classList.contains('bg-brand-subtle');
+      const textSpan = notifBtn.querySelector('span.font-label-sm');
+      const icon = notifBtn.querySelector('.material-symbols-outlined');
+
+      if (isCurrentlyActive) {
+        notifBtn.classList.remove('bg-brand-subtle', 'text-brand-primary');
+        notifBtn.classList.add('bg-bg-sunken', 'text-text-secondary');
+        textSpan.textContent = 'Mati';
+        icon.textContent = 'notifications_off';
+        showToast('Notifikasi promo wishlist dinonaktifkan', false);
+      } else {
+        notifBtn.classList.add('bg-brand-subtle', 'text-brand-primary');
+        notifBtn.classList.remove('bg-bg-sunken', 'text-text-secondary');
+        textSpan.textContent = 'Aktif';
+        icon.textContent = 'notifications_active';
+        showToast('Notifikasi perubahan harga aktif');
+      }
+    });
+  }
+</script></main><nav class="fixed bottom-0 w-full z-50 pb-safe bg-bg-surface/95 backdrop-blur-xl shadow-[0_-2px_12px_rgba(0,0,0,0.04)]" data-active-classes="text-brand-primary font-label-md"><div class="flex items-center justify-around h-16 px-space-xs"><a class="flex flex-col items-center justify-center min-w-[56px] min-h-[48px] py-1 text-text-tertiary transition-colors" data-path="beranda" href="#"><span class="material-symbols-outlined text-[24px]">storefront</span><span class="font-label-sm text-label-sm mt-0.5">Beranda</span></a><a aria-current="page" class="flex flex-col items-center justify-center min-w-[56px] min-h-[48px] py-1 transition-colors text-brand-primary font-label-md" data-path="wishlist" href="#"><span class="material-symbols-outlined text-[24px]">favorite</span><span class="font-label-sm text-label-sm mt-0.5">Wishlist</span></a><a class="flex flex-col items-center justify-center min-w-[56px] min-h-[48px] py-1 text-text-tertiary transition-colors" data-path="pesanan-saya" href="#"><span class="material-symbols-outlined text-[24px]">local_shipping</span><span class="font-label-sm text-label-sm mt-0.5">Pesanan Saya</span></a><a class="flex flex-col items-center justify-center min-w-[56px] min-h-[48px] py-1 text-text-tertiary transition-colors" data-path="chat" href="#"><span class="material-symbols-outlined text-[24px]">chat</span><span class="font-label-sm text-label-sm mt-0.5">Chat</span></a><a class="flex flex-col items-center justify-center min-w-[56px] min-h-[48px] py-1 text-text-tertiary transition-colors" data-path="my-xpedia" href="#"><span class="material-symbols-outlined text-[24px]">account_circle</span><span class="font-label-sm text-label-sm mt-0.5">My Xpedia</span></a></div></nav></body></html>

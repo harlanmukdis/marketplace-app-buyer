@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+
+<html lang="id"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"/><meta content="mobile_stack" name="shell-type"/><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { colors: { "on-primary-fixed": "#001550", "surface-tint": "#004ee8", "success-subtle": "#E8F8EF", "tertiary-fixed": "#ffdbd1", "signature-black": "#101014", "on-surface-variant": "#434656", "surface-dim": "#d3daef", "inverse-surface": "#293040", "surface": "#f9f9ff", "brand-primary": "#0056FE", "warning-subtle": "#FFF6E5", "on-error-container": "#93000a", "bg-sunken": "#EFF1F4", "on-secondary-fixed": "#00164f", "outline": "#737688", "on-tertiary": "#ffffff", "brand-primary-pressed": "#0047D1", "text-placeholder": "#9CA3AF", "primary-fixed-dim": "#b6c4ff", "on-tertiary-fixed-variant": "#872100", "error": "#ba1a1a", "on-surface": "#141b2b", "outline-variant": "#c3c5d9", "border-subtle": "#E5E7EB", "on-primary": "#ffffff", "surface-bright": "#f9f9ff", "secondary-fixed": "#dce1ff", "on-primary-container": "#e3e7ff", "on-tertiary-fixed": "#3b0900", "on-secondary-container": "#2e4387", "primary-fixed": "#dce1ff", "on-tertiary-container": "#ffe2da", "tertiary": "#972600", "bg-canvas": "#F7F8FA", "signature-gold": "#C9A227", "tertiary-fixed-dim": "#ffb5a0", "primary": "#0042c7", "on-secondary": "#ffffff", "text-on-brand": "#FFFFFF", "secondary": "#465ba0", "surface-container-low": "#f1f3ff", "surface-container-lowest": "#ffffff", "success": "#109553", "brand-navy": "#0F286C", "border-strong": "#9CA3AF", "danger-subtle": "#FFECEE", "primary-container": "#0056fe", "inverse-primary": "#b6c4ff", "on-error": "#ffffff", "bg-surface": "#FFFFFF", "warning": "#F59E0B", "inverse-on-surface": "#edf0ff", "secondary-fixed-dim": "#b6c4ff", "on-secondary-fixed-variant": "#2d4286", "danger": "#FB132D", "text-secondary": "#4B5563", "secondary-container": "#9fb3ff", "text-primary": "#111827", "surface-container-highest": "#dce2f7", "background": "#f9f9ff", "tertiary-container": "#c13402", "surface-container-high": "#e1e8fd", "on-primary-fixed-variant": "#003ab2", "surface-variant": "#dce2f7", "text-tertiary": "#6B7280", "surface-container": "#e9edff", "error-container": "#ffdad6", "brand-subtle": "#EBF2FF", "border-default": "#D1D5DB", "on-background": "#141b2b" }, borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" }, spacing: { "gutter": "0.75rem", "space-xl": "1.5rem", "space-md": "0.75rem", "space-lg": "1rem", "space-sm": "0.5rem", "margin": "1rem", "space-xs": "0.25rem" }, fontFamily: { "price-sm": ["Inter"], "price-md": ["Inter"], "caption": ["Inter"], "body-lg": ["Inter"], "label-lg": ["Inter"], "price-lg": ["Inter"], "headline-md": ["Inter"], "label-sm": ["Inter"], "body-md": ["Inter"], "label-md": ["Inter"], "title-lg": ["Inter"], "body-sm": ["Inter"], "headline-lg": ["Inter"], "headline-xl": ["Inter"], "title-md": ["Inter"] }, fontSize: { "price-sm": ["14px", { lineHeight: "20px", fontWeight: "600" }], "price-md": ["16px", { lineHeight: "22px", fontWeight: "700" }], "caption": ["11px", { lineHeight: "14px", fontWeight: "400" }], "body-lg": ["16px", { lineHeight: "24px", fontWeight: "400" }], "label-lg": ["14px", { lineHeight: "20px", fontWeight: "500" }], "price-lg": ["18px", { lineHeight: "24px", fontWeight: "700" }], "headline-md": ["18px", { lineHeight: "26px", fontWeight: "600" }], "label-sm": ["11px", { lineHeight: "14px", fontWeight: "500" }], "body-md": ["14px", { lineHeight: "20px", fontWeight: "400" }], "label-md": ["12px", { lineHeight: "16px", fontWeight: "500" }], "title-lg": ["16px", { lineHeight: "24px", fontWeight: "600" }], "body-sm": ["12px", { lineHeight: "18px", fontWeight: "400" }], "headline-lg": ["20px", { lineHeight: "28px", fontWeight: "600" }], "headline-xl": ["24px", { lineHeight: "32px", fontWeight: "700" }], "title-md": ["14px", { lineHeight: "20px", fontWeight: "600" }] } } } };</script><style>@layer base{html,body{width:100vw;margin:0;padding:0;}body{overscroll-behavior:none;}.pb-safe{padding-bottom:env(safe-area-inset-bottom,0px);}.pt-safe{padding-top:env(safe-area-inset-top,0px);}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style></head><body class="bg-bg-canvas font-body-md text-body-md text-text-primary flex flex-col min-h-screen"><header class="fixed top-0 w-full z-50 pt-safe bg-bg-surface/90 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)]"><div class="h-14 px-space-sm flex items-center justify-between"><div class="flex items-center gap-space-xs"><button aria-label="Kembali" class="w-11 h-11 flex items-center justify-center text-text-primary hover:text-brand-primary rounded-full transition-colors" onclick="history.back()"><span class="material-symbols-outlined text-[24px]">arrow_back</span></button><h1 class="font-title-lg text-title-lg text-text-primary tracking-tight truncate max-w-[200px]">Detail Produk</h1></div><div class="flex items-center gap-space-xs"><button aria-label="Bantuan atau Chat" class="w-11 h-11 flex items-center justify-center text-text-secondary hover:text-brand-primary rounded-full transition-colors"><span class="material-symbols-outlined text-[22px]">support_agent</span></button><button aria-label="Opsi Lainnya" class="w-11 h-11 flex items-center justify-center text-text-secondary hover:text-brand-primary rounded-full transition-colors"><span class="material-symbols-outlined text-[22px]">more_vert</span></button><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div></div></div></header><main class="flex-1 flex flex-col relative w-full pt-14 bg-bg-canvas"><div class="flex flex-col w-full pb-safe">
+<!-- Store Profile Header -->
+<div class="bg-bg-surface px-margin pt-space-md pb-space-lg flex flex-col gap-space-md shadow-sm">
+<div class="flex items-start gap-space-md">
+<!-- Store Avatar -->
+<div class="relative w-16 h-16 rounded-xl bg-brand-navy flex-shrink-0 p-1 flex items-center justify-center overflow-hidden shadow-sm">
+<div class="w-full h-full rounded-lg bg-[#FFD100] flex flex-col items-center justify-center p-1 text-center select-none">
+<span class="material-symbols-outlined text-[#0F286C] text-[24px]" style="font-variation-settings: 'FILL' 1;">format_paint</span>
+<span class="font-headline-md text-[10px] leading-tight font-bold text-[#0F286C] tracking-tighter">JOTUN</span>
+</div>
+<div class="absolute -bottom-1 -right-1 bg-brand-primary text-on-primary rounded-full w-5 h-5 flex items-center justify-center">
+<span class="material-symbols-outlined text-[13px]">verified</span>
+</div>
+</div>
+<!-- Store Details -->
+<div class="flex-1 min-w-0">
+<div class="flex items-center gap-space-xs flex-wrap">
+<h2 class="font-title-lg text-title-lg text-text-primary font-bold truncate">Jotun Paint Center</h2>
+<span class="material-symbols-outlined text-brand-primary text-[18px]" title="Terverifikasi">verified</span>
+</div>
+<!-- Signature Elite Seller Badge -->
+<div class="mt-space-xs inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-signature-black">
+<span class="material-symbols-outlined text-signature-gold text-[12px]" style="font-variation-settings: 'FILL' 1;">workspace_premium</span>
+<span class="font-label-sm text-caption text-signature-gold font-semibold tracking-wide">Xpedia Signature</span>
+</div>
+<!-- Meta info -->
+<div class="flex items-center gap-space-xs mt-1 text-text-secondary font-caption text-caption flex-wrap">
+<span class="flex items-center gap-0.5">
+<span class="material-symbols-outlined text-[12px] text-text-placeholder">location_on</span>
+            Jakarta Selatan
+          </span>
+<span class="text-text-placeholder">•</span>
+<span>28.7k Pengikut</span>
+<span class="text-text-placeholder">•</span>
+<span>356 Produk</span>
+</div>
+</div>
+</div>
+<!-- Store Action CTAs -->
+<div class="grid grid-cols-2 gap-space-sm pt-space-xs">
+<button class="h-9 px-space-md rounded-lg bg-brand-primary active:bg-brand-primary-pressed text-on-primary font-label-md text-label-md font-medium flex items-center justify-center gap-1.5 transition-all shadow-sm" id="follow-toggle-btn">
+<span class="material-symbols-outlined text-[18px]" id="follow-icon">add</span>
+<span id="follow-label">Ikuti Toko</span>
+</button>
+<button class="h-9 px-space-md rounded-lg bg-brand-subtle text-brand-primary active:bg-surface-container font-label-md text-label-md font-medium flex items-center justify-center gap-1.5 transition-colors">
+<span class="material-symbols-outlined text-[18px]">chat</span>
+<span>Chat Penjual</span>
+</button>
+</div>
+</div>
+<!-- Store Live Pulse Quick Ribbon -->
+<div class="bg-gradient-to-r from-brand-navy to-secondary text-on-primary px-margin py-2 flex items-center justify-between">
+<div class="flex items-center gap-2 min-w-0">
+<span class="relative flex h-2.5 w-2.5">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-danger opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-danger"></span>
+</span>
+<span class="font-label-md text-label-md font-semibold truncate">Live Konsultasi Warna &amp; Promo 35%</span>
+</div>
+<button class="bg-danger text-on-primary px-2.5 py-1 rounded-full font-label-sm text-caption font-bold flex items-center gap-1 shrink-0 shadow-sm active:scale-95 transition-transform">
+<span>Tonton</span>
+<span class="material-symbols-outlined text-[14px]">arrow_forward</span>
+</button>
+</div>
+<!-- Store Operational Stats -->
+<div class="bg-bg-surface px-margin py-space-md grid grid-cols-4 gap-space-xs text-center shadow-sm">
+<div class="flex flex-col items-center justify-center px-1">
+<div class="flex items-center gap-0.5 text-warning font-headline-md text-title-md font-bold">
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span>4.9/5</span>
+</div>
+<span class="font-caption text-caption text-text-tertiary mt-0.5 truncate w-full">12.4k ulasan</span>
+</div>
+<div class="flex flex-col items-center justify-center px-1 bg-surface-container-low rounded-lg py-1">
+<span class="font-headline-md text-title-md font-bold text-success">98.7%</span>
+<span class="font-caption text-caption text-text-tertiary mt-0.5 truncate w-full">Transaksi sukses</span>
+</div>
+<div class="flex flex-col items-center justify-center px-1">
+<span class="font-headline-md text-title-md font-bold text-text-primary">≤ 4 mnt</span>
+<span class="font-caption text-caption text-text-tertiary mt-0.5 truncate w-full">Balas chat</span>
+</div>
+<div class="flex flex-col items-center justify-center px-1">
+<div class="flex items-center gap-1 font-headline-md text-title-md font-bold text-success">
+<span class="w-2 h-2 rounded-full bg-success"></span>
+<span>Online</span>
+</div>
+<span class="font-caption text-caption text-text-tertiary mt-0.5 truncate w-full">Aktif sekarang</span>
+</div>
+</div>
+<!-- Navigation Tabs -->
+<div class="bg-bg-surface sticky top-14 z-40 px-margin flex items-center justify-between gap-space-md overflow-x-auto shadow-sm">
+<button class="relative py-3 font-title-md text-title-md font-semibold text-brand-primary whitespace-nowrap">
+<span>Beranda Toko</span>
+<span class="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-primary rounded-full"></span>
+</button>
+<button class="py-3 font-body-md text-body-md text-text-secondary whitespace-nowrap hover:text-text-primary">
+      Produk (356)
+    </button>
+<button class="py-3 font-body-md text-body-md text-text-secondary whitespace-nowrap hover:text-text-primary">
+      Ulasan (12.4k)
+    </button>
+<button class="py-3 font-body-md text-body-md text-text-secondary whitespace-nowrap hover:text-text-primary">
+      Tentang Toko
+    </button>
+</div>
+<!-- Main Content Body -->
+<div class="p-margin flex flex-col gap-space-lg">
+<!-- Store Campaign Hero Banner -->
+<div class="relative w-full rounded-2xl overflow-hidden bg-brand-navy shadow-md text-on-primary">
+<div class="absolute inset-0 opacity-40 mix-blend-overlay">
+<img class="w-full h-full object-cover" data-alt="Interior luxury living room with warm ambient lighting, elegant Scandinavian furniture, and smooth Scandinavian blue accent wall painted with premium Jotun paint, architectural photography style, warm soft daylight, 8k resolution" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDtOAiX9l-bm3d2D3dP8wiDTrYQSrfL_5TaETewqSRhIpGDW1mjs4VnAaRwQgkbmaEoHuzllUdCYQXyFQiTUXwVlRp2h9qj1kzgHRMq0AIqWBYm-UinZWa0uxrpiNJbaEm_gchM5iiBMHXQKXjXNjG8AQR-fAM7XIfco7EODc06yh-Cl0nbjTq5J-32Ibm_wkfV4M3vH-OdsqXXmGQjc1jl3H0i4-4IYRGwu5lOdkLr3v78I7yfE4X0"/>
+</div>
+<div class="relative p-space-lg flex flex-col gap-space-sm bg-gradient-to-t from-brand-navy via-brand-navy/80 to-transparent">
+<div class="inline-flex items-center gap-1 self-start px-2 py-0.5 rounded-full bg-signature-gold/20 text-signature-gold font-label-sm text-caption font-bold">
+<span class="material-symbols-outlined text-[13px]" style="font-variation-settings: 'FILL' 1;">verified</span>
+          Official Partner Store
+        </div>
+<div>
+<h3 class="font-headline-lg text-headline-lg font-bold leading-tight">Warna untuk Hidup yang Lebih Baik</h3>
+<p class="font-body-sm text-body-sm text-on-primary-container mt-1">Koleksi Jotun Majestic &amp; Jotashield perlindungan premium luar dan dalam.</p>
+</div>
+<!-- Voucher Claim Capsule -->
+<div class="mt-space-xs bg-bg-surface text-text-primary p-space-sm rounded-xl flex items-center justify-between shadow-sm">
+<div class="flex items-center gap-2 min-w-0">
+<div class="w-8 h-8 rounded-lg bg-warning-subtle text-warning flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-[20px]">confirmation_number</span>
+</div>
+<div class="flex flex-col min-w-0">
+<span class="font-label-md text-label-md font-bold text-text-primary truncate">Diskon 10% Min. Belanja Rp500rb</span>
+<span class="font-caption text-caption text-text-tertiary">Berlaku untuk semua produk cat</span>
+</div>
+</div>
+<button class="bg-brand-primary text-on-primary px-3 py-1.5 rounded-lg font-label-md text-label-md font-medium shrink-0 active:scale-95 transition-transform" id="claim-voucher-btn">
+            Klaim
+          </button>
+</div>
+</div>
+</div>
+<!-- Guarantees & Perks -->
+<div class="grid grid-cols-3 gap-space-sm">
+<div class="bg-bg-surface p-2.5 rounded-xl shadow-sm flex flex-col items-center text-center gap-1">
+<span class="material-symbols-outlined text-brand-primary text-[22px]">verified_user</span>
+<span class="font-label-sm text-caption font-semibold text-text-primary leading-tight">100% Original</span>
+</div>
+<div class="bg-bg-surface p-2.5 rounded-xl shadow-sm flex flex-col items-center text-center gap-1">
+<span class="material-symbols-outlined text-brand-primary text-[22px]">local_shipping</span>
+<span class="font-label-sm text-caption font-semibold text-text-primary leading-tight">Instant Dispatch</span>
+</div>
+<div class="bg-bg-surface p-2.5 rounded-xl shadow-sm flex flex-col items-center text-center gap-1">
+<span class="material-symbols-outlined text-brand-primary text-[22px]">palette</span>
+<span class="font-label-sm text-caption font-semibold text-text-primary leading-tight">Tinting Resmi</span>
+</div>
+</div>
+<!-- Section: Produk Unggulan Toko -->
+<div class="flex flex-col gap-space-md">
+<div class="flex items-center justify-between">
+<div>
+<h3 class="font-title-lg text-title-lg font-bold text-text-primary">Produk Unggulan Toko</h3>
+<p class="font-caption text-caption text-text-secondary">Paling sering dibeli dan bergaransi resmi Jotun</p>
+</div>
+<button class="font-label-md text-label-md text-brand-primary font-semibold flex items-center gap-0.5">
+          Lihat Semua
+          <span class="material-symbols-outlined text-[16px]">chevron_right</span>
+</button>
+</div>
+<!-- 2-Column Product Grid -->
+<div class="grid grid-cols-2 gap-space-md">
+<!-- Product Card 1 -->
+<div class="bg-bg-surface rounded-xl overflow-hidden shadow-sm flex flex-col group">
+<div class="relative w-full aspect-square bg-bg-sunken overflow-hidden">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" data-alt="Jotun Jotashield Colour Extreme exterior paint can placed on a clean modern architectural stone surface with bright tropical sunlight and lush garden background, hyper-realistic product showcase" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC-E-dgh3KUDoPww_BrTWgpnLx4yoXY8N8I_rh_UUsNam9TGWW9lkNcIEkpf8FR5zQG_Gau6Jc4FzfIhypJi5klxTWVZD_bNDJ-legjREJ0oGWg5wg9GPMtoyw6PSQ3EGmS15XSgLKPdN-OZa1aIo25ZDd-YyZ79cq1_dsFQy8wXyrQtYmcgiDnIdxU57e0WNDyqiVXaa_bQ7YjSwOnrlvsG25uBzmpVBVbhjwpStbBCy9yg2cC3bY5"/>
+<span class="absolute top-2 left-2 bg-success-subtle text-success font-label-sm text-caption font-semibold px-2 py-0.5 rounded-full shadow-xs">
+              Ready Stok
+            </span>
+</div>
+<div class="p-space-sm flex flex-col flex-1 justify-between gap-space-xs">
+<div>
+<span class="font-caption text-caption text-text-tertiary">Eksterior • 5L</span>
+<h4 class="font-title-md text-title-md text-text-primary font-medium line-clamp-2 mt-0.5">Jotun Jotashield Colour Extreme 5L</h4>
+</div>
+<div class="mt-1 flex flex-col">
+<span class="font-price-md text-price-md text-brand-primary font-bold">Rp 589.000</span>
+<div class="flex items-center gap-1 mt-1 text-text-secondary font-caption text-caption">
+<span class="material-symbols-outlined text-warning text-[14px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="font-medium text-text-primary">4.8</span>
+<span class="text-text-placeholder">(320)</span>
+<span>•</span>
+<span>2.1k terjual</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Product Card 2 -->
+<div class="bg-bg-surface rounded-xl overflow-hidden shadow-sm flex flex-col group">
+<div class="relative w-full aspect-square bg-bg-sunken overflow-hidden">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" data-alt="Jotun Majestic True Beauty interior paint container positioned in a minimalist aesthetic pastel modern room beside soft beige fabrics, studio product lighting, ultra detailed" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAGegRUr1PveGrIvfQ28wbB_b2aGggeN_XlESrujFMKRF0wdZn5BxwQozqAj_CYfNSgV4yWOeAW3CKHaObMST20MJ13vC6SgQPNPEUuAYKr3hapPiVUPxaZSCqs_5fmVjGMEkN-uG9py1JZog8WSSg8c3-NdkTtmeoRybmecLT_cAP16WuHGRIOoeNpsd4iciztHDnlALH3PVFFiG3FIbb4ZrMn9zXz2vWkr_xi07fK58xEyV5YhB-6"/>
+<span class="absolute top-2 left-2 bg-success-subtle text-success font-label-sm text-caption font-semibold px-2 py-0.5 rounded-full shadow-xs">
+              Ready Stok
+            </span>
+</div>
+<div class="p-space-sm flex flex-col flex-1 justify-between gap-space-xs">
+<div>
+<span class="font-caption text-caption text-text-tertiary">Interior • 5L</span>
+<h4 class="font-title-md text-title-md text-text-primary font-medium line-clamp-2 mt-0.5">Jotun Majestic True Beauty 5L</h4>
+</div>
+<div class="mt-1 flex flex-col">
+<span class="font-price-md text-price-md text-brand-primary font-bold">Rp 359.000</span>
+<div class="flex items-center gap-1 mt-1 text-text-secondary font-caption text-caption">
+<span class="material-symbols-outlined text-warning text-[14px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="font-medium text-text-primary">4.9</span>
+<span class="text-text-placeholder">(512)</span>
+<span>•</span>
+<span>3.4k terjual</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Product Card 3 -->
+<div class="bg-bg-surface rounded-xl overflow-hidden shadow-sm flex flex-col group">
+<div class="relative w-full aspect-square bg-bg-sunken overflow-hidden">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" data-alt="Jotun Gardex Primer metal and wood basecoat paint can set on an industrial workshop table with clean craftsmanship tools, warm soft studio rim light" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDDLPV-5_-9bWwmscIXM74MR2wi07i4K7VwsptFJMT6MN-D9eXtfSpQBc0cg5IZzvysxmn72UshhcQG0nklv0Zl7vPyoWfbcmfFLHmPyzf2yEXnY2nuc1CQywsXe1FhNOOAaY8AG5nHM2_7AFoHnTyHm5ZZGVB9pwQOExFgz-1Hx9nRH1n3glZmq6TlW8otD8W9VLOGVJNBkDiL15vB-hQQ_SCDH2iArpwBlB5nHMX8ZNWTSAST5a-t"/>
+<span class="absolute top-2 left-2 bg-success-subtle text-success font-label-sm text-caption font-semibold px-2 py-0.5 rounded-full shadow-xs">
+              Ready Stok
+            </span>
+</div>
+<div class="p-space-sm flex flex-col flex-1 justify-between gap-space-xs">
+<div>
+<span class="font-caption text-caption text-text-tertiary">Primer Dasar • 1L</span>
+<h4 class="font-title-md text-title-md text-text-primary font-medium line-clamp-2 mt-0.5">Jotun Gardex Primer 1L</h4>
+</div>
+<div class="mt-1 flex flex-col">
+<span class="font-price-md text-price-md text-brand-primary font-bold">Rp 189.000</span>
+<div class="flex items-center gap-1 mt-1 text-text-secondary font-caption text-caption">
+<span class="material-symbols-outlined text-warning text-[14px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="font-medium text-text-primary">4.8</span>
+<span class="text-text-placeholder">(110)</span>
+<span>•</span>
+<span>800 terjual</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Product Card 4 -->
+<div class="bg-bg-surface rounded-xl overflow-hidden shadow-sm flex flex-col group">
+<div class="relative w-full aspect-square bg-bg-sunken overflow-hidden">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" data-alt="Jotun Essence Easy Clean washable interior wall paint tin shown in family home kitchen dining context, clean bright architectural composition" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAQRIy--8untnzVgrs0eDO86HUtPFb_nah296e9BumOMGIS75_vnPWw_i8-nSRlVd00q-xTqlBiidUjwpChQhjpL5HDhUdb_vUv0KY9V76xtG76b4ms0GvwYNNHcBGyirQKOaMOux5emsD75t4RtL0qII8Phg2QYHQc13XvTSckwO9YU1u1-hRVGluKJC4t01G4aQXYX1bMwCBohITrTw3cyVOTgQX-Wx0td-vN5Fs7Z4hJiRr9kGUa"/>
+<span class="absolute top-2 left-2 bg-success-subtle text-success font-label-sm text-caption font-semibold px-2 py-0.5 rounded-full shadow-xs">
+              Ready Stok
+            </span>
+</div>
+<div class="p-space-sm flex flex-col flex-1 justify-between gap-space-xs">
+<div>
+<span class="font-caption text-caption text-text-tertiary">Mudah Dicuci • 5L</span>
+<h4 class="font-title-md text-title-md text-text-primary font-medium line-clamp-2 mt-0.5">Jotun Essence Easy Clean 5L</h4>
+</div>
+<div class="mt-1 flex flex-col">
+<span class="font-price-md text-price-md text-brand-primary font-bold">Rp 249.000</span>
+<div class="flex items-center gap-1 mt-1 text-text-secondary font-caption text-caption">
+<span class="material-symbols-outlined text-warning text-[14px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="font-medium text-text-primary">4.7</span>
+<span class="text-text-placeholder">(280)</span>
+<span>•</span>
+<span>1.5k terjual</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Category Highlights Section -->
+<div class="flex flex-col gap-space-sm">
+<h3 class="font-title-lg text-title-lg font-bold text-text-primary">Kategori Cat Pilihan</h3>
+<div class="grid grid-cols-4 gap-space-xs">
+<button class="bg-bg-surface p-2.5 rounded-xl flex flex-col items-center gap-1 shadow-sm active:bg-surface-container transition-colors">
+<div class="w-10 h-10 rounded-full bg-brand-subtle text-brand-primary flex items-center justify-center">
+<span class="material-symbols-outlined text-[20px]">home</span>
+</div>
+<span class="font-label-sm text-caption text-text-primary font-medium text-center">Cat Dalam</span>
+</button>
+<button class="bg-bg-surface p-2.5 rounded-xl flex flex-col items-center gap-1 shadow-sm active:bg-surface-container transition-colors">
+<div class="w-10 h-10 rounded-full bg-brand-subtle text-brand-primary flex items-center justify-center">
+<span class="material-symbols-outlined text-[20px]">wb_sunny</span>
+</div>
+<span class="font-label-sm text-caption text-text-primary font-medium text-center">Cat Luar</span>
+</button>
+<button class="bg-bg-surface p-2.5 rounded-xl flex flex-col items-center gap-1 shadow-sm active:bg-surface-container transition-colors">
+<div class="w-10 h-10 rounded-full bg-brand-subtle text-brand-primary flex items-center justify-center">
+<span class="material-symbols-outlined text-[20px]">hardware</span>
+</div>
+<span class="font-label-sm text-caption text-text-primary font-medium text-center">Kayu &amp; Besi</span>
+</button>
+<button class="bg-bg-surface p-2.5 rounded-xl flex flex-col items-center gap-1 shadow-sm active:bg-surface-container transition-colors">
+<div class="w-10 h-10 rounded-full bg-brand-subtle text-brand-primary flex items-center justify-center">
+<span class="material-symbols-outlined text-[20px]">brush</span>
+</div>
+<span class="font-label-sm text-caption text-text-primary font-medium text-center">Alat Cat</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Store Notification & Live Status Toast (Interactive) -->
+<div class="fixed bottom-6 left-margin right-margin bg-signature-black text-on-primary p-3 rounded-xl shadow-xl flex items-center justify-between transform translate-y-24 opacity-0 transition-all duration-300 pointer-events-none z-50" id="toast-notification">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-signature-gold text-[20px]">check_circle</span>
+<span class="font-body-sm text-body-sm" id="toast-message">Berhasil mengikuti Jotun Paint Center</span>
+</div>
+<button class="text-text-placeholder hover:text-on-primary" onclick="hideToast()">
+<span class="material-symbols-outlined text-[18px]">close</span>
+</button>
+</div>
+</div>
+<script>
+  // Follow Toggle Microinteraction
+  const followBtn = document.getElementById('follow-toggle-btn');
+  const followIcon = document.getElementById('follow-icon');
+  const followLabel = document.getElementById('follow-label');
+  const toast = document.getElementById('toast-notification');
+  const toastMsg = document.getElementById('toast-message');
+  let isFollowing = false;
+
+  function showToast(message) {
+    toastMsg.textContent = message;
+    toast.classList.remove('translate-y-24', 'opacity-0', 'pointer-events-none');
+    toast.classList.add('translate-y-0', 'opacity-100', 'pointer-events-auto');
+    setTimeout(() => {
+      hideToast();
+    }, 2800);
+  }
+
+  function hideToast() {
+    toast.classList.add('translate-y-24', 'opacity-0', 'pointer-events-none');
+    toast.classList.remove('translate-y-0', 'opacity-100', 'pointer-events-auto');
+  }
+
+  if (followBtn) {
+    followBtn.addEventListener('click', () => {
+      isFollowing = !isFollowing;
+      if (isFollowing) {
+        followBtn.classList.remove('bg-brand-primary', 'text-on-primary');
+        followBtn.classList.add('bg-bg-sunken', 'text-text-secondary');
+        followIcon.textContent = 'done';
+        followLabel.textContent = 'Mengikuti';
+        showToast('Berhasil mengikuti Jotun Paint Center');
+      } else {
+        followBtn.classList.remove('bg-bg-sunken', 'text-text-secondary');
+        followBtn.classList.add('bg-brand-primary', 'text-on-primary');
+        followIcon.textContent = 'add';
+        followLabel.textContent = 'Ikuti Toko';
+        showToast('Berhenti mengikuti toko');
+      }
+    });
+  }
+
+  // Voucher claim interaction
+  const claimBtn = document.getElementById('claim-voucher-btn');
+  if (claimBtn) {
+    claimBtn.addEventListener('click', () => {
+      claimBtn.textContent = 'Terklaim';
+      claimBtn.classList.remove('bg-brand-primary', 'text-on-primary');
+      claimBtn.classList.add('bg-success', 'text-on-primary');
+      claimBtn.disabled = true;
+      showToast('Voucher Diskon 10% berhasil disimpan di dompet Anda!');
+    });
+  }
+</script></main></body></html>
