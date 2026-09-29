@@ -147,52 +147,64 @@ void main() {
     test('format dan nilai yang sama ditolak lokal', () async {
       register();
       final cubit = ContactChangeCubit(type: ContactType.email, currentValue: 'budi@contoh.id');
-      await cubit.start('bukan-email');
+      await cubit.request('bukan-email');
       expect(cubit.state.error?.code, kLocalValidationCode);
-      await cubit.start('BUDI@contoh.id');
+      // Server menolak nilai yang sama sebagai EMAIL_TAKEN — pesan yang
+      // menyesatkan, jadi dicegah di sini.
+      await cubit.request('BUDI@contoh.id');
       expect(cubit.state.error?.message, contains('sama'));
       final phone = ContactChangeCubit(type: ContactType.phone);
-      await phone.start('12345');
+      await phone.request('12345');
       expect(phone.state.error?.code, kLocalValidationCode);
       expect(repo.calls, isEmpty);
     });
 
-    test('dua tahap OTP sampai selesai', () async {
+    test('minta kode → masukkan kode → tersimpan', () async {
       register();
-      repo.verifyResults = [
-        const DataSuccess(
-          ContactChangeChallenge(requestId: 'r1', stage: 'new_contact', otpSentTo: 'ba***@contoh.id'),
-          meta: mockMeta,
-        ),
-        const DataSuccess(
-          ContactChangeChallenge(requestId: 'r1', stage: 'completed', newValue: 'baru@contoh.id'),
-          meta: mockMeta,
-        ),
-      ];
       final cubit = ContactChangeCubit(type: ContactType.email, currentValue: 'budi@contoh.id');
-      await cubit.start('baru@contoh.id');
-      expect(cubit.state.challenge?.stageValue, ContactChangeStage.currentContact);
+      await cubit.request('baru@contoh.id');
+      expect(cubit.state.awaitingToken, isTrue);
+      expect(cubit.state.request?.devVerificationToken, 'dev-contact-token');
 
-      await cubit.verify('12');
-      expect(cubit.state.error?.code, kLocalValidationCode, reason: 'OTP harus 6 angka');
+      await cubit.confirm('   ');
+      expect(cubit.state.error?.code, kLocalValidationCode);
 
-      await cubit.verify('123456');
-      expect(cubit.state.challenge?.stageValue, ContactChangeStage.newContact);
-      await cubit.verify('123456');
-      expect(cubit.state.isCompleted, isTrue);
+      // Spasi/baris baru dari tempelan email dibuang.
+      await cubit.confirm(' abc123\n');
+      expect(cubit.state.completed, isTrue);
       expect(repo.calls, [
-        'startContact:email:baru@contoh.id',
-        'verifyContact:r1:123456',
-        'verifyContact:r1:123456',
+        'requestContact:email:baru@contoh.id',
+        'confirmContact:email:abc123',
       ]);
     });
 
-    test('endpoint belum ada → unavailable', () async {
+    test('kode salah tetap menunggu kode', () async {
       register();
-      repo.startResult = const DataFailed(_htmlNotFound);
+      repo.contactConfirmResults = [const DataFailed(DataError(
+          code: 'INVALID_TOKEN', message: 'x', statusCode: 422, kind: DataErrorKind.api))];
       final cubit = ContactChangeCubit(type: ContactType.phone);
-      await cubit.start('081234567890');
-      expect(cubit.state.unavailable, isTrue);
+      await cubit.request('0812 3456 7890');
+      await cubit.confirm('salah');
+
+      expect(cubit.state.error?.code, 'INVALID_TOKEN');
+      expect(cubit.state.awaitingToken, isTrue);
+      expect(repo.calls.first, 'requestContact:phone:081234567890');
+    });
+
+    test('kontak keburu dipakai saat konfirmasi → kembali ke langkah awal',
+        () async {
+      // Server mengonsumsi token sebelum memeriksa, jadi kode itu sudah
+      // hangus — menunggu kode lagi akan buntu.
+      register();
+      repo.contactConfirmResults = [const DataFailed(DataError(
+          code: 'EMAIL_TAKEN', message: 'x', statusCode: 409, kind: DataErrorKind.api))];
+      final cubit = ContactChangeCubit(type: ContactType.email);
+      await cubit.request('baru@contoh.id');
+      await cubit.confirm('abc');
+
+      expect(cubit.state.awaitingToken, isFalse);
+      expect(cubit.state.error?.code, 'EMAIL_TAKEN');
+      expect(cubit.state.newValue, 'baru@contoh.id');
     });
   });
 

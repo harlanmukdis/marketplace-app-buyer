@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:marketplace_app_member/core/data_state.dart';
 import 'package:marketplace_app_member/core/design/xp_colors.dart';
 import 'package:marketplace_app_member/core/design/xp_text.dart';
 import 'package:marketplace_app_member/core/utils/app_routes.dart';
@@ -102,7 +103,15 @@ class _ResetPasswordBodyState extends State<_ResetPasswordBody> {
                   ),
                   const SizedBox(height: 24),
                   if (state.error != null) ...[
-                    AuthErrorBanner(error: state.error!, onRetry: _submit),
+                    AuthErrorBanner(
+                      error: state.error!,
+                      onRetry: _submit,
+                      overrides: const {
+                        ApiErrorCode.invalidToken: 'Kode reset tidak berlaku. '
+                            'Mungkin sudah dipakai atau lewat 60 menit — minta '
+                            'tautan baru.',
+                      },
+                    ),
                     const SizedBox(height: 16),
                   ],
                   const AuthFieldLabel('Kode reset', isRequired: true),

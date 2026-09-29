@@ -160,12 +160,6 @@ String? _shoppingMessage(String code) {
       return 'NIK ini sudah dipakai akun Xpedia lain.';
     case ApiErrorCode.identityLocked:
       return 'Nama lengkap terkunci karena identitasmu sudah diverifikasi.';
-    case ApiErrorCode.invalidOtp:
-      return 'Kode OTP salah.';
-    case ApiErrorCode.otpExpired:
-      return 'Kode OTP sudah kedaluwarsa. Minta kode baru.';
-    case ApiErrorCode.contactChangeNotFound:
-      return 'Permintaan penggantian sudah tidak berlaku. Mulai lagi dari awal.';
   }
   return null;
 }

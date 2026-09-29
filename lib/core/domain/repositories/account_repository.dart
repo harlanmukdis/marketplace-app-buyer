@@ -24,14 +24,16 @@ abstract interface class AccountRepository {
     required String fullName,
   });
 
-  Future<DataState<ContactChangeChallenge>> startContactChange({
+  /// Meminta token verifikasi ganti kontak (dikirim ke kontak lama).
+  Future<DataState<ContactChangeRequest>> requestContactChange({
     required ContactType type,
     required String newValue,
   });
 
-  Future<DataState<ContactChangeChallenge>> verifyContactChange({
-    required String requestId,
-    required String otp,
+  /// Menyimpan kontak baru dengan token dari [requestContactChange].
+  Future<DataState<void>> confirmContactChange({
+    required ContactType type,
+    required String token,
   });
 
   /// `POST /auth/forgot-password`, **dengan** token dev kalau server

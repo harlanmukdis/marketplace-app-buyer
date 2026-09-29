@@ -8,11 +8,11 @@ import 'package:marketplace_app_member/core/domain/model/account/account_models.
 /// Dua jenis endpoint bercampur di sini, dan bedanya penting:
 ///
 /// * **Sungguhan**: `GET /me/sessions`, `DELETE /me/sessions/{id}`.
+/// * **Sungguhan** (backend `b501fc3`, docs/22 #10):
+///   `/me/{email,phone}/change-request` dan `change-confirm`.
 /// * **Usulan, dijawab mock di debug** (`account_mock_routes.dart`):
-///   `/me/identity-verification` (docs/22 #4) dan `/me/contact-change*`
-///   (docs/22 #10). Ditulis persis seolah sudah ada; begitu backend
-///   membangunnya, cukup hapus rute mock-nya. Dengan mock mati, rute-rute
-///   ini dibalas **404 HTML** CodeIgniter → `DataError.isRouteNotFound`, dan
+///   `/me/identity-verification` (docs/22 #4). Dengan mock mati, rutenya
+///   dibalas **404 HTML** CodeIgniter → `DataError.isRouteNotFound`, dan
 ///   layar menyembunyikan fiturnya alih-alih menampilkan error.
 class AccountService {
   AccountService(this._dio);
@@ -93,50 +93,50 @@ class AccountService {
     }
   }
 
-  /// `POST /me/contact-change` — **usulan** (mock). Memulai penggantian dan
-  /// mengirim OTP pertama ke **kontak lama**.
-  Future<ApiEnvelope<ContactChangeChallenge>> startContactChange({
+  /// `POST /me/{email|phone}/change-request` `{new_email|new_phone}` —
+  /// token verifikasi dikirim ke kontak **lama**.
+  ///
+  /// Permintaan baru untuk jenis yang sama **membatalkan** token lama, jadi
+  /// "kirim ulang" cukup memanggil ini lagi. Penolakannya: kosong →
+  /// `422 VALIDATION_ERROR` (format **tidak** divalidasi server), sudah
+  /// dipakai akun mana pun — termasuk akun ini sendiri — → `409
+  /// EMAIL_TAKEN`/`PHONE_TAKEN`, lebih dari 3 permintaan per jam → `429`
+  /// (setiap permintaan dihitung, termasuk kirim ulang).
+  Future<ApiEnvelope<ContactChangeRequest>> requestContactChange({
     required ContactType type,
     required String newValue,
   }) async {
-    const context = 'POST /me/contact-change';
+    final context = 'POST /me/${type.code}/change-request';
     try {
       final response = await _dio.post<dynamic>(
-        '/me/contact-change',
-        data: {'type': type.code, 'new_value': newValue},
+        '/me/${type.code}/change-request',
+        data: {type.field: newValue},
       );
-      return parseEnvelope(
-        response,
-        (raw) => ContactChangeChallenge.fromJson(
-            Map<String, dynamic>.from(raw as Map)),
-        context: context,
-      );
+      return parseEnvelope(response, ContactChangeRequest.fromJson,
+          context: context);
     } on DioException catch (e) {
       throw ApiException.fromDio(e, context: context);
     }
   }
 
-  /// `POST /me/contact-change/{id}/verify` — **usulan** (mock). Balasannya
-  /// tantangan berikutnya (`new_contact`) atau `stage: completed`.
+  /// `POST /me/{email|phone}/change-confirm` `{token}` — menyimpan kontak
+  /// baru. Balasannya `data: null`; pemanggil membaca ulang `GET /me`.
   ///
-  /// Jangan diulang otomatis: tiap panggilan menghabiskan satu percobaan
-  /// OTP, dan batasnya lima.
-  Future<ApiEnvelope<ContactChangeChallenge>> verifyContactChange({
-    required String requestId,
-    required String otp,
+  /// Token salah, kedaluwarsa (30 menit), atau sudah terpakai →
+  /// `422 INVALID_TOKEN`. Kontak yang keburu dipakai akun lain → `409
+  /// EMAIL_TAKEN`/`PHONE_TAKEN` — dan 🔴 **tokennya tetap hangus** (dikonsumsi
+  /// sebelum diperiksa), jadi pembeli harus meminta kode baru.
+  Future<ApiEnvelope<dynamic>> confirmContactChange({
+    required ContactType type,
+    required String token,
   }) async {
-    final context = 'POST /me/contact-change/$requestId/verify';
+    final context = 'POST /me/${type.code}/change-confirm';
     try {
       final response = await _dio.post<dynamic>(
-        '/me/contact-change/$requestId/verify',
-        data: {'otp': otp},
+        '/me/${type.code}/change-confirm',
+        data: {'token': token},
       );
-      return parseEnvelope(
-        response,
-        (raw) => ContactChangeChallenge.fromJson(
-            Map<String, dynamic>.from(raw as Map)),
-        context: context,
-      );
+      return parseEnvelope(response, (raw) => raw, context: context);
     } on DioException catch (e) {
       throw ApiException.fromDio(e, context: context);
     }

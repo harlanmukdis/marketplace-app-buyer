@@ -316,9 +316,6 @@ abstract final class ApiErrorCode {
   static const uploadFailed = 'UPLOAD_FAILED';
   static const idCardAlreadyUsed = 'ID_CARD_ALREADY_USED';
   static const identityLocked = 'IDENTITY_LOCKED';
-  static const invalidOtp = 'INVALID_OTP';
-  static const otpExpired = 'OTP_EXPIRED';
-  static const contactChangeNotFound = 'CONTACT_CHANGE_NOT_FOUND';
   static const notParticipant = 'NOT_PARTICIPANT';
 }
 

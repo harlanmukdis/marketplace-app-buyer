@@ -18,8 +18,8 @@ import 'package:marketplace_app_member/ui/main/shell/xp_app_bars.dart';
 /// lengkap**: `PATCH /me` menerima `full_name` + `avatar_url` saja, dan foto
 /// belum bisa diunggah dengan benar (`POST /media/upload` merakit URL dari
 /// `base_url` backend yang masih salah). Email dan nomor HP tampil sebagai
-/// teks dengan tombol "Ubah" yang membuka alur OTP (kontrak usulan, docs/22
-/// #10).
+/// teks dengan tombol "Ubah" yang membuka alur kode verifikasi ke kontak
+/// lama (sungguhan, backend `b501fc3`, docs/22 #10).
 ///
 /// docs/22 #11: sesudah KTP terverifikasi (atau selama ditinjau), nama
 /// lengkap **dikunci**. Status itu dari kontrak usulan
@@ -225,7 +225,7 @@ class _EditProfileBodyState extends State<_EditProfileBody> {
         ),
         const SizedBox(height: 8),
         Text(
-          'Email dan nomor HP diganti lewat verifikasi kode ke kontak lama dan baru.',
+          'Email dan nomor HP diganti lewat kode verifikasi yang dikirim ke kontak lama.',
           style: XpText.caption(context).copyWith(color: XpColors.textTertiary),
         ),
       ],

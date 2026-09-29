@@ -11,8 +11,9 @@ import '../pending_api_mock.dart';
 /// cukup untuk menjalani alurnya dari ujung ke ujung, tidak untuk dipercaya
 /// sebagai data.
 ///
-/// Yang sengaja **tidak** di-mock: `GET/DELETE /me/sessions` (sudah ada di
-/// server) dan `/auth/forgot-password` + `/auth/reset-password` (sudah ada).
+/// Yang sengaja **tidak** di-mock: `GET/DELETE /me/sessions`,
+/// `/auth/forgot-password` + `/auth/reset-password`, dan ganti email/HP
+/// (`/me/{email,phone}/change-*`, backend `b501fc3`) — semuanya sudah ada.
 List<MockRoute> get accountMockRoutes => [
       // -- Verifikasi identitas (docs/22 #4) ---------------------------------
       MockRoute(
@@ -46,65 +47,20 @@ List<MockRoute> get accountMockRoutes => [
         },
       ),
 
-      // Mengingat email/HP akun dari respons `GET /me` SUNGGUHAN, supaya OTP
-      // tahap pertama bisa "dikirim" ke kontak lama yang tersensor. Tidak
-      // menambah field apa pun, jadi tidak menandai `mock_fields`.
-      MockRoute(
-        method: 'GET',
-        path: RegExp(r'^/me$'),
-        onResponse: (response, match) async {
-          final body = response.data;
-          final data = body is Map ? body['data'] : null;
-          if (data is! Map) return;
-          _knownContacts['email'] = data['email']?.toString();
-          _knownContacts['phone'] = data['phone']?.toString();
-        },
-      ),
-
-      // -- Ganti email / HP dengan OTP (docs/22 #10) --------------------------
-      MockRoute(
-        method: 'POST',
-        path: RegExp(r'^/me/contact-change$'),
-        onRequest: (options, match) async => _startContactChange(_body(options.data)),
-      ),
-      MockRoute(
-        method: 'POST',
-        path: RegExp(r'^/me/contact-change/([^/]+)/verify$'),
-        onRequest: (options, match) async =>
-            _verifyContactChange(match.group(1)!, _body(options.data)),
-      ),
     ];
-
-/// OTP yang diterima mock. Dikirim di `meta.mock_otp` tiap tantangan, supaya
-/// layar bisa menampilkannya sebagai petunjuk (debug saja) **tanpa**
-/// mengimpor berkas ini — layar tidak boleh bergantung pada rute mock yang
-/// kelak dihapus.
-const String kMockOtp = '123456';
 
 /// Pengajuan KTP berpindah dari `pending` ke hasil akhirnya pada `GET`
 /// pertama sesudah jeda ini — cukup lama untuk melihat keadaan "sedang
 /// ditinjau", cukup singkat untuk tidak menunggu.
 const Duration kMockIdentityReviewDelay = Duration(seconds: 10);
 
-/// Masa berlaku OTP.
-const Duration kMockOtpLifetime = Duration(minutes: 5);
-
-/// Batas salah OTP per permintaan, dan batas permintaan baru per jenis
-/// kontak per jam.
-const int kMockOtpMaxAttempts = 5;
-const int kMockContactChangePerHour = 3;
-
-/// Jam mock — diganti test supaya jeda 10 detik / 5 menit tidak ditunggu.
+/// Jam mock — diganti test supaya jeda 10 detik tidak ditunggu.
 @visibleForTesting
 DateTime Function() accountMockClock = DateTime.now;
 
 @visibleForTesting
 void resetAccountMockState() {
   _identity = null;
-  _contactRequests.clear();
-  _contactRequestLog.clear();
-  _knownContacts.clear();
-  _requestCounter = 0;
   accountMockClock = DateTime.now;
 }
 
@@ -176,141 +132,8 @@ Future<MockReply> _submitIdentity(Map<String, dynamic> body) async {
 
 // ---------------------------------------------------------------------------
 
-class _ContactRequest {
-  _ContactRequest({
-    required this.id,
-    required this.type,
-    required this.newValue,
-    required this.expiresAt,
-  });
-
-  final String id;
-  final String type;
-  final String newValue;
-  String stage = 'current_contact';
-  DateTime expiresAt;
-  int attempts = 0;
-}
-
-final Map<String, _ContactRequest> _contactRequests = {};
-final List<(String, DateTime)> _contactRequestLog = [];
-final Map<String, String?> _knownContacts = {};
-int _requestCounter = 0;
-
-Future<MockReply> _startContactChange(Map<String, dynamic> body) async {
-  final rawType = body['type']?.toString();
-  final value = (body['new_value'] ?? '').toString().trim();
-  if (rawType != 'email' && rawType != 'phone') {
-    return MockReply.error('VALIDATION_ERROR', 'type harus email atau phone');
-  }
-  final type = rawType!;
-  final validFormat = type == 'email'
-      ? RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(value)
-      : RegExp(r'^(\+62|62|0)8\d{7,12}$').hasMatch(value);
-  if (!validFormat || value == _knownContacts[type]) {
-    return MockReply.error('VALIDATION_ERROR', 'new_value tidak valid');
-  }
-  // Pemicu khusus mock untuk kontak yang sudah dipakai akun lain.
-  if (type == 'email' && value.toLowerCase().startsWith('terpakai@')) {
-    return MockReply.error('EMAIL_TAKEN', 'Email sudah terdaftar', statusCode: 409);
-  }
-  if (type == 'phone' && value.endsWith('00000000')) {
-    return MockReply.error('PHONE_TAKEN', 'Nomor sudah terdaftar', statusCode: 409);
-  }
-
-  final now = accountMockClock();
-  _contactRequestLog.removeWhere((e) => now.difference(e.$2) >= const Duration(hours: 1));
-  if (_contactRequestLog.where((e) => e.$1 == type).length >= kMockContactChangePerHour) {
-    return MockReply.error('TOO_MANY_REQUESTS', 'Terlalu banyak permintaan', statusCode: 429);
-  }
-  _contactRequestLog.add((type, now));
-
-  // Satu permintaan aktif per jenis: meminta ulang membatalkan yang lama.
-  _contactRequests.removeWhere((_, r) => r.type == type);
-  final request = _ContactRequest(
-    id: 'mock-cc-${now.millisecondsSinceEpoch}-${++_requestCounter}',
-    type: type,
-    newValue: value,
-    expiresAt: now.add(kMockOtpLifetime),
-  );
-  _contactRequests[request.id] = request;
-  return MockReply.ok(await _challengePayload(request), statusCode: 201, meta: _otpHint);
-}
-
-const Map<String, dynamic> _otpHint = {'mock_otp': kMockOtp};
-
-Future<MockReply> _verifyContactChange(String id, Map<String, dynamic> body) async {
-  final request = _contactRequests[id];
-  if (request == null) {
-    return MockReply.error('CONTACT_CHANGE_NOT_FOUND', 'Permintaan tidak ditemukan',
-        statusCode: 404);
-  }
-  final now = accountMockClock();
-  if (!now.isBefore(request.expiresAt)) {
-    return MockReply.error('OTP_EXPIRED', 'Kode OTP kedaluwarsa');
-  }
-  if (request.attempts >= kMockOtpMaxAttempts) {
-    return MockReply.error('TOO_MANY_REQUESTS', 'Terlalu banyak percobaan', statusCode: 429);
-  }
-  if ((body['otp'] ?? '').toString().trim() != kMockOtp) {
-    request.attempts++;
-    return MockReply.error('INVALID_OTP', 'Kode OTP salah');
-  }
-
-  if (request.stage == 'current_contact') {
-    request
-      ..stage = 'new_contact'
-      ..attempts = 0
-      ..expiresAt = now.add(kMockOtpLifetime);
-    return MockReply.ok(await _challengePayload(request), meta: _otpHint);
-  }
-
-  _contactRequests.remove(id);
-  _knownContacts[request.type] = request.newValue;
-  final done = await MockFixtures.load<Map<String, dynamic>>('account/contact_change_completed.json');
-  return MockReply.ok({
-    ...done,
-    'request_id': request.id,
-    'type': request.type,
-    'new_value': request.newValue,
-  });
-}
-
-Future<Map<String, dynamic>> _challengePayload(_ContactRequest request) async {
-  final base = await MockFixtures.load<Map<String, dynamic>>('account/contact_change_challenge.json');
-  final target =
-      request.stage == 'current_contact' ? _knownContacts[request.type] : request.newValue;
-  return {
-    ...base,
-    'request_id': request.id,
-    'type': request.type,
-    'stage': request.stage,
-    'otp_sent_to': target == null || target.isEmpty
-        ? (request.type == 'email' ? 'email terdaftar' : 'nomor HP terdaftar')
-        : maskContact(request.type, target),
-    'expires_at': formatForServer(request.expiresAt),
-    'new_value': null,
-  };
-}
-
-// ---------------------------------------------------------------------------
-
 Map<String, dynamic> _body(Object? data) =>
     data is Map ? Map<String, dynamic>.from(data) : <String, dynamic>{};
 
 String _maskIdCard(String nik) =>
     nik.length <= 4 ? nik : '${'*' * (nik.length - 4)}${nik.substring(nik.length - 4)}';
-
-/// `budi@contoh.id` → `bu***@contoh.id`; `081234567890` → `0812****7890`.
-@visibleForTesting
-String maskContact(String type, String value) {
-  if (type == 'email') {
-    final at = value.indexOf('@');
-    if (at <= 0) return '***';
-    final local = value.substring(0, at);
-    final keep = local.length <= 2 ? 1 : 2;
-    return '${local.substring(0, keep)}***${value.substring(at)}';
-  }
-  if (value.length <= 8) return '****';
-  return '${value.substring(0, 4)}${'*' * (value.length - 8)}${value.substring(value.length - 4)}';
-}

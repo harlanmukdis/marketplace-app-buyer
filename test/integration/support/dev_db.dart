@@ -114,3 +114,9 @@ Future<void> clearWalletPin(int userId) =>
 /// Menyetel saldo persis — untuk menguji `INSUFFICIENT_BALANCE`.
 Future<void> setWalletBalance(int userId, num balance) =>
     _sql('UPDATE wallets SET balance = $balance WHERE user_id = $userId');
+
+/// Mengosongkan kuota ganti email/HP (3 permintaan per jam per jenis, setiap
+/// permintaan dihitung) — supaya suite bisa dijalankan beruntun.
+Future<void> resetContactChangeAttempts(int userId) => _sql(
+    "DELETE FROM auth_rate_limits WHERE rate_key IN "
+    "('email_change:user:$userId', 'phone_change:user:$userId')");

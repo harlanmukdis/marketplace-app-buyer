@@ -24,11 +24,10 @@ class FakeAccountRepository implements AccountRepository {
     IdentityVerificationModel(status: 'pending', idCardNumberMasked: '************3456'),
     meta: mockMeta,
   );
-  DataState<ContactChangeChallenge> startResult = const DataSuccess(
-    ContactChangeChallenge(requestId: 'r1', otpSentTo: 'e2***@example.id'),
-    meta: mockMeta,
+  DataState<ContactChangeRequest> contactRequestResult = const DataSuccess(
+    ContactChangeRequest(devVerificationToken: 'dev-contact-token'),
   );
-  List<DataState<ContactChangeChallenge>> verifyResults = [];
+  List<DataState<void>> contactConfirmResults = [];
   DataState<PasswordResetRequest> resetRequest =
       const DataSuccess(PasswordResetRequest(devResetToken: 'dev-token-1'));
   DataState<void> resetResult = const DataSuccess(null);
@@ -61,21 +60,23 @@ class FakeAccountRepository implements AccountRepository {
   }
 
   @override
-  Future<DataState<ContactChangeChallenge>> startContactChange({
+  Future<DataState<ContactChangeRequest>> requestContactChange({
     required ContactType type,
     required String newValue,
   }) async {
-    calls.add('startContact:${type.code}:$newValue');
-    return startResult;
+    calls.add('requestContact:${type.code}:$newValue');
+    return contactRequestResult;
   }
 
   @override
-  Future<DataState<ContactChangeChallenge>> verifyContactChange({
-    required String requestId,
-    required String otp,
+  Future<DataState<void>> confirmContactChange({
+    required ContactType type,
+    required String token,
   }) async {
-    calls.add('verifyContact:$requestId:$otp');
-    return verifyResults.removeAt(0);
+    calls.add('confirmContact:${type.code}:$token');
+    return contactConfirmResults.isEmpty
+        ? const DataSuccess(null)
+        : contactConfirmResults.removeAt(0);
   }
 
   @override

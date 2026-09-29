@@ -119,7 +119,7 @@ Legenda sumber data: **API** = endpoint sungguhan · **MOCK** = endpoint belum a
 | My Xpedia (tab profil) | `profile/screens/my_xpedia_screen.dart` | API `/me` | pintu ke semua layar akun |
 | Ubah profil | `profile/screens/edit_profile_screen.dart` | API + MOCK | nama terkunci bila KTP terverifikasi (`IDENTITY_LOCKED`) |
 | Verifikasi KTP | di profil | MOCK `/me/identity-verification` | docs/22 #4, #11 |
-| Ganti email/HP + OTP | di profil | MOCK `/me/contact-change` | OTP mock `123456`; docs/22 #10 |
+| Ganti email/HP | di profil (`profile/widgets/contact_change_sheet.dart`) | API `/me/{email,phone}/change-request` + `change-confirm` | satu token 64 hex ke kontak **lama** (30 mnt); debug: tombol "Isi kode (dev)". 🔴 HP tidak dikirim ke mana pun di luar dev |
 | Keamanan akun (sesi perangkat) | `profile/screens/account_security_screen.dart` | API `/me/sessions` | dikelompokkan per perangkat (bug backend: sesi menumpuk tiap refresh) |
 | Pengaturan (tema, bahasa, keluar) | `profile/screens/settings_screen.dart` | LOKAL | ganti tema/bahasa = app restart (Phoenix) |
 | Alamat (maks 3) + master lokasi | `address/screens/address_list_screen.dart`, `address_form_sheet.dart`, `location_picker.dart` | API `/me/addresses`, `/locations/*` | batas 3 ditegakkan app; kota tetap bisa ketik bebas |
@@ -167,15 +167,15 @@ Legenda sumber data: **API** = endpoint sungguhan · **MOCK** = endpoint belum a
 - Kode: `lib/config/network/mock/pending_api_mock.dart` + `routes/{account,checkout,order,discovery}_mock_routes.dart`.
 - Fixture + **kontrak untuk tim backend**: `assets/mock/pending_api/<domain>/*.json` dan **`assets/mock/pending_api/README.md`** (baca ini untuk detail tiap endpoint).
 - Aktif hanya di debug (`PENDING_API_MOCK`, default `kDebugMode`). Matikan: `flutter run --dart-define=PENDING_API_MOCK=false`.
-- Nilai simulasi: OTP `123456`. Opsi debug lain (`MOCK_CANCELLATION_OUTCOME`, …) ada di README mock. Mock checkout/Wallet **sudah dihapus** — checkout memakai server sungguhan.
+- Opsi debug (`MOCK_CANCELLATION_OUTCOME`, …) ada di README mock. Mock checkout/Wallet dan ganti email/HP **sudah dihapus** — keduanya memakai server sungguhan.
 - **Saat backend membangun endpoint: hapus rute mock-nya saja**, lalu jalankan layar terkait terhadap server; sesuaikan model hanya bila bentuk respons berbeda dari fixture.
 - `test/integration/` tidak terpengaruh mock (pakai `DioClient.createBare`).
 
 ## 7. Belum dikerjakan / keputusan terbuka
 
 ### Sisa sinkron backend `45568d9` (12 commit docs/22)
-Sudah: #1–#2 checkout wallet-only, #4 NIK saat daftar, #5 bukti refund (`evidence`), #9 & #12 (ditegakkan server, dipatok test). Belum:
-- [ ] **#10 ganti email/HP** — server membangun `/me/{email,phone}/change-request` + `change-confirm {token}`, **beda kontrak** dari mock `/me/contact-change` + OTP. Layar & service harus ditulis ulang.
+Sudah: #1–#2 checkout wallet-only, #4 NIK saat daftar, #5 bukti refund (`evidence`), #9 & #12 (ditegakkan server, dipatok test), #10 ganti email/HP. Belum:
+- [x] **#10 ganti email/HP** — ditulis ulang ke kontrak satu tahap sungguhan, dipatok `test/integration/contact_change_service_test.dart`.
 - [ ] **#3 pembatalan sesudah resi** — `POST /orders/{id}/cancellation-request` ada; `GET`-nya **tidak** (mock GET tetap). Hapus mock POST, sesuaikan bentuk.
 - [ ] **#8 ubah ulasan** — `PATCH /reviews/{id}` ada; `GET /me/reviews` tidak (mock tetap).
 - [ ] **#13 lonceng wishlist** — `PATCH /wishlist/items/{productId} {alert_enabled}` ada; cek `GET /wishlist` membawa `alert_enabled`, lalu hapus mock.
@@ -184,6 +184,7 @@ Sudah: #1–#2 checkout wallet-only, #4 NIK saat daftar, #5 bukti refund (`evide
 - [ ] **#7 rating toko** — kini dari ulasan terverifikasi; cek ulang catatan "`rating_avg` salah" di CLAUDE.md.
 - [ ] **e2e `member_journey_test`** — sudah disesuaikan untuk NIK & checkout wallet-only, tapi **sudah merah sebelumnya** di langkah katalog (chip "Semua" tergulir keluar saat mencari grid produk di bawah lipatan). Perlu diperbarui untuk beranda Xpedia.
 - [ ] 🔴 Laporkan ke backend: hapus alamat yang pernah dipakai checkout → **500 HTML** (FK `RESTRICT` dari `checkout_sessions`); dengan batas 3 alamat, pembeli tak bisa lagi mengganti alamat lama.
+- [ ] 🔴 Laporkan ke backend: ganti nomor HP **tidak mengirim token ke mana pun** (tidak ada SMS) — hanya bisa diselesaikan di mode development.
 
 - [ ] Cek visual **dark mode** semua layar baru.
 - [ ] Lokalisasi **en/ar** untuk layar baru (copy saat ini Bahasa Indonesia hardcoded) — butuh keputusan produk.

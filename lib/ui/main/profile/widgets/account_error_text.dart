@@ -37,16 +37,14 @@ String accountErrorText(
 
 /// Kode error domain akun yang belum dipetakan `errorMessageFor`.
 ///
-/// Sebagian besar milik **kontrak usulan** (mock: verifikasi identitas dan
-/// ganti kontak, lihat `assets/mock/pending_api/README.md`). `INVALID_TOKEN`
-/// sungguhan: dibalas `reset-password` untuk token yang salah, sudah
-/// terpakai, atau lewat 60 menit — ketiganya tidak bisa dibedakan.
+/// `INVALID_TOKEN` sungguhan dan dipakai dua alur: `reset-password` (token
+/// 60 menit) dan ganti email/HP (`change-confirm`, token 30 menit). Salah,
+/// sudah terpakai, dan kedaluwarsa tidak bisa dibedakan, jadi pesannya umum;
+/// layar yang tahu konteksnya memakai `overrides`. Sisanya milik **kontrak
+/// usulan** (mock verifikasi identitas, `assets/mock/pending_api/README.md`).
 const Map<String, String> kAccountErrorMessages = {
-  'INVALID_TOKEN': 'Kode reset tidak berlaku. Mungkin sudah dipakai atau lewat '
-      '60 menit — minta tautan baru.',
-  'INVALID_OTP': 'Kode OTP salah. Periksa lagi kode yang kami kirim.',
-  'OTP_EXPIRED': 'Kode OTP sudah kedaluwarsa. Minta kode baru.',
-  'CONTACT_CHANGE_NOT_FOUND': 'Permintaan penggantian sudah tidak berlaku. Mulai lagi dari awal.',
+  'INVALID_TOKEN': 'Kode tidak berlaku. Mungkin salah, sudah dipakai, atau '
+      'kedaluwarsa — minta kode baru.',
   'ID_CARD_ALREADY_USED': 'NIK ini sudah dipakai akun Xpedia lain. Satu KTP hanya untuk '
       'satu akun — hubungi Xpedia 911 kalau ini bukan akunmu.',
   'IDENTITY_LOCKED': 'Nama lengkap terkunci karena identitasmu sudah diverifikasi.',

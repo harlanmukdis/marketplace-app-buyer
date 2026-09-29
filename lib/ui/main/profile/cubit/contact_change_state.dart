@@ -8,15 +8,14 @@ abstract class ContactChangeState with _$ContactChangeState {
     required ContactType type,
     String? newValue,
 
-    /// `null` = belum meminta OTP.
-    ContactChangeChallenge? challenge,
-    @Default(<String, dynamic>{}) Map<String, dynamic> meta,
+    /// `null` = belum meminta kode; terisi = menunggu kode dimasukkan.
+    ContactChangeRequest? request,
     @Default(false) bool isBusy,
     DataError? error,
 
-    /// Endpoint belum ada di backend (mock dimatikan).
-    @Default(false) bool unavailable,
+    /// Kontak baru sudah tersimpan di server.
+    @Default(false) bool completed,
   }) = _ContactChangeState;
 
-  bool get isCompleted => challenge?.isCompleted ?? false;
+  bool get awaitingToken => request != null && !completed;
 }

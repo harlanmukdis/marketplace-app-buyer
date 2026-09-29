@@ -73,18 +73,24 @@ class AccountRepositoryImpl with RepositoryGuard implements AccountRepository {
           ));
 
   @override
-  Future<DataState<ContactChangeChallenge>> startContactChange({
+  Future<DataState<ContactChangeRequest>> requestContactChange({
     required ContactType type,
     required String newValue,
   }) =>
-      guard(() => _service.startContactChange(type: type, newValue: newValue));
+      guard(() => _service.requestContactChange(type: type, newValue: newValue));
 
   @override
-  Future<DataState<ContactChangeChallenge>> verifyContactChange({
-    required String requestId,
-    required String otp,
-  }) =>
-      guard(() => _service.verifyContactChange(requestId: requestId, otp: otp));
+  Future<DataState<void>> confirmContactChange({
+    required ContactType type,
+    required String token,
+  }) async {
+    try {
+      final env = await _service.confirmContactChange(type: type, token: token);
+      return DataSuccess(null, meta: env.meta, statusCode: env.statusCode);
+    } on ApiException catch (e) {
+      return DataFailed(e.error);
+    }
+  }
 
   @override
   Future<DataState<PasswordResetRequest>> requestPasswordReset(

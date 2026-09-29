@@ -1,8 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:marketplace_app_member/config/network/mock/pending_api_mock.dart';
+import 'package:marketplace_app_member/core/data_state.dart';
 import 'package:marketplace_app_member/core/design/xp_colors.dart';
 import 'package:marketplace_app_member/core/design/xp_text.dart';
 import 'package:marketplace_app_member/core/design/xp_widgets.dart';
@@ -11,15 +10,12 @@ import 'package:marketplace_app_member/core/domain/model/auth/user_model.dart';
 import 'package:marketplace_app_member/ui/main/auth/cubit/auth_cubit.dart';
 import 'package:marketplace_app_member/ui/main/profile/cubit/contact_change_cubit.dart';
 import 'package:marketplace_app_member/ui/main/profile/widgets/account_error_text.dart';
-import 'package:marketplace_app_member/ui/main/shell/simulated_badge.dart';
-import 'package:marketplace_app_member/util/format_helper.dart';
 
 /// Lembar ganti email / nomor HP (docs/22 #10), dipakai layar Keamanan Akun
 /// dan Ubah Profil.
 ///
-/// Mengembalikan `true` kalau penggantian selesai — pemanggil memuat ulang
-/// `GET /me`. Selama backend belum punya endpoint-nya, perubahan itu
-/// **simulasi**: `/me` tidak ikut berubah, dan lembar ini mengatakannya.
+/// Mengembalikan `true` kalau kontak baru tersimpan — pemanggil memuat ulang
+/// `GET /me` (`change-confirm` membalas `data: null`).
 Future<bool?> showContactChangeSheet(
   BuildContext context, {
   required ContactType type,
@@ -51,36 +47,29 @@ class _ContactChangeSheet extends StatefulWidget {
 
 class _ContactChangeSheetState extends State<_ContactChangeSheet> {
   final _value = TextEditingController();
-  final _otp = TextEditingController();
+  final _token = TextEditingController();
 
   @override
   void dispose() {
     _value.dispose();
-    _otp.dispose();
+    _token.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return BlocConsumer<ContactChangeCubit, ContactChangeState>(
-      // Kode OTP dikosongkan tiap berganti tahap: kode tahap satu tidak
-      // berlaku untuk tahap dua.
-      listenWhen: (a, b) => a.challenge?.stage != b.challenge?.stage,
-      listener: (_, __) => _otp.clear(),
+      // Kode dikosongkan tiap kali permintaan baru dibuat: permintaan baru
+      // membatalkan kode lama di server.
+      listenWhen: (a, b) => !identical(a.request, b.request),
+      listener: (_, __) => _token.clear(),
       builder: (context, state) {
         final cubit = ContactChangeCubit.get(context);
         final Widget body;
-        if (state.unavailable) {
-          body = XpEmptyState(
-            icon: Icons.construction_outlined,
-            title: 'Ganti ${state.type.label.toLowerCase()} belum tersedia',
-            message: 'Fitur ini sedang disiapkan. Hubungi Xpedia 911 kalau perlu '
-                'mengganti kontak akunmu sekarang.',
-          );
-        } else if (state.isCompleted) {
+        if (state.completed) {
           body = _completed(context, state);
-        } else if (state.challenge != null) {
-          body = _otpStep(context, state, cubit);
+        } else if (state.awaitingToken) {
+          body = _tokenStep(context, state, cubit);
         } else {
           body = _valueStep(context, state, cubit);
         }
@@ -103,14 +92,7 @@ class _ContactChangeSheetState extends State<_ContactChangeSheet> {
                     ),
                   ),
                 ),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text('Ganti ${state.type.label}', style: XpText.headingM(context)),
-                    ),
-                    SimulatedBadge(meta: state.meta),
-                  ],
-                ),
+                Text('Ganti ${state.type.label}', style: XpText.headingM(context)),
                 const SizedBox(height: 16),
                 body,
               ],
@@ -126,7 +108,16 @@ class _ContactChangeSheetState extends State<_ContactChangeSheet> {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Text(
-        accountErrorText(context, state.error!),
+        accountErrorText(context, state.error!, overrides: const {
+          ApiErrorCode.invalidToken: 'Kode verifikasi salah, sudah dipakai, atau '
+              'lewat 30 menit. Periksa lagi, atau kirim ulang kode.',
+          ApiErrorCode.emailTaken: 'Email ini sudah dipakai akun lain. Pakai '
+              'email lain.',
+          ApiErrorCode.phoneTaken: 'Nomor HP ini sudah dipakai akun lain. Pakai '
+              'nomor lain.',
+          ApiErrorCode.tooManyRequests: 'Terlalu banyak permintaan kode. Coba '
+              'lagi dalam satu jam.',
+        }),
         style: XpText.bodyS(context).copyWith(color: XpColors.danger),
       ),
     );
@@ -151,72 +142,72 @@ class _ContactChangeSheetState extends State<_ContactChangeSheet> {
             hintText: isEmail ? 'nama@email.com' : '08xxxxxxxxxx',
             prefixIcon: Icon(isEmail ? Icons.mail_outline : Icons.phone_outlined),
           ),
-          onSubmitted: (_) => cubit.start(_value.text),
+          onSubmitted: (_) => cubit.request(_value.text),
         ),
         const SizedBox(height: 12),
         Text(
-          'Demi keamananmu, kami kirim kode ke ${state.type.label.toLowerCase()} lama '
-          'dulu, lalu ke ${state.type.label.toLowerCase()} baru. Perubahan baru '
-          'tersimpan setelah keduanya terverifikasi.',
+          'Demi keamananmu, kode verifikasi dikirim ke '
+          '${state.type.label.toLowerCase()} lama. Perubahan tersimpan setelah '
+          'kodenya dimasukkan.',
           style: XpText.bodyS(context).copyWith(color: XpColors.textSecondary),
         ),
         const SizedBox(height: 16),
         _error(context, state),
         FilledButton(
           style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
-          onPressed: state.isBusy ? null : () => cubit.start(_value.text),
+          onPressed: state.isBusy ? null : () => cubit.request(_value.text),
           child: state.isBusy ? const _Spinner() : const Text('Kirim Kode'),
         ),
       ],
     );
   }
 
-  Widget _otpStep(BuildContext context, ContactChangeState state, ContactChangeCubit cubit) {
-    final challenge = state.challenge!;
-    final isFirst = challenge.stageValue == ContactChangeStage.currentContact;
+  Widget _tokenStep(BuildContext context, ContactChangeState state, ContactChangeCubit cubit) {
     final label = state.type.label.toLowerCase();
+    final devToken = state.request?.devVerificationToken;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(isFirst ? 'Langkah 1 dari 2 · $label lama' : 'Langkah 2 dari 2 · $label baru',
-            style: XpText.labelM(context).copyWith(color: XpColors.primary)),
-        const SizedBox(height: 4),
-        Text('Masukkan kode 6 angka yang dikirim ke ${challenge.otpSentTo ?? '$label kamu'}.',
+        Text('Masukkan kode verifikasi yang kami kirim ke $label lama kamu '
+            'untuk mengganti ke ${state.newValue}.',
             style: XpText.bodyM(context)),
-        if (challenge.expiresAt != null)
-          Padding(
-            padding: const EdgeInsets.only(top: 4),
-            child: Text('Berlaku sampai ${formatServerDateTime(challenge.expiresAt)}',
-                style: XpText.caption(context).copyWith(color: XpColors.textTertiary)),
-          ),
+        const SizedBox(height: 4),
+        Text('Kode berlaku 30 menit.',
+            style: XpText.caption(context).copyWith(color: XpColors.textTertiary)),
         const SizedBox(height: 16),
+        // Kodenya 64 karakter — praktis hanya ditempel dari email, jadi
+        // kolom biasa, bukan kotak 6 angka.
         TextField(
-          controller: _otp,
+          controller: _token,
           enabled: !state.isBusy,
           autofocus: true,
-          keyboardType: TextInputType.number,
-          maxLength: 6,
-          textAlign: TextAlign.center,
-          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-          style: XpText.headingL(context).copyWith(letterSpacing: 8),
-          decoration: const InputDecoration(hintText: '••••••', counterText: ''),
-          onSubmitted: (_) => cubit.verify(_otp.text),
+          autocorrect: false,
+          enableSuggestions: false,
+          textDirection: TextDirection.ltr,
+          decoration: const InputDecoration(
+            labelText: 'Kode verifikasi',
+            hintText: 'Tempel kode dari pesan',
+            prefixIcon: Icon(Icons.key_outlined),
+          ),
+          onSubmitted: (_) => cubit.confirm(_token.text),
         ),
-        // Petunjuk kode hanya dari respons mock (`meta.mock_otp`), dan hanya
-        // di debug — server sungguhan mengirim kodenya ke kontak user.
-        if (kDebugMode && isMockMeta(state.meta) && state.meta['mock_otp'] != null)
-          Padding(
-            padding: const EdgeInsets.only(top: 8),
-            child: Text('Simulasi: kode OTP-nya ${state.meta['mock_otp']}',
-                textAlign: TextAlign.center,
-                style: XpText.caption(context).copyWith(color: const Color(0xff8C5002))),
+        // Hanya di debug, dan hanya bila backend berjalan dalam mode
+        // development — pola yang sama dengan lupa kata sandi.
+        if (kDebugMode && devToken != null)
+          Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: TextButton(
+              style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
+              onPressed: state.isBusy ? null : () => _token.text = devToken,
+              child: const Text('Isi kode (dev)'),
+            ),
           ),
         const SizedBox(height: 16),
         _error(context, state),
         FilledButton(
           style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
-          onPressed: state.isBusy ? null : () => cubit.verify(_otp.text),
-          child: state.isBusy ? const _Spinner() : const Text('Verifikasi'),
+          onPressed: state.isBusy ? null : () => cubit.confirm(_token.text),
+          child: state.isBusy ? const _Spinner() : const Text('Simpan'),
         ),
         const SizedBox(height: 8),
         Wrap(
@@ -224,9 +215,9 @@ class _ContactChangeSheetState extends State<_ContactChangeSheet> {
           children: [
             TextButton(
               style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
-              // Permintaan baru untuk jenis yang sama menggantikan yang lama,
-              // jadi "kirim ulang" = mulai lagi dari kontak lama.
-              onPressed: state.isBusy ? null : () => cubit.start(state.newValue ?? ''),
+              // Permintaan baru membatalkan kode lama. Ikut dihitung kuota
+              // 3 permintaan per jam.
+              onPressed: state.isBusy ? null : () => cubit.request(state.newValue ?? ''),
               child: const Text('Kirim ulang kode'),
             ),
             TextButton(
@@ -246,24 +237,20 @@ class _ContactChangeSheetState extends State<_ContactChangeSheet> {
   }
 
   Widget _completed(BuildContext context, ContactChangeState state) {
-    final simulated = isMockMeta(state.meta);
-    final label = state.type.label.toLowerCase();
+    final isEmail = state.type == ContactType.email;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Icon(Icons.check_circle, size: 48, color: XpColors.success),
         const SizedBox(height: 12),
-        Text(
-          simulated ? 'Verifikasi selesai (simulasi)' : '${state.type.label} berhasil diganti',
-          textAlign: TextAlign.center,
-          style: XpText.titleL(context),
-        ),
+        Text('${state.type.label} berhasil diganti',
+            textAlign: TextAlign.center, style: XpText.titleL(context)),
         const SizedBox(height: 4),
         Text(
-          simulated
-              ? 'Kedua kode berhasil diverifikasi, tapi ini masih simulasi — backend '
-                  'belum bisa menyimpan $label baru, jadi $label di akunmu belum berubah.'
-              : '$label akunmu sekarang ${state.challenge?.newValue ?? state.newValue}.',
+          isEmail
+              // Email adalah identitas login.
+              ? 'Mulai sekarang masuk dengan ${state.newValue}.'
+              : 'Nomor HP akunmu sekarang ${state.newValue}.',
           textAlign: TextAlign.center,
           style: XpText.bodyM(context).copyWith(color: XpColors.textSecondary),
         ),
@@ -289,7 +276,7 @@ class _Spinner extends StatelessWidget {
       );
 }
 
-/// Baris kontak read-only dengan tombol "Ubah" → lembar OTP. Dipakai layar
+/// Baris kontak read-only dengan tombol "Ubah" → lembar ganti kontak. Dipakai layar
 /// Keamanan Akun dan Ubah Profil; butuh `AuthCubit` di atasnya.
 class ContactRow extends StatelessWidget {
   const ContactRow({
@@ -331,8 +318,6 @@ class ContactRow extends StatelessWidget {
               : () async {
                   final done = await showContactChangeSheet(context,
                       type: type, currentValue: value);
-                  // Server sungguhan akan mengubah `/me`; dengan mock tidak,
-                  // tapi membaca ulang tetap benar untuk keduanya.
                   if (done == true) await auth.restoreSession();
                 },
           child: const Text('Ubah'),

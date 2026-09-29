@@ -53,27 +53,28 @@ diam-diam, karena `PATCH /me` membalas `data: null` dan pengabaian tidak akan
 terlihat). Mock menjawab penolakan itu; permintaan lain diteruskan ke server.
 App juga sudah mengunci kolom nama di layar Ubah Profil.
 
-#### Ganti email / nomor HP dengan OTP — docs/22 #10
+#### Ganti email / nomor HP — ✅ dibangun backend, mock DIHAPUS (30 September 2026)
 
-Dua tahap, sesuai saran docs/22 #10 ("OTP ke kontak lama → OTP ke kontak baru
-→ commit"). Perubahan baru disimpan sesudah tahap kedua.
+Backend `b501fc3` membangun docs/22 #10 dengan kontrak **satu tahap**, bukan
+OTP dua tahap yang diusulkan di sini. Rute mock `/me/contact-change*` dan
+fixture `account/contact_change_*.json` sudah dihapus. Catatan untuk backend:
 
-| | |
-|---|---|
-| **`POST /me/contact-change`** | Body `{"type": "email" \| "phone", "new_value": "…"}`. Memulai permintaan dan mengirim OTP ke **kontak lama**. Permintaan baru untuk `type` yang sama **membatalkan** permintaan lama (dipakai app sebagai "Kirim ulang kode"). |
-| Respons `201` | [`account/contact_change_challenge.json`](account/contact_change_challenge.json): `request_id` (string, UUID), `type`, `stage: "current_contact"`, `otp_sent_to` (tujuan tersensor: `bu***@contoh.id`, `0812****7890`), `expires_at` (5 menit), `new_value: null`. |
-| **`POST /me/contact-change/{request_id}/verify`** | Body `{"otp": "123456"}`. |
-| Respons `200` (tahap 1 lolos) | Bentuk yang sama, `stage: "new_contact"`, `otp_sent_to` = kontak **baru** tersensor, `expires_at` baru, percobaan direset. |
-| Respons `200` (tahap 2 lolos) | [`account/contact_change_completed.json`](account/contact_change_completed.json): `stage: "completed"`, `new_value` terisi. Sesudah ini `GET /me` harus mengembalikan kontak baru (dan `email_verified`/`phone_verified` untuk kontak itu jadi `"1"`). |
-| Error | `422 VALIDATION_ERROR` (`type` asing, format salah, atau sama dengan kontak sekarang) · `409 EMAIL_TAKEN` / `409 PHONE_TAKEN` (kode yang sudah dipakai `/auth/register`) · `422 INVALID_OTP` · `422 OTP_EXPIRED` · `404 CONTACT_CHANGE_NOT_FOUND` (id tak dikenal, milik orang lain, atau sudah selesai) · `429 TOO_MANY_REQUESTS` (>5 OTP salah per permintaan, atau >3 permintaan per `type` per jam). |
-| Catatan | Jangan pakai pola rate limit login yang **ikut menghitung percobaan benar** (lihat CLAUDE.md "Rate limit auth"). Jalur "kontak lama tidak bisa diakses" (Account Recovery) sengaja tidak diusulkan — docs/22 #10 menyebutnya masih pending review. |
-| Perilaku mock | OTP selalu `123456`, dan dikirim di `meta.mock_otp` supaya layar debug bisa menampilkannya (backend **tidak** mengirim field itu). `otp_sent_to` tahap 1 diambil dari respons `GET /me` sungguhan terakhir. **Pemicu khusus mock**: email berawalan `terpakai@` → `EMAIL_TAKEN`; nomor berakhiran `00000000` → `PHONE_TAKEN`. Karena `/me` sungguhan tidak berubah, layar menyebut hasilnya "simulasi". |
+| Usulan | Yang dibangun | Catatan |
+|---|---|---|
+| `POST /me/contact-change {type, new_value}` | `POST /me/{email\|phone}/change-request {new_email\|new_phone}` | Format **tidak divalidasi** (`bukan-email` diterima); app yang memvalidasi. |
+| OTP 6 angka ke kontak lama **lalu** kontak baru | **Satu** token 64 hex (30 menit) ke kontak lama saja → `POST /me/{…}/change-confirm {token}` | Kontak baru tersimpan dengan `*_verified = 0` dan tidak ada cara memverifikasinya ulang. Token terlalu panjang untuk diketik — app menyediakan kolom tempel. |
+| `otp_sent_to` tersensor | Tidak ada | App menulis "kontak lama kamu". |
+| — | 🔴 **HP: tidak ada yang dikirim** (tidak ada SMS di backend) | Di luar mode development (`dev_verification_token`), ganti HP **tidak bisa diselesaikan**. |
+| `EMAIL_TAKEN` untuk kontak orang lain | Juga untuk **kontak akun sendiri** | App menolak nilai yang sama lebih dulu. |
+| 429 hanya untuk permintaan berlebih | 3 permintaan/jam/jenis, **setiap** permintaan dihitung (termasuk kirim ulang) | Sesuai usulan. |
+| — | 🔴 `change-confirm` **mengonsumsi token sebelum** memeriksa pemilik & ketersediaan | Token milik akun lain tetap hangus; kontak yang keburu dipakai → `409` dan pembeli harus meminta kode baru. |
 
 #### Tidak di-mock (endpoint sudah ada)
 
 | Endpoint | Catatan untuk backend |
 |---|---|
 | `GET /me/sessions`, `DELETE /me/sessions/{id}` | Dipakai layar Keamanan Akun apa adanya. **Usulan field `is_current`** (boolean) per baris — app kini menebaknya dari `created_at` yang paling dekat dengan saat access token diterbitkan, dan otomatis memakai `is_current` begitu dikirim. 🔴 **Temuan**: `Jwt_auth::refresh()` menyisipkan baris `user_sessions` baru tiap refresh **tanpa mencabut yang lama**, jadi refresh token lama tetap sah 30 hari dan daftar sesi tumbuh satu baris per 15 menit. App mengelompokkan baris per `device_id`+`user_agent`+`ip_address` dan mencabut semuanya saat "Keluarkan"; perbaikan sebenarnya adalah merotasi (mencabut) baris lama saat refresh. `DELETE` juga membalas `200` untuk id apa pun dan tidak menolak sesi yang sedang dipakai. |
+| `POST /me/{email,phone}/change-request`, `.../change-confirm` | Lihat tabel di atas. |
 | `POST /auth/forgot-password`, `POST /auth/reset-password` | Sudah dipakai layar Lupa/Atur Ulang Kata Sandi. `dev_reset_token` (development) dipakai tombol debug "Buka tautan reset (dev)". Tautan email menunjuk `base_url/reset-password?token=` — belum ada deep link ke app, jadi app menyediakan kolom tempel kode. `reset-password` tidak memvalidasi panjang `new_password` sama sekali. |
 
 ### Checkout & Wallet — ✅ dibangun backend, mock DIHAPUS (29 September 2026)

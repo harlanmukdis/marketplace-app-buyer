@@ -17,14 +17,13 @@ mixin _$ContactChangeState {
   ContactType get type;
   String? get newValue;
 
-  /// `null` = belum meminta OTP.
-  ContactChangeChallenge? get challenge;
-  Map<String, dynamic> get meta;
+  /// `null` = belum meminta kode; terisi = menunggu kode dimasukkan.
+  ContactChangeRequest? get request;
   bool get isBusy;
   DataError? get error;
 
-  /// Endpoint belum ada di backend (mock dimatikan).
-  bool get unavailable;
+  /// Kontak baru sudah tersimpan di server.
+  bool get completed;
 
   /// Create a copy of ContactChangeState
   /// with the given fields replaced by the non-null parameter values.
@@ -42,22 +41,20 @@ mixin _$ContactChangeState {
             (identical(other.type, type) || other.type == type) &&
             (identical(other.newValue, newValue) ||
                 other.newValue == newValue) &&
-            (identical(other.challenge, challenge) ||
-                other.challenge == challenge) &&
-            const DeepCollectionEquality().equals(other.meta, meta) &&
+            (identical(other.request, request) || other.request == request) &&
             (identical(other.isBusy, isBusy) || other.isBusy == isBusy) &&
             (identical(other.error, error) || other.error == error) &&
-            (identical(other.unavailable, unavailable) ||
-                other.unavailable == unavailable));
+            (identical(other.completed, completed) ||
+                other.completed == completed));
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType, type, newValue, challenge,
-      const DeepCollectionEquality().hash(meta), isBusy, error, unavailable);
+  int get hashCode => Object.hash(
+      runtimeType, type, newValue, request, isBusy, error, completed);
 
   @override
   String toString() {
-    return 'ContactChangeState(type: $type, newValue: $newValue, challenge: $challenge, meta: $meta, isBusy: $isBusy, error: $error, unavailable: $unavailable)';
+    return 'ContactChangeState(type: $type, newValue: $newValue, request: $request, isBusy: $isBusy, error: $error, completed: $completed)';
   }
 }
 
@@ -70,13 +67,10 @@ abstract mixin class $ContactChangeStateCopyWith<$Res> {
   $Res call(
       {ContactType type,
       String? newValue,
-      ContactChangeChallenge? challenge,
-      Map<String, dynamic> meta,
+      ContactChangeRequest? request,
       bool isBusy,
       DataError? error,
-      bool unavailable});
-
-  $ContactChangeChallengeCopyWith<$Res>? get challenge;
+      bool completed});
 }
 
 /// @nodoc
@@ -94,11 +88,10 @@ class _$ContactChangeStateCopyWithImpl<$Res>
   $Res call({
     Object? type = null,
     Object? newValue = freezed,
-    Object? challenge = freezed,
-    Object? meta = null,
+    Object? request = freezed,
     Object? isBusy = null,
     Object? error = freezed,
-    Object? unavailable = null,
+    Object? completed = null,
   }) {
     return _then(_self.copyWith(
       type: null == type
@@ -109,14 +102,10 @@ class _$ContactChangeStateCopyWithImpl<$Res>
           ? _self.newValue
           : newValue // ignore: cast_nullable_to_non_nullable
               as String?,
-      challenge: freezed == challenge
-          ? _self.challenge
-          : challenge // ignore: cast_nullable_to_non_nullable
-              as ContactChangeChallenge?,
-      meta: null == meta
-          ? _self.meta
-          : meta // ignore: cast_nullable_to_non_nullable
-              as Map<String, dynamic>,
+      request: freezed == request
+          ? _self.request
+          : request // ignore: cast_nullable_to_non_nullable
+              as ContactChangeRequest?,
       isBusy: null == isBusy
           ? _self.isBusy
           : isBusy // ignore: cast_nullable_to_non_nullable
@@ -125,25 +114,11 @@ class _$ContactChangeStateCopyWithImpl<$Res>
           ? _self.error
           : error // ignore: cast_nullable_to_non_nullable
               as DataError?,
-      unavailable: null == unavailable
-          ? _self.unavailable
-          : unavailable // ignore: cast_nullable_to_non_nullable
+      completed: null == completed
+          ? _self.completed
+          : completed // ignore: cast_nullable_to_non_nullable
               as bool,
     ));
-  }
-
-  /// Create a copy of ContactChangeState
-  /// with the given fields replaced by the non-null parameter values.
-  @override
-  @pragma('vm:prefer-inline')
-  $ContactChangeChallengeCopyWith<$Res>? get challenge {
-    if (_self.challenge == null) {
-      return null;
-    }
-
-    return $ContactChangeChallengeCopyWith<$Res>(_self.challenge!, (value) {
-      return _then(_self.copyWith(challenge: value));
-    });
   }
 }
 
@@ -243,19 +218,18 @@ extension ContactChangeStatePatterns on ContactChangeState {
     TResult Function(
             ContactType type,
             String? newValue,
-            ContactChangeChallenge? challenge,
-            Map<String, dynamic> meta,
+            ContactChangeRequest? request,
             bool isBusy,
             DataError? error,
-            bool unavailable)?
+            bool completed)?
         $default, {
     required TResult orElse(),
   }) {
     final _that = this;
     switch (_that) {
       case _ContactChangeState() when $default != null:
-        return $default(_that.type, _that.newValue, _that.challenge, _that.meta,
-            _that.isBusy, _that.error, _that.unavailable);
+        return $default(_that.type, _that.newValue, _that.request, _that.isBusy,
+            _that.error, _that.completed);
       case _:
         return orElse();
     }
@@ -279,18 +253,17 @@ extension ContactChangeStatePatterns on ContactChangeState {
     TResult Function(
             ContactType type,
             String? newValue,
-            ContactChangeChallenge? challenge,
-            Map<String, dynamic> meta,
+            ContactChangeRequest? request,
             bool isBusy,
             DataError? error,
-            bool unavailable)
+            bool completed)
         $default,
   ) {
     final _that = this;
     switch (_that) {
       case _ContactChangeState():
-        return $default(_that.type, _that.newValue, _that.challenge, _that.meta,
-            _that.isBusy, _that.error, _that.unavailable);
+        return $default(_that.type, _that.newValue, _that.request, _that.isBusy,
+            _that.error, _that.completed);
       case _:
         throw StateError('Unexpected subclass');
     }
@@ -313,18 +286,17 @@ extension ContactChangeStatePatterns on ContactChangeState {
     TResult? Function(
             ContactType type,
             String? newValue,
-            ContactChangeChallenge? challenge,
-            Map<String, dynamic> meta,
+            ContactChangeRequest? request,
             bool isBusy,
             DataError? error,
-            bool unavailable)?
+            bool completed)?
         $default,
   ) {
     final _that = this;
     switch (_that) {
       case _ContactChangeState() when $default != null:
-        return $default(_that.type, _that.newValue, _that.challenge, _that.meta,
-            _that.isBusy, _that.error, _that.unavailable);
+        return $default(_that.type, _that.newValue, _that.request, _that.isBusy,
+            _that.error, _that.completed);
       case _:
         return null;
     }
@@ -337,41 +309,30 @@ class _ContactChangeState extends ContactChangeState {
   const _ContactChangeState(
       {required this.type,
       this.newValue,
-      this.challenge,
-      final Map<String, dynamic> meta = const <String, dynamic>{},
+      this.request,
       this.isBusy = false,
       this.error,
-      this.unavailable = false})
-      : _meta = meta,
-        super._();
+      this.completed = false})
+      : super._();
 
   @override
   final ContactType type;
   @override
   final String? newValue;
 
-  /// `null` = belum meminta OTP.
+  /// `null` = belum meminta kode; terisi = menunggu kode dimasukkan.
   @override
-  final ContactChangeChallenge? challenge;
-  final Map<String, dynamic> _meta;
-  @override
-  @JsonKey()
-  Map<String, dynamic> get meta {
-    if (_meta is EqualUnmodifiableMapView) return _meta;
-    // ignore: implicit_dynamic_type
-    return EqualUnmodifiableMapView(_meta);
-  }
-
+  final ContactChangeRequest? request;
   @override
   @JsonKey()
   final bool isBusy;
   @override
   final DataError? error;
 
-  /// Endpoint belum ada di backend (mock dimatikan).
+  /// Kontak baru sudah tersimpan di server.
   @override
   @JsonKey()
-  final bool unavailable;
+  final bool completed;
 
   /// Create a copy of ContactChangeState
   /// with the given fields replaced by the non-null parameter values.
@@ -389,22 +350,20 @@ class _ContactChangeState extends ContactChangeState {
             (identical(other.type, type) || other.type == type) &&
             (identical(other.newValue, newValue) ||
                 other.newValue == newValue) &&
-            (identical(other.challenge, challenge) ||
-                other.challenge == challenge) &&
-            const DeepCollectionEquality().equals(other._meta, _meta) &&
+            (identical(other.request, request) || other.request == request) &&
             (identical(other.isBusy, isBusy) || other.isBusy == isBusy) &&
             (identical(other.error, error) || other.error == error) &&
-            (identical(other.unavailable, unavailable) ||
-                other.unavailable == unavailable));
+            (identical(other.completed, completed) ||
+                other.completed == completed));
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType, type, newValue, challenge,
-      const DeepCollectionEquality().hash(_meta), isBusy, error, unavailable);
+  int get hashCode => Object.hash(
+      runtimeType, type, newValue, request, isBusy, error, completed);
 
   @override
   String toString() {
-    return 'ContactChangeState(type: $type, newValue: $newValue, challenge: $challenge, meta: $meta, isBusy: $isBusy, error: $error, unavailable: $unavailable)';
+    return 'ContactChangeState(type: $type, newValue: $newValue, request: $request, isBusy: $isBusy, error: $error, completed: $completed)';
   }
 }
 
@@ -419,14 +378,10 @@ abstract mixin class _$ContactChangeStateCopyWith<$Res>
   $Res call(
       {ContactType type,
       String? newValue,
-      ContactChangeChallenge? challenge,
-      Map<String, dynamic> meta,
+      ContactChangeRequest? request,
       bool isBusy,
       DataError? error,
-      bool unavailable});
-
-  @override
-  $ContactChangeChallengeCopyWith<$Res>? get challenge;
+      bool completed});
 }
 
 /// @nodoc
@@ -444,11 +399,10 @@ class __$ContactChangeStateCopyWithImpl<$Res>
   $Res call({
     Object? type = null,
     Object? newValue = freezed,
-    Object? challenge = freezed,
-    Object? meta = null,
+    Object? request = freezed,
     Object? isBusy = null,
     Object? error = freezed,
-    Object? unavailable = null,
+    Object? completed = null,
   }) {
     return _then(_ContactChangeState(
       type: null == type
@@ -459,14 +413,10 @@ class __$ContactChangeStateCopyWithImpl<$Res>
           ? _self.newValue
           : newValue // ignore: cast_nullable_to_non_nullable
               as String?,
-      challenge: freezed == challenge
-          ? _self.challenge
-          : challenge // ignore: cast_nullable_to_non_nullable
-              as ContactChangeChallenge?,
-      meta: null == meta
-          ? _self._meta
-          : meta // ignore: cast_nullable_to_non_nullable
-              as Map<String, dynamic>,
+      request: freezed == request
+          ? _self.request
+          : request // ignore: cast_nullable_to_non_nullable
+              as ContactChangeRequest?,
       isBusy: null == isBusy
           ? _self.isBusy
           : isBusy // ignore: cast_nullable_to_non_nullable
@@ -475,25 +425,11 @@ class __$ContactChangeStateCopyWithImpl<$Res>
           ? _self.error
           : error // ignore: cast_nullable_to_non_nullable
               as DataError?,
-      unavailable: null == unavailable
-          ? _self.unavailable
-          : unavailable // ignore: cast_nullable_to_non_nullable
+      completed: null == completed
+          ? _self.completed
+          : completed // ignore: cast_nullable_to_non_nullable
               as bool,
     ));
-  }
-
-  /// Create a copy of ContactChangeState
-  /// with the given fields replaced by the non-null parameter values.
-  @override
-  @pragma('vm:prefer-inline')
-  $ContactChangeChallengeCopyWith<$Res>? get challenge {
-    if (_self.challenge == null) {
-      return null;
-    }
-
-    return $ContactChangeChallengeCopyWith<$Res>(_self.challenge!, (value) {
-      return _then(_self.copyWith(challenge: value));
-    });
   }
 }
 

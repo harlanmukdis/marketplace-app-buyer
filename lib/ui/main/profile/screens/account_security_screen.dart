@@ -23,9 +23,9 @@ import 'package:marketplace_app_member/util/format_helper.dart';
 /// Sumber datanya bercampur, dan layar menandainya:
 ///
 /// * **Perangkat aktif** — `GET/DELETE /me/sessions`, sungguhan.
-/// * **Verifikasi KTP** (docs/22 #4) dan **ganti email/HP** (#10) — kontrak
-///   usulan yang dijawab mock di debug; seksinya berlencana "Simulasi".
-///   Dengan mock mati, seksinya disembunyikan / menjelaskan belum tersedia.
+/// * **Ganti email/HP** (docs/22 #10) — sungguhan sejak backend `b501fc3`.
+/// * **Verifikasi KTP** (docs/22 #4) — kontrak usulan yang dijawab mock di
+///   debug; seksinya berlencana "Simulasi" dan disembunyikan bila mock mati.
 /// * **Kata sandi** — tidak ada endpoint ganti sandi; satu-satunya jalan
 ///   adalah reset lewat email, jadi barisnya membuka alur itu.
 class AccountSecurityScreen extends StatelessWidget {

@@ -243,65 +243,45 @@ abstract class IdentityVerificationModel with _$IdentityVerificationModel {
 }
 
 // ---------------------------------------------------------------------------
-// Ganti email / nomor HP dengan OTP — MOCK, docs/22 #10
+// Ganti email / nomor HP — SUNGGUHAN (backend `b501fc3`, docs/22 #10)
 // ---------------------------------------------------------------------------
 
 enum ContactType {
-  email('email', 'Email'),
-  phone('phone', 'Nomor HP');
+  email('email', 'Email', field: 'new_email'),
+  phone('phone', 'Nomor HP', field: 'new_phone');
 
-  const ContactType(this.code, this.label);
+  const ContactType(this.code, this.label, {required this.field});
 
+  /// Segmen path: `/me/{code}/change-request`.
   final String code;
   final String label;
+
+  /// Nama field body `change-request`.
+  final String field;
 }
 
-/// Tahap tantangan OTP.
+/// Hasil `POST /me/{email|phone}/change-request`.
 ///
-/// docs/22 #10: kode dikirim **ke kontak lama dulu** (membuktikan pemilik
-/// akun yang meminta), **lalu ke kontak baru** (membuktikan kontaknya milik
-/// user). Perubahan baru disimpan sesudah tahap kedua.
-enum ContactChangeStage {
-  currentContact('current_contact'),
-  newContact('new_contact'),
-  completed('completed');
+/// Server membuat **token verifikasi 30 menit** (64 karakter hex, bukan OTP
+/// 6 angka) dan mengirimnya ke kontak **lama** — membuktikan pemilik akun yang
+/// meminta. Kontak baru **tidak** diverifikasi: `change-confirm` langsung
+/// menyimpannya dengan `email_verified`/`phone_verified` = `0`.
+///
+/// 🔴 Untuk nomor HP server **tidak mengirim apa pun** (tidak ada SMS di
+/// backend), jadi di luar dev penggantian HP tidak bisa diselesaikan.
+///
+/// [devVerificationToken] hanya ada saat backend `ENVIRONMENT ===
+/// 'development'` — satu-satunya cara menguji tanpa kotak surat sungguhan.
+class ContactChangeRequest {
+  const ContactChangeRequest({this.devVerificationToken});
 
-  const ContactChangeStage(this.code);
-
-  final String code;
-
-  static ContactChangeStage parse(String? raw) {
-    for (final s in values) {
-      if (s.code == raw) return s;
-    }
-    return ContactChangeStage.currentContact;
+  factory ContactChangeRequest.fromJson(Object? raw) {
+    final token = raw is Map ? raw['dev_verification_token']?.toString() : null;
+    return ContactChangeRequest(
+        devVerificationToken: (token ?? '').isEmpty ? null : token);
   }
-}
 
-/// Balasan `POST /me/contact-change` dan `POST /me/contact-change/{id}/verify`.
-@freezed
-abstract class ContactChangeChallenge with _$ContactChangeChallenge {
-  const ContactChangeChallenge._();
-
-  const factory ContactChangeChallenge({
-    @StringJson() @JsonKey(name: 'request_id') @Default('') String requestId,
-    @StringJson() @Default('email') String type,
-    @StringJson() @Default('current_contact') String stage,
-
-    /// Tujuan OTP yang sudah disensor (`bu***@contoh.id`, `0812****7890`).
-    @StringOrNullJson() @JsonKey(name: 'otp_sent_to') String? otpSentTo,
-    @ServerDateTimeJson() @JsonKey(name: 'expires_at') DateTime? expiresAt,
-
-    /// Terisi hanya saat [stage] `completed`.
-    @StringOrNullJson() @JsonKey(name: 'new_value') String? newValue,
-  }) = _ContactChangeChallenge;
-
-  factory ContactChangeChallenge.fromJson(Map<String, dynamic> json) =>
-      _$ContactChangeChallengeFromJson(json);
-
-  ContactChangeStage get stageValue => ContactChangeStage.parse(stage);
-
-  bool get isCompleted => stageValue == ContactChangeStage.completed;
+  final String? devVerificationToken;
 }
 
 // ---------------------------------------------------------------------------

@@ -12,10 +12,18 @@ import 'package:marketplace_app_member/ui/main/profile/widgets/account_error_tex
 /// "Coba lagi" ditampilkan; untuk kredensial salah tidak, karena mengulang
 /// request yang sama tidak akan mengubah hasilnya.
 class AuthErrorBanner extends StatelessWidget {
-  const AuthErrorBanner({super.key, required this.error, this.onRetry});
+  const AuthErrorBanner({
+    super.key,
+    required this.error,
+    this.onRetry,
+    this.overrides = const {},
+  });
 
   final DataError error;
   final VoidCallback? onRetry;
+
+  /// Pesan khusus layar untuk kode tertentu — lihat `accountErrorText`.
+  final Map<String, String> overrides;
 
   @override
   Widget build(BuildContext context) {
@@ -35,7 +43,7 @@ class AuthErrorBanner extends StatelessWidget {
           const SizedBox(width: 12),
           Expanded(
             child: Text(
-              accountErrorText(context, error),
+              accountErrorText(context, error, overrides: overrides),
               style: XpText.bodyM(context),
             ),
           ),

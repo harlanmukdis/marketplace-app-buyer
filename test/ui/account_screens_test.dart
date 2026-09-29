@@ -405,24 +405,9 @@ void main() {
       expect(account.calls, contains('revoke:2'));
     });
 
-    testWidgets('ganti email: dua tahap OTP berakhir dengan keterangan simulasi',
+    testWidgets('ganti email: kode ke email lama, tempel, tersimpan',
         (tester) async {
-      await pump(tester, const AccountSecurityScreen(), setupAccount: (a) {
-        a.startResult = const DataSuccess(
-          ContactChangeChallenge(requestId: 'r1', otpSentTo: 'e2***@example.id'),
-          meta: {'mock': true, 'mock_otp': '123456'},
-        );
-        a.verifyResults = [
-          const DataSuccess(
-            ContactChangeChallenge(requestId: 'r1', stage: 'new_contact', otpSentTo: 'ba***@contoh.id'),
-            meta: {'mock': true, 'mock_otp': '123456'},
-          ),
-          const DataSuccess(
-            ContactChangeChallenge(requestId: 'r1', stage: 'completed', newValue: 'baru@contoh.id'),
-            meta: mockMeta,
-          ),
-        ];
-      });
+      await pump(tester, const AccountSecurityScreen());
 
       await tester.tap(find.widgetWithText(TextButton, 'Ubah').first);
       await tester.pumpAndSettle();
@@ -430,19 +415,25 @@ void main() {
       await tester.tap(find.text('Kirim Kode'));
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('Langkah 1 dari 2'), findsOneWidget);
-      expect(find.textContaining('e2***@example.id'), findsOneWidget);
-      expect(find.text('Simulasi: kode OTP-nya 123456'), findsOneWidget);
+      expect(find.textContaining('email lama kamu'), findsOneWidget);
+      expect(find.textContaining('baru@contoh.id'), findsOneWidget);
+      // Tidak ada lagi simulasi di lembar ini: kontraknya sungguhan. (Seksi
+      // KTP di belakangnya masih mock, jadi pencariannya dibatasi.)
+      expect(
+          find.descendant(
+              of: find.byType(BottomSheet),
+              matching: find.textContaining('Simulasi')),
+          findsNothing);
 
-      await tester.enterText(find.byType(TextField).last, '123456');
-      await tester.tap(find.text('Verifikasi'));
+      // Tombol dev mengisi token dari `dev_verification_token`.
+      await tester.tap(find.text('Isi kode (dev)'));
+      await tester.pump();
+      await tester.tap(find.widgetWithText(FilledButton, 'Simpan').last);
       await tester.pumpAndSettle();
-      expect(find.textContaining('Langkah 2 dari 2'), findsOneWidget);
 
-      await tester.enterText(find.byType(TextField).last, '123456');
-      await tester.tap(find.text('Verifikasi'));
-      await tester.pumpAndSettle();
-      expect(find.text('Verifikasi selesai (simulasi)'), findsOneWidget);
+      expect(account.calls, contains('confirmContact:email:dev-contact-token'));
+      expect(find.text('Email berhasil diganti'), findsOneWidget);
+      expect(find.textContaining('masuk dengan baru@contoh.id'), findsOneWidget);
     });
 
     testWidgets('endpoint KTP belum ada: seksinya disembunyikan', (tester) async {

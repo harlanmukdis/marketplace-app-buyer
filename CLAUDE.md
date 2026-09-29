@@ -29,7 +29,7 @@ Buyer app for a **multi-vendor marketplace**, built on a purchased Flutter UI ki
 flutter pub get                       # install dependencies
 flutter run                           # run on connected device/emulator
 flutter analyze                       # static analysis (flutter_lints 4.0.0 via analysis_options.yaml)
-flutter test                          # run all tests (669 unit/widget + 168 integration; all pass)
+flutter test                          # run all tests (665 unit/widget + 176 integration; all pass)
 flutter test test/integration --concurrency=1   # integrasi: butuh backend hidup, WAJIB serial
 # ^ memakai 8 login; plafonnya 20 per IP per 15 menit, jadi maks DUA putaran
 #   beruntun. Lebih dari itu: DELETE FROM auth_rate_limits; (lihat "Rate limit
@@ -132,7 +132,7 @@ Current state: `en` and `ar` are complete (284 keys) and selectable. `fr` appear
 
 ## Known rough edges
 
-- The Flutter counter template `test/widget_test.dart` is **gone** — the suite is real (669 unit/widget tests + 168 integration, all passing) and is a usable signal. `test/integration/` (168) hits a live backend, so it fails with connection errors when the API is not running; that is the environment, not a regression. Note the API is started with `php -S`, **not** `docker compose` — see "Menyalakan backend dev" in Part 2 — and the integration suite must run `--concurrency=1`.
+- The Flutter counter template `test/widget_test.dart` is **gone** — the suite is real (665 unit/widget tests + 176 integration, all passing) and is a usable signal. `test/integration/` (176) hits a live backend, so it fails with connection errors when the API is not running; that is the environment, not a regression. Note the API is started with `php -S`, **not** `docker compose` — see "Menyalakan backend dev" in Part 2 — and the integration suite must run `--concurrency=1`.
 - `lib/features/my_cart/presentation/views/map_screen.dart` is 100% commented out, and the `com.google.android.geo.API_KEY` meta-data in `android/app/src/main/AndroidManifest.xml` is commented out too. Restoring the map needs both, plus an iOS key. Location permissions are already declared in the manifest.
 - **The UI kit's images are placeholders.** The kit's asset folders were never copied into this repo, so all 67 files in `assets/images/` and `assets/icon/` are grey 64×64 stubs (`assets/PLACEHOLDER-README.md`). This matters less now: every API-wired screen was rebuilt on the Xpedia design and draws product images from the API. The font is **Inter** (`assets/fonts/inter/`, OFL) — the kit's `Hanimation` font was never in the repo and is gone.
 - Android `usesCleartextTraffic` / iOS ATS are **not** configured, so the `http://` base URL will fail on mobile. Not needed for the current web target; required before the first Android/iOS run.
@@ -337,7 +337,7 @@ Current state: `en` and `ar` are complete (284 keys) and selectable. `fr` appear
 - **Chat domain** — `lib/core/…/chat/` + `lib/ui/main/chat/`; lihat "Domain chat" di bawah
 - **Store + Support (Xpedia 911) domain** — `lib/core/…/{store,support}/` + `lib/ui/main/{store,support}/`; lihat "Backend v1.6–v1.28" di bawah
 - **Design system Xpedia** — `lib/core/design/`, `lib/ui/main/shell/`; lihat "Design system Xpedia" di bawah
-- Tests: `test/util/`, `test/data/`, `test/ui/` (termasuk widget smoke test tiap layar di 390×844) — **669**; `test/integration/` (**168** jalan + 1 opt-in; butuh backend hidup, **jalankan `--concurrency=1`**) — semuanya lulus
+- Tests: `test/util/`, `test/data/`, `test/ui/` (termasuk widget smoke test tiap layar di 390×844) — **665**; `test/integration/` (**176** jalan + 1 opt-in; butuh backend hidup, **jalankan `--concurrency=1`**) — semuanya lulus
 - **`integration_test/`** — app sungguhan di perangkat sungguhan, **di luar `flutter test`**; lihat "Test app sungguhan" di bawah
 
 Still absent: Firebase and `lib/firebase_options.dart`.
@@ -1024,6 +1024,7 @@ Kode error baru di `ApiErrorCode` + `errorMessageFor`: `CHAT_CONTENT_BLOCKED`, `
 - **Batas 3 alamat ditegakkan server** (`c12228b`, `VALIDATION_ERROR` generik). 🔴 Ditambah FK `RESTRICT` `checkout_sessions.shipping_address_id`, alamat yang pernah dipakai checkout **tak bisa dihapus** (`DELETE` → 500 HTML "Database Error"). Belum dilaporkan.
 - **Refund** (`0307edf`): bukti di body **`evidence`** (bukan `evidence_urls` — nama salah dibuang diam-diam), dan status selain `delivered`/`completed` → `422 VALIDATION_ERROR`.
 - **Min top up Rp 10.000** kini juga ditegakkan server (`7ce3b92`).
+- **Ganti email/HP** (`b501fc3`) — **satu tahap**, bukan OTP dua tahap usulan mock: `POST /me/{email|phone}/change-request {new_email|new_phone}` → token **64 hex** (30 menit) ke kontak **lama** → `POST /me/{…}/change-confirm {token}` → `data: null`, kontak baru tersimpan dengan `*_verified = 0`. Mock dihapus. Temuan: format tidak divalidasi server; email/HP **akun sendiri** dibalas `EMAIL_TAKEN`/`PHONE_TAKEN`; permintaan baru membatalkan token lama; 3 permintaan/jam/jenis (setiap permintaan dihitung); `change-confirm` mengonsumsi token **sebelum** memeriksa pemilik/ketersediaan; 🔴 **untuk HP tidak ada yang dikirim** (tak ada SMS) — di luar dev tidak bisa diselesaikan. Token dev: `dev_verification_token`, tombol "Isi kode (dev)". Dipatok `test/integration/contact_change_service_test.dart` (akun uji `kontak`, kuotanya dikosongkan lewat `dev_db.dart`).
 
 **Test integrasi kini menyentuh DB dev** lewat `test/integration/support/dev_db.dart` (klien `mysql` XAMPP): PIN `123456` dipasang via API sesudah hash-nya dikosongkan, saldo disuntik, kuota PIN dikosongkan — satu-satunya cara membuat pesanan di dev. Hanya untuk menyiapkan keadaan, tak pernah untuk memeriksa hasil. Grup alamat memakai akun uji `alamat` yang tak pernah checkout (alamatnya selalu bisa dihapus); kasus "milik orang lain" memakai akun kedua, bukan menebak id `1`.
 
