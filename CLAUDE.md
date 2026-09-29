@@ -6,6 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 > **Part 1 — Current state** is what the code actually is today; re-verified against the repo on 13 September 2026 and against a running, seeded backend on 14 September 2026.
 > **Part 2 — Target architecture** is where the project is headed. Its foundation (env, network, DI, `DataState`) and the auth domain are built; every other feature domain is not.
 > Never run a command or follow a pattern from Part 2 until the corresponding migration step is done. If the two parts conflict, Part 1 wins for any change you make right now.
+>
+> **Starting on a new machine or picking up the work?** Read [docs/FEATURES.md](docs/FEATURES.md) first: setup steps, every feature → screen → data source (real API vs pending-API mock), and the open-work checklist. **Before every task, run its §0 "cek update API"**: diff the marketplace-api repo against the last synced commit recorded there, and report the result to the user before starting.
 
 ## Project identity
 
