@@ -5,7 +5,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show rootBundle;
 
 import 'routes/account_mock_routes.dart';
-import 'routes/checkout_mock_routes.dart';
 import 'routes/discovery_mock_routes.dart';
 import 'routes/order_mock_routes.dart';
 
@@ -36,7 +35,6 @@ abstract final class PendingApiMock {
 
   static List<MockRoute> get routes => [
         ...accountMockRoutes,
-        ...checkoutMockRoutes,
         ...orderMockRoutes,
         ...discoveryMockRoutes,
       ];

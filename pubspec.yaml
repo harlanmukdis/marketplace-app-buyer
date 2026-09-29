@@ -142,7 +142,6 @@ flutter:
     # lib/config/network/mock/pending_api_mock.dart. Setiap subfolder wajib
     # didaftarkan sendiri; Flutter tidak mendaftarkan folder secara rekursif.
     - assets/mock/pending_api/account/
-    - assets/mock/pending_api/checkout/
     - assets/mock/pending_api/order/
     - assets/mock/pending_api/discovery/
   # An image asset can refer to one or more resolution-specific "variants", see

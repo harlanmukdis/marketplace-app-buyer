@@ -32,11 +32,17 @@ class AuthService {
   /// begitu: tanpa nomor, server membalas `422 VALIDATION_ERROR` dengan pesan
   /// "Field wajib belum lengkap" dan `details: null` — tidak menyebut field
   /// mana. Nomor yang sudah dipakai akun lain dibalas `PHONE_TAKEN`.
+  ///
+  /// [idCardNumber] (NIK KTP) **wajib** sejak backend `3e8906d` (docs/22 #4,
+  /// "1 KTP = 1 akun buyer"): kosong → `422` "Field wajib belum lengkap" yang
+  /// sama, bukan 16 digit angka → `422 VALIDATION_ERROR`, sudah dipakai akun
+  /// lain → `409 IDENTITY_TAKEN`.
   Future<ApiEnvelope<RegisterResultModel>> register({
     required String email,
     required String password,
     required String fullName,
     required String phone,
+    required String idCardNumber,
   }) async {
     const context = 'POST /auth/register';
     try {
@@ -47,6 +53,7 @@ class AuthService {
           'password': password,
           'full_name': fullName,
           'phone': phone,
+          'id_card_number': idCardNumber,
         },
         options: noAuthOptions(),
       );

@@ -21,6 +21,7 @@ class AuthRepositoryImpl implements AuthRepository {
     required String password,
     required String fullName,
     required String phone,
+    required String idCardNumber,
   }) async {
     try {
       final registered = await _service.register(
@@ -28,6 +29,7 @@ class AuthRepositoryImpl implements AuthRepository {
         password: password,
         fullName: fullName,
         phone: phone,
+        idCardNumber: idCardNumber,
       );
 
       // Register tidak memberi token apa pun, jadi tidak ada yang bisa

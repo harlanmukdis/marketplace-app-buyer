@@ -167,55 +167,35 @@ class CheckoutService {
     }
   }
 
-  /// `GET /checkout/sessions/{id}/wallet-summary` — saldo Wallet vs total
-  /// tagihan sesi ini. **Kontrak yang diusulkan** (docs/22 #1); lihat
-  /// [WalletSummaryModel] dan `assets/mock/pending_api/README.md`.
+  /// `POST /checkout/sessions/{id}/confirm` `{pin}` → order terbentuk **dan
+  /// sudah dibayar** dari saldo Xpedia Wallet.
   ///
-  /// Di server hari ini rutenya tidak ada, jadi balasannya 404 **HTML** —
-  /// sampai ke pemanggil sebagai `DataError.isRouteNotFound`, tanda bahwa
-  /// checkout harus memakai pemilih metode pembayaran lama.
-  Future<ApiEnvelope<WalletSummaryModel>> fetchWalletSummary(String id) async {
-    final context = 'GET /checkout/sessions/$id/wallet-summary';
-    try {
-      final response =
-          await _dio.get<dynamic>('/checkout/sessions/$id/wallet-summary');
-      return parseEnvelope(
-        response,
-        (raw) =>
-            WalletSummaryModel.fromJson(Map<String, dynamic>.from(raw as Map)),
-        context: context,
-      );
-    } on DioException catch (e) {
-      throw ApiException.fromDio(e, context: context);
-    }
-  }
-
-  /// `POST /checkout/sessions/{id}/confirm` → order terbentuk.
+  /// Sejak backend `d9ecb33` (docs/22 #1–#2) checkout **wallet-only**:
+  /// `payment_method` tidak lagi dibaca, PIN wajib setiap kali, saldo didebit
+  /// dan order lahir berstatus `paid` dalam satu transaksi. Balasannya hanya
+  /// `{order_ids, payment_transaction_id}` — tanpa `paid`/`balance_after` yang
+  /// dulu diusulkan; `CheckoutRepositoryImpl.confirm` yang melengkapinya.
   ///
-  /// Mengonfirmasi sesi yang sudah dikonfirmasi dibalas
-  /// `422 CHECKOUT_CONFIRM_FAILED`.
+  /// Penolakannya (diperiksa ke kode backend):
   ///
-  /// [pin] hanya untuk `payment_method: "wallet"` (**kontrak yang
-  /// diusulkan**, docs/22 #2): server memverifikasi PIN, mendebit saldo, dan
-  /// menandai order `paid` dalam satu transaksi. Tanpa [pin] body-nya persis
-  /// seperti hari ini.
+  /// * PIN salah, PIN **belum dibuat**, sesi kedaluwarsa, maupun sesi yang
+  ///   sudah dikonfirmasi — semuanya `422 CHECKOUT_CONFIRM_FAILED`, yang beda
+  ///   hanya `message`. Repository membedakannya dengan membaca ulang sesi.
+  /// * Saldo kurang → `422 INSUFFICIENT_BALANCE`, `details` null.
+  /// * `429 TOO_MANY_REQUESTS` — 🔴 kuota PIN **5 per 15 menit per user,
+  ///   dibagi dengan penarikan, dan percobaan BENAR ikut dihitung**: pembeli
+  ///   yang tidak pernah salah PIN pun hanya bisa checkout 5× per 15 menit.
   ///
-  /// ⚠️ `LoggingInterceptor` (debug) **belum menyensor field `pin`** — sama
-  /// halnya untuk `POST /wallet/withdraw`. `pin` perlu masuk
-  /// `_sensitiveFields` di sana.
+  /// ⚠️ **Tidak pernah diulang otomatis** — tidak ada `Idempotency-Key`.
   Future<ApiEnvelope<CheckoutConfirmResult>> confirm(
     String id, {
-    required String paymentMethod,
-    String? pin,
+    required String pin,
   }) async {
     final context = 'POST /checkout/sessions/$id/confirm';
     try {
       final response = await _dio.post<dynamic>(
         '/checkout/sessions/$id/confirm',
-        data: {
-          'payment_method': paymentMethod,
-          if (pin != null) 'pin': pin,
-        },
+        data: {'pin': pin},
       );
       return parseEnvelope(
         response,

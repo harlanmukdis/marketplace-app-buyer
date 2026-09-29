@@ -24,6 +24,7 @@ abstract interface class AuthRepository {
     required String password,
     required String fullName,
     required String phone,
+    required String idCardNumber,
   });
 
   /// Login dan simpan sesi. API ini **berbasis email**, bukan nomor HP.

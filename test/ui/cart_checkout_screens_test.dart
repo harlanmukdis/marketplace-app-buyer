@@ -148,15 +148,17 @@ class _FakeAddresses implements AddressRepository {
 class _FakeCheckout implements CheckoutRepository {
   DataState<CheckoutSnapshot>? startResult;
 
-  /// Default: server hari ini — `wallet-summary` belum ada (404 HTML).
-  DataState<WalletSummaryModel> walletResult = const DataFailed(DataError(
-    code: ClientErrorCode.badResponse,
-    message: 'html',
-    statusCode: 404,
-    kind: DataErrorKind.server,
-  ));
+  /// Default: saldo cukup untuk `grand_total` sesi palsu di bawah.
+  DataState<WalletSummaryModel> walletResult = const DataSuccess(
+    WalletSummaryModel(
+      walletBalance: 2500000,
+      grandTotal: 159000,
+      canPay: true,
+      pinSet: true,
+    ),
+  );
   DataState<CheckoutConfirmResult> confirmResult = const DataSuccess(
-      CheckoutConfirmResult(orderIds: [1], paymentTransactionId: 5));
+      CheckoutConfirmResult(orderIds: [1], paymentTransactionId: 5, paid: true));
   final calls = <String>[];
 
   CheckoutSnapshot get snapshot => CheckoutSnapshot(
@@ -211,9 +213,8 @@ class _FakeCheckout implements CheckoutRepository {
       DataSuccess(snapshot);
   @override
   Future<DataState<CheckoutConfirmResult>> confirm(String sessionId,
-      {required String paymentMethod, String? pin}) async {
-    calls.add(
-        pin == null ? 'confirm:$paymentMethod' : 'confirm:$paymentMethod:$pin');
+      {required String pin}) async {
+    calls.add('confirm:$pin');
     return confirmResult;
   }
 
@@ -393,45 +394,26 @@ void main() {
       await tester.pump();
 
       expect(find.text('Checkout Pembayaran'), findsOneWidget);
-      expect(find.byType(RadioListTile<String>), findsWidgets);
+      // Checkout wallet-only (backend d9ecb33): tidak ada pemilih metode.
+      expect(find.text('Metode Pembayaran'), findsNothing);
+      expect(find.text('QRIS'), findsNothing);
       // grand_total sesi sudah termasuk ongkir.
       expect(find.text('Rp 159.000'), findsWidgets);
       expect(find.text('Rp 168.000'), findsNothing);
       expect(
           find.widgetWithText(FilledButton, 'Bayar Sekarang'), findsOneWidget);
-
-      await tester.tap(find.widgetWithText(FilledButton, 'Bayar Sekarang'));
-      await tester.pump();
-      await tester.pump();
-      expect(checkout.calls, contains('confirm:qris'));
-      expect(find.textContaining('Pesanan berhasil dibuat'), findsOneWidget);
-      expect(find.text('Lanjut ke pembayaran'), findsOneWidget);
-      expect(find.text('Lihat pesanan saya'), findsOneWidget);
     });
 
     testWidgets('Wallet: saldo & total satu kartu, Bayar → PIN → lunas',
         (tester) async {
-      checkout
-        ..walletResult = const DataSuccess(
-          WalletSummaryModel(
-            walletBalance: 2500000,
-            grandTotal: 159000,
-            canPay: true,
-            pinSet: true,
-          ),
-          meta: {'mock': true, 'mock_pin': '123456'},
-        )
-        ..confirmResult = const DataSuccess(
-          CheckoutConfirmResult(
-            orderIds: [1],
-            paymentTransactionId: 5,
-            paid: true,
-            balanceAfter: 2341000,
-          ),
-          meta: {
-            'mock_fields': ['paid'],
-          },
-        );
+      checkout.confirmResult = const DataSuccess(
+        CheckoutConfirmResult(
+          orderIds: [1],
+          paymentTransactionId: 5,
+          paid: true,
+          balanceAfter: 2341000,
+        ),
+      );
       await _pump(tester, const CheckoutScreen());
       await tester.pump();
       await _scrollTo(tester, find.text('Xpedia Wallet'));
@@ -440,14 +422,14 @@ void main() {
       expect(find.text('Rp 2.500.000'), findsOneWidget);
       expect(find.text('Saldo kamu mencukupi untuk pembayaran ini'),
           findsOneWidget);
-      expect(find.text('Simulasi'), findsWidgets);
+      // Data sungguhan, bukan simulasi.
+      expect(find.text('Simulasi'), findsNothing);
       // Alur Wallet tidak menawarkan metode lain.
       expect(find.text('QRIS'), findsNothing);
 
       await tester.tap(find.widgetWithText(FilledButton, 'Bayar Sekarang'));
       await tester.pumpAndSettle();
       expect(find.text('Masukkan PIN 6-Digit'), findsOneWidget);
-      expect(find.text('Simulasi: PIN yang diterima 123456'), findsOneWidget);
       expect(checkout.calls.where((c) => c.startsWith('confirm')), isEmpty,
           reason: 'tidak ada bayar satu ketukan');
 
@@ -458,7 +440,7 @@ void main() {
       }
       await tester.pumpAndSettle();
 
-      expect(checkout.calls, contains('confirm:wallet:123456'));
+      expect(checkout.calls, contains('confirm:123456'));
       expect(find.text('Pembayaran berhasil'), findsOneWidget);
       expect(find.text('Rp 2.341.000'), findsOneWidget);
       expect(find.text('Lihat pesanan saya'), findsOneWidget);

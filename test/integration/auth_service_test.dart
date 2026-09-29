@@ -39,6 +39,7 @@ void main() {
 
   late String email;
   late String phone;
+  late String idCard;
   const password = 'RahasiaAman123';
 
   setUp(() {
@@ -48,6 +49,9 @@ void main() {
     email = 'uji.$stamp@marketplace.local';
     // Nomor juga harus unik: nomor yang sudah dipakai dibalas PHONE_TAKEN.
     phone = '08${stamp.toString().substring(stamp.toString().length - 10)}';
+    // NIK juga unik: sejak backend `3e8906d` wajib, dan duplikatnya
+    // dibalas IDENTITY_TAKEN.
+    idCard = uniqueIdCardNumber();
   });
 
   Future<String> registerAndLogin() async {
@@ -56,6 +60,7 @@ void main() {
       password: password,
       fullName: 'Pembeli Uji',
       phone: phone,
+      idCardNumber: idCard,
     );
     final session = await auth.login(email: email, password: password);
     dio.options.headers['Authorization'] = 'Bearer ${session.data.accessToken}';
@@ -69,6 +74,7 @@ void main() {
         password: password,
         fullName: 'Pembeli Uji',
         phone: phone,
+        idCardNumber: idCard,
       );
 
       expect(env.data.userId, greaterThan(0));
@@ -85,6 +91,7 @@ void main() {
         password: password,
         fullName: 'Pembeli Uji',
         phone: phone,
+        idCardNumber: idCard,
       );
 
       await expectLater(
@@ -93,6 +100,7 @@ void main() {
           password: password,
           fullName: 'Pembeli Uji Lagi',
           phone: '08${DateTime.now().microsecondsSinceEpoch % 1000000000}',
+          idCardNumber: uniqueIdCardNumber(),
         ),
         throwsA(isA<ApiException>()),
       );
@@ -101,10 +109,70 @@ void main() {
     test('field wajib kosong dibalas VALIDATION_ERROR', () async {
       try {
         await auth.register(
-            email: '', password: '', fullName: '', phone: '');
+            email: '', password: '', fullName: '', phone: '', idCardNumber: '');
         fail('seharusnya ditolak');
       } on ApiException catch (e) {
         expect(e.error.code, ApiErrorCode.validationError);
+      }
+    });
+  });
+
+  group('NIK KTP saat daftar (backend 3e8906d, docs/22 #4)', () {
+    test('tanpa NIK dibalas VALIDATION_ERROR yang sama dengan field kosong',
+        () async {
+      try {
+        await auth.register(
+          email: email,
+          password: password,
+          fullName: 'Pembeli Uji',
+          phone: phone,
+          idCardNumber: '',
+        );
+        fail('seharusnya ditolak');
+      } on ApiException catch (e) {
+        expect(e.error.code, ApiErrorCode.validationError);
+      }
+    });
+
+    test('NIK bukan 16 digit angka dibalas VALIDATION_ERROR', () async {
+      for (final bad in ['123456789012345', '317101010101000A']) {
+        try {
+          await auth.register(
+            email: email,
+            password: password,
+            fullName: 'Pembeli Uji',
+            phone: phone,
+            idCardNumber: bad,
+          );
+          fail('NIK "$bad" seharusnya ditolak');
+        } on ApiException catch (e) {
+          expect(e.error.code, ApiErrorCode.validationError, reason: bad);
+        }
+      }
+    });
+
+    test('NIK yang sudah dipakai dibalas 409 IDENTITY_TAKEN', () async {
+      await auth.register(
+        email: email,
+        password: password,
+        fullName: 'Pembeli Uji',
+        phone: phone,
+        idCardNumber: idCard,
+      );
+
+      final stamp = DateTime.now().microsecondsSinceEpoch;
+      try {
+        await auth.register(
+          email: 'uji.nik.$stamp@marketplace.local',
+          password: password,
+          fullName: 'Pembeli Uji Lain',
+          phone: '08${stamp.toString().substring(stamp.toString().length - 10)}',
+          idCardNumber: idCard,
+        );
+        fail('NIK ganda seharusnya ditolak');
+      } on ApiException catch (e) {
+        expect(e.error.statusCode, 409);
+        expect(e.error.code, ApiErrorCode.identityTaken);
       }
     });
   });
@@ -116,6 +184,7 @@ void main() {
         password: password,
         fullName: 'Pembeli Uji',
         phone: phone,
+        idCardNumber: idCard,
       );
 
       final env = await auth.login(email: email, password: password);
@@ -134,6 +203,7 @@ void main() {
         password: password,
         fullName: 'Pembeli Uji',
         phone: phone,
+        idCardNumber: idCard,
       );
 
       try {
@@ -152,6 +222,7 @@ void main() {
         password: password,
         fullName: 'Pembeli Uji',
         phone: phone,
+        idCardNumber: idCard,
       );
 
       final env = await auth.login(email: email, password: password);
@@ -182,6 +253,7 @@ void main() {
         password: password,
         fullName: 'Pembeli Uji',
         phone: phone,
+        idCardNumber: idCard,
       );
 
       for (var attempt = 1; attempt <= 5; attempt++) {
@@ -288,6 +360,7 @@ void main() {
         password: password,
         fullName: 'Pembeli Uji',
         phone: phone,
+        idCardNumber: idCard,
       );
       final token = registered.data.devVerificationToken;
       expect(token, isNotNull);
@@ -328,6 +401,7 @@ void main() {
         password: password,
         fullName: 'Pembeli Uji',
         phone: phone,
+        idCardNumber: idCard,
       );
 
       final env = await auth.forgotPassword(email: email);

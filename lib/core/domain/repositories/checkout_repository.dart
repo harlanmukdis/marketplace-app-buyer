@@ -72,24 +72,28 @@ abstract class CheckoutRepository {
     Map<String, CourierChoice> selection,
   );
 
-  /// Mengonfirmasi sesi → order terbentuk.
+  /// Mengonfirmasi sesi dan **membayarnya dari saldo Wallet** dengan [pin] →
+  /// order terbentuk berstatus `paid`.
   ///
   /// ⚠️ Jangan pernah mengulang panggilan ini secara otomatis: backend belum
   /// menangani `Idempotency-Key`, jadi pengulangan berisiko menggandakan
   /// order.
   ///
-  /// [pin] dikirim hanya untuk `paymentMethod: 'wallet'` — bayar langsung dari
-  /// saldo (kontrak yang diusulkan, docs/22 #2). `DataSuccess.meta` ikut
-  /// diteruskan supaya layar bisa menandai hasil simulasi.
+  /// Hasil sukses selalu `paid: true` (server wallet-only), dengan
+  /// `balanceAfter` dari `GET /wallet` bila bisa dibaca. Kegagalan
+  /// `CHECKOUT_CONFIRM_FAILED` yang sesinya ternyata masih aktif diterjemahkan
+  /// jadi [WalletPayErrorCode.invalidPin] — lihat implementasinya.
   Future<DataState<CheckoutConfirmResult>> confirm(
     String sessionId, {
-    required String paymentMethod,
-    String? pin,
+    required String pin,
   });
 
-  /// Saldo Wallet vs total sesi (kontrak yang diusulkan). Kegagalan
-  /// `isRouteNotFound` berarti backend belum punya pembayaran Wallet —
-  /// pemanggil jatuh ke alur metode pembayaran lama.
+  /// Saldo Wallet vs total sesi, **dirakit aplikasi** dari `GET /wallet` dan
+  /// `grand_total` sesi — `GET .../wallet-summary` yang diusulkan tidak
+  /// dibangun backend.
+  ///
+  /// `pinSet` selalu `true`: tidak ada endpoint yang memberi tahu apakah PIN
+  /// sudah dibuat, jadi baru ketahuan saat `confirm` ditolak.
   Future<DataState<WalletSummaryModel>> fetchWalletSummary(String sessionId);
 
   /// Membatalkan sesi dan melepas reservasi stok.

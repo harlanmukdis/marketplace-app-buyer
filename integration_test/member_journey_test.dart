@@ -7,7 +7,6 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:marketplace_app_member/config/network/dio_client.dart';
-import 'package:marketplace_app_member/config/network/mock/pending_api_mock.dart';
 import 'package:marketplace_app_member/core/services/token_store.dart';
 import 'package:marketplace_app_member/core/utils/app_routes.dart';
 import 'package:marketplace_app_member/core/utils/local_network.dart';
@@ -15,7 +14,6 @@ import 'package:marketplace_app_member/di/injector.dart';
 import 'package:marketplace_app_member/main.dart';
 import 'package:marketplace_app_member/core/design/xp_widgets.dart';
 import 'package:marketplace_app_member/ui/main/catalog/widgets/product_card.dart';
-import 'package:marketplace_app_member/ui/main/wallet/widgets/pin_pad.dart';
 
 /// Menjalankan **app sungguhan** terhadap backend yang **benar-benar hidup**.
 ///
@@ -214,12 +212,14 @@ void main() {
       await pumpUntil(tester, find.text('Create Account'));
 
       final fields = find.byType(TextFormField);
-      expect(fields, findsAtLeastNWidgets(4),
-          reason: 'nama, telepon, email, dan kata sandi');
+      expect(fields, findsAtLeastNWidgets(5),
+          reason: 'nama, telepon, NIK, email, dan kata sandi');
       await tester.enterText(fields.at(0), 'E2E Pembeli');
       await tester.enterText(fields.at(1), '0819${stamp.substring(stamp.length - 6)}');
-      await tester.enterText(fields.at(2), email);
-      await tester.enterText(fields.at(3), 'Password123');
+      // NIK wajib & unik sejak backend 3e8906d (docs/22 #4).
+      await tester.enterText(fields.at(2), stamp.padLeft(16, '0').substring(stamp.padLeft(16, '0').length - 16));
+      await tester.enterText(fields.at(3), email);
+      await tester.enterText(fields.at(4), 'Password123');
       await tester.pump();
 
       // `POST /auth/register` tidak mengembalikan token sama sekali, jadi
@@ -414,54 +414,25 @@ void main() {
       }
       await pumpUntil(tester, find.textContaining('Total'));
 
-      // Di build debug `PendingApiMock` aktif, jadi checkout memakai kontrak
-      // Xpedia Wallet + PIN yang diusulkan (docs/22 #1–#2): tombol baru hidup
-      // sesudah `wallet-summary` termuat, lalu membuka lembar PIN. Tanpa mock
-      // (`--dart-define=PENDING_API_MOCK=false`) alurnya jatuh ke pemilih
-      // metode pembayaran lama — test ini menangani keduanya.
-      const walletMode = PendingApiMock.enabled;
-      if (walletMode) {
-        final payButton = find.widgetWithText(FilledButton, 'Bayar Sekarang');
-        final ready = DateTime.now().add(const Duration(seconds: 30));
-        while (tester.widget<FilledButton>(payButton.first).onPressed == null &&
-            DateTime.now().isBefore(ready)) {
-          await tester.pump(const Duration(milliseconds: 250));
-        }
-      }
-      await tapAt(tester, find.widgetWithText(FilledButton, 'Bayar Sekarang'));
+      // Checkout wallet-only sejak backend `d9ecb33` (docs/22 #1–#2). Akun
+      // ini baru didaftarkan lewat layar, jadi saldonya 0 dan PIN-nya belum
+      // ada. Yang bisa dibuktikan ujung ke ujung di sini adalah layar membaca
+      // saldo SUNGGUHAN (`GET /wallet`) dan menahan pembayaran — bukan
+      // pesanan lunas: saldo dev hanya bisa disuntik lewat SQL, yang tidak
+      // bisa dari app macOS ter-sandbox. Alur lunasnya dipatok
+      // test/integration/checkout_service_test.dart.
+      step('saldo kurang menahan pembayaran');
+      await pumpUntil(tester, find.text('Isi saldo untuk melanjutkan'),
+          timeout: const Duration(seconds: 30));
+      expect(find.text('Saldo Kurang'), findsWidgets);
+      final pay = tester.widget<FilledButton>(
+          find.widgetWithText(FilledButton, 'Bayar Sekarang'));
+      expect(pay.onPressed, isNull,
+          reason: 'saldo 0 tidak boleh bisa membuka lembar PIN');
 
-      if (walletMode) {
-        await pumpUntil(tester, find.text('Masukkan PIN 6-Digit'));
-        // PIN mock: 123456 (lihat checkout_mock_routes.dart).
-        for (final digit in ['1', '2', '3', '4', '5', '6']) {
-          await tapAt(
-            tester,
-            find.descendant(of: find.byType(PinPad), matching: find.text(digit)),
-          );
-        }
-        await pumpUntil(tester, find.textContaining('Pembayaran berhasil'),
-            timeout: const Duration(seconds: 45));
-      } else {
-        await pumpUntil(tester, find.textContaining('Pesanan berhasil dibuat'),
-            timeout: const Duration(seconds: 45));
-        expect(find.text('Lanjut ke pembayaran'), findsOneWidget);
-      }
-
-      // 🔴 Berhenti di sini dengan sengaja. Tidak ada pesanan yang bisa
-      // mencapai `paid` di lingkungan ini: callback pembayaran menolak
-      // signature lalu 500 saat mencatat penolakannya (menulis
-      // `payment_transaction_id = 0` yang melanggar foreign key). Jadi lacak
-      // kiriman, terima barang, dan ulas **tidak bisa** diuji ujung ke ujung
-      // sampai backend memperbaikinya — lihat CLAUDE.md.
-      await tapText(tester, 'Lihat pesanan saya');
-
-      step('daftar pesanan');
-      // ---- daftar pesanan
-      await pumpUntil(tester, find.text('Pesanan Saya'));
-      expect(find.textContaining('ORD-'), findsWidgets,
-          reason: 'nomor pesanan dibuat server, jadi kemunculannya '
-              'membuktikan daftar dibaca dari API, bukan dirakit lokal');
-      expect(find.text('Menunggu Pembayaran'), findsWidgets);
+      // Keluar dari checkout membatalkan sesi — melepas reservasi stok.
+      await tapAt(tester, find.byTooltip('Kembali'));
+      await tester.pump(const Duration(seconds: 1));
 
       step('bukti dari sisi jaringan');
       // ---- bukti dari sisi jaringan
@@ -477,8 +448,12 @@ void main() {
       expect(called('POST', '/checkout/sessions'), isTrue);
       expect(called('GET', '/shipping-options'), isTrue);
       expect(called('PATCH', '/shipping'), isTrue);
-      expect(called('POST', '/confirm'), isTrue);
-      expect(called('GET', '/orders'), isTrue);
+      expect(called('GET', '/wallet'), isTrue,
+          reason: 'ringkasan saldo checkout dari dompet sungguhan');
+      expect(called('POST', '/confirm'), isFalse,
+          reason: 'saldo kurang ditolak sebelum menyentuh jaringan');
+      expect(called('POST', '/cancel'), isTrue,
+          reason: 'meninggalkan checkout melepas reservasi stok');
       // Nama toko di kartu produk: satu request per TOKO, bukan per kartu.
       expect(called('GET', '/stores/'), isTrue);
 

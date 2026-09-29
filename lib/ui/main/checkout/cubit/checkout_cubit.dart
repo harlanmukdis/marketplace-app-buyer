@@ -5,9 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:marketplace_app_member/core/data_state.dart';
 import 'package:marketplace_app_member/core/domain/model/checkout/checkout_models.dart';
-import 'package:marketplace_app_member/core/domain/model/payment/payment_models.dart';
 import 'package:marketplace_app_member/core/domain/repositories/checkout_repository.dart';
-import 'package:marketplace_app_member/core/domain/repositories/payment_repository.dart';
 import 'package:marketplace_app_member/core/domain/repositories/wallet_repository.dart';
 import 'package:marketplace_app_member/core/services/order_payment_link_store.dart';
 import 'package:marketplace_app_member/di/injector.dart';
@@ -26,11 +24,11 @@ DataError _localValidation(String message) => DataError(
 
 /// Alur checkout: buat sesi → pilih kurir per toko → konfirmasi.
 ///
-/// **Dua cara membayar**, dipilih dengan mendeteksi kemampuan server (lihat
-/// [CheckoutPaymentMode]): Xpedia Wallet + PIN ([payWithWallet], kontrak yang
-/// diusulkan, docs/22 #1–#2) atau alur lama ([confirm] dengan metode bayar
-/// terpilih). Keduanya berbagi aturan keselamatan yang sama: satu konfirmasi
-/// pada satu waktu, tidak pernah diulang otomatis.
+/// **Satu cara membayar: Xpedia Wallet + PIN** ([payWithWallet]). Sejak
+/// backend `d9ecb33` (docs/22 #1–#2) checkout wallet-only — pemilih metode
+/// pembayaran lama (QRIS/VA) sudah dibuang, karena server tidak lagi membaca
+/// `payment_method` dan menolak konfirmasi tanpa PIN. Aturan keselamatannya:
+/// satu konfirmasi pada satu waktu, tidak pernah diulang otomatis.
 ///
 /// Membuat sesi **mereservasi stok selama 15 menit**, jadi cubit ini memegang
 /// sumber daya di server — bukan sekadar menampilkan data. Itu sebabnya
@@ -39,18 +37,11 @@ DataError _localValidation(String message) => DataError(
 class CheckoutCubit extends Cubit<CheckoutState> {
   CheckoutCubit()
       : _repository = injector<CheckoutRepository>(),
-        _payments = injector<PaymentRepository>(),
         super(const CheckoutState.preparing());
 
   static CheckoutCubit get(BuildContext context) => BlocProvider.of(context);
 
   final CheckoutRepository _repository;
-  final PaymentRepository _payments;
-
-  /// Metode bayar dimuat sekali dan disimpan di cubit, bukan diambil ulang
-  /// setiap sesi dibuat — daftarnya tidak bergantung pada isi keranjang.
-  List<PaymentMethodModel> _paymentMethods = const [];
-  String _selectedPaymentMethod = '';
 
   /// Alamat yang dipakai sesi berjalan, disimpan supaya sesi bisa dibuat ulang
   /// saat alamatnya diganti.
@@ -61,21 +52,18 @@ class CheckoutCubit extends Cubit<CheckoutState> {
   /// ditinggalkan.
   String? _openSessionId;
 
-  /// Hasil deteksi pembayaran Wallet, dipegang di cubit supaya tidak hilang
+  /// Ringkasan Wallet terakhir, dipegang di cubit supaya tidak hilang
   /// setiap kali [CheckoutState.ready] dibuat ulang dari snapshot baru.
-  /// Sekali `legacy`, tidak dideteksi lagi selama layar ini hidup — rute
-  /// yang tidak ada tidak akan muncul di tengah checkout.
   CheckoutPaymentMode _paymentMode = CheckoutPaymentMode.detecting;
   WalletSummaryModel? _wallet;
   Map<String, dynamic>? _walletMeta;
 
-  /// Nomor muat `wallet-summary`, supaya balasan lama yang tiba belakangan
+  /// Nomor muat ringkasan Wallet, supaya balasan lama yang tiba belakangan
   /// tidak menimpa yang lebih baru (kurir diganti dua kali berturut-turut).
   int _walletRequest = 0;
 
-  /// Minimum top up — blueprint Xpedia; **tidak** ditegakkan server
-  /// (docs/22 #12), jadi aplikasi yang menjaganya. `wallet-summary` boleh
-  /// mengirim nilai lain lewat `min_topup`.
+  /// Minimum top up — blueprint Xpedia (docs/22 #12). Ditegakkan server juga
+  /// sejak backend `7ce3b92`, tapi dicek di sini dulu supaya pesannya tepat.
   static const double minimumTopup = 10000;
 
   Future<void> start({required int addressId, String? voucherCode}) async {
@@ -83,37 +71,12 @@ class CheckoutCubit extends Cubit<CheckoutState> {
     _addressId = addressId;
     _voucherCode = voucherCode;
 
-    // Metode bayar ditembak paralel dengan pembuatan sesi; keduanya tidak
-    // saling bergantung. Kegagalan mengambil metode tidak menggagalkan
-    // checkout — layar menampilkan daftar kosong dan tombol bayar tetap mati
-    // sampai ada metode, yang lebih jelas daripada layar error penuh.
-    final methodsFuture = _paymentMethods.isEmpty
-        ? _payments.fetchMethods()
-        : Future.value(DataSuccess(_paymentMethods));
-
     final result = await _repository.startSession(
       addressId: addressId,
       voucherCode: voucherCode,
     );
-    final methods = await methodsFuture;
     if (isClosed) return;
-
-    if (methods is DataSuccess<List<PaymentMethodModel>>) {
-      _paymentMethods = methods.data;
-      if (_selectedPaymentMethod.isEmpty && methods.data.isNotEmpty) {
-        _selectedPaymentMethod = methods.data.first.code;
-      }
-    }
-
     _apply(result);
-  }
-
-  /// Mengganti metode pembayaran.
-  void selectPaymentMethod(String code) {
-    _selectedPaymentMethod = code;
-    final current = state;
-    if (current is! CheckoutReady) return;
-    emit(current.copyWith(selectedPaymentMethod: code));
   }
 
   /// Mengganti alamat tujuan **pada sesi yang sedang berjalan**.
@@ -178,81 +141,22 @@ class CheckoutCubit extends Cubit<CheckoutState> {
     _apply(result, previous: current);
   }
 
-  /// Mengonfirmasi checkout pada **alur lama** (tanpa Wallet).
-  ///
-  /// ⚠️ **Tidak pernah diulang otomatis.** Backend belum menangani
-  /// `Idempotency-Key`, jadi percobaan ulang berisiko membuat order ganda —
-  /// user yang memutuskan menekan tombolnya lagi, bukan aplikasi.
-  Future<void> confirm() async {
-    final current = state;
-    if (current is! CheckoutReady || current.isSubmitting) return;
-    final id = _openSessionId;
-    if (id == null) return;
-
-    if (current.paymentMode == CheckoutPaymentMode.detecting) {
-      // Belum tahu apakah server menuntut Wallet; mengonfirmasi dengan metode
-      // lama sekarang bisa membuat order dengan cara bayar yang salah.
-      emit(current.copyWith(
-        actionError: _localValidation('Metode pembayaran sedang diperiksa.'),
-      ));
-      return;
-    }
-    if (current.paymentMode == CheckoutPaymentMode.wallet) {
-      // Pada alur Wallet setiap pembayaran menuntut PIN (design_buyer.md §5,
-      // aturan 5) — tidak ada jalan pintas satu ketukan.
-      emit(current.copyWith(
-        actionError: _localValidation('Masukkan PIN Wallet untuk membayar.'),
-      ));
-      return;
-    }
-
-    final paymentMethod = current.selectedPaymentMethod;
-    if (paymentMethod.isEmpty) {
-      emit(current.copyWith(
-        actionError: _localValidation('Pilih metode pembayaran dulu.'),
-      ));
-      return;
-    }
-
-    if (!current.snapshot.session.canConfirm) {
-      emit(current.copyWith(
-        actionError: const DataError(
-          code: ApiErrorCode.checkoutConfirmFailed,
-          message: 'Sesi belum siap dikonfirmasi',
-          kind: DataErrorKind.api,
-        ),
-      ));
-      return;
-    }
-
-    emit(current.copyWith(isSubmitting: true, actionError: null));
-    final result = await _repository.confirm(id, paymentMethod: paymentMethod);
-    if (isClosed) return;
-
-    switch (result) {
-      case DataSuccess(:final data, :final meta):
-        await _onConfirmed(data, meta);
-      case DataFailed(:final error):
-        emit(current.copyWith(isSubmitting: false, actionError: error));
-      case DataEmpty():
-      case DataLoading():
-        emit(current.copyWith(isSubmitting: false));
-    }
-  }
-
   /// Mengonfirmasi **dan membayar** dari saldo Xpedia Wallet dengan [pin].
   ///
   /// Semua yang bisa diperiksa tanpa jaringan diperiksa dulu — format PIN,
   /// PIN sudah dibuat, saldo cukup — supaya percobaan PIN yang dibatasi
   /// server (5 per 15 menit) tidak terbuang untuk penolakan yang sudah pasti.
   ///
-  /// Penolakan PIN (`INVALID_PIN`, `TOO_MANY_REQUESTS`) masuk ke
+  /// Penolakan PIN ([WalletPayErrorCode.invalidPin] — hasil terjemahan
+  /// repository, lihat `CheckoutRepositoryImpl.confirm` — dan
+  /// `TOO_MANY_REQUESTS`) masuk ke
   /// [CheckoutReady.pinError] supaya tampil di lembar PIN; penolakan lain
   /// menutup lembarnya lewat [CheckoutReady.actionError], dan untuk saldo /
   /// PIN yang ternyata belum dibuat, ringkasan Wallet dimuat ulang supaya
   /// layar menunjukkan jalan keluarnya.
   ///
-  /// ⚠️ Seperti [confirm]: **tidak pernah diulang otomatis**.
+  /// ⚠️ **Tidak pernah diulang otomatis**: backend belum menangani
+  /// `Idempotency-Key`, jadi pengulangan bisa membuat order ganda.
   Future<void> payWithWallet(String pin) async {
     final current = state;
     if (current is! CheckoutReady || current.isSubmitting) return;
@@ -300,7 +204,7 @@ class CheckoutCubit extends Cubit<CheckoutState> {
     emit(current.copyWith(
         isSubmitting: true, actionError: null, pinError: null));
     final result =
-        await _repository.confirm(id, paymentMethod: 'wallet', pin: pin);
+        await _repository.confirm(id, pin: pin);
     if (isClosed) return;
 
     switch (result) {
@@ -388,14 +292,13 @@ class CheckoutCubit extends Cubit<CheckoutState> {
   /// ditolak server karena saldo).
   Future<void> reloadWallet() async {
     final id = _openSessionId;
-    if (id == null || _paymentMode == CheckoutPaymentMode.legacy) return;
+    if (id == null) return;
     await _loadWallet(id);
   }
 
   /// Menyimpan pasangan order → transaksi (tidak ada endpoint yang
   /// memetakannya, lihat [OrderPaymentLinkStore]) lalu pindah ke
-  /// [CheckoutConfirmed]. Berlaku untuk **kedua** alur: pesanan alur lama
-  /// yang belum dibayar jadi bisa dibayar lagi dari detail pesanan.
+  /// [CheckoutConfirmed].
   Future<void> _onConfirmed(
     CheckoutConfirmResult data,
     Map<String, dynamic> meta,
@@ -463,12 +366,9 @@ class CheckoutCubit extends Cubit<CheckoutState> {
     switch (result) {
       case DataSuccess(:final data):
         _openSessionId = data.session.isStockReserved ? data.session.id : null;
-        final loadWallet = _openSessionId != null &&
-            _paymentMode != CheckoutPaymentMode.legacy;
+        final loadWallet = _openSessionId != null;
         emit(CheckoutState.ready(
           snapshot: data,
-          paymentMethods: _paymentMethods,
-          selectedPaymentMethod: _selectedPaymentMethod,
           paymentMode: _paymentMode,
           wallet: _wallet,
           walletMeta: _walletMeta,
@@ -491,14 +391,10 @@ class CheckoutCubit extends Cubit<CheckoutState> {
     }
   }
 
-  /// Memuat `wallet-summary` dan sekaligus mendeteksi apakah server
-  /// mendukung pembayaran Wallet.
+  /// Memuat ringkasan saldo Wallet vs total sesi.
   ///
-  /// Hanya rute yang **tidak dikenal** yang memindahkan checkout ke alur
-  /// lama. Kegagalan lain (jaringan, 500) disimpan sebagai
-  /// [CheckoutReady.walletError] dengan tombol coba lagi — menyerah ke alur
-  /// lama karena satu request gagal akan menawarkan cara bayar yang tidak
-  /// lagi berlaku begitu Wallet sudah wajib.
+  /// Kegagalan (jaringan, 500) disimpan sebagai [CheckoutReady.walletError]
+  /// dengan tombol coba lagi; tombol bayar mati sampai ringkasannya ada.
   Future<void> _loadWallet(String sessionId) async {
     final request = ++_walletRequest;
     final before = state;
@@ -525,19 +421,8 @@ class CheckoutCubit extends Cubit<CheckoutState> {
           ));
         }
       case DataFailed(:final error):
-        if (error.isRouteNotFound) {
-          _paymentMode = CheckoutPaymentMode.legacy;
-          _wallet = null;
-          _walletMeta = null;
-        }
         if (current is CheckoutReady) {
-          emit(current.copyWith(
-            paymentMode: _paymentMode,
-            wallet: _wallet,
-            walletMeta: _walletMeta,
-            walletLoading: false,
-            walletError: error.isRouteNotFound ? null : error,
-          ));
+          emit(current.copyWith(walletLoading: false, walletError: error));
         }
       case DataEmpty():
       case DataLoading():

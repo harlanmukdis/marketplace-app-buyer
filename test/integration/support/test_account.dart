@@ -143,6 +143,19 @@ Future<bool> _tryRefresh(_CachedAccount account) async {
   }
 }
 
+/// NIK 16 digit yang belum pernah dipakai — `POST /auth/register` menuntutnya
+/// sejak backend `3e8906d` dan menolak duplikat dengan `409 IDENTITY_TAKEN`.
+///
+/// Diturunkan dari jam mikrodetik (16 digit sampai tahun 2286) ditambah
+/// penghitung, supaya dua panggilan dalam mikrodetik yang sama tetap berbeda.
+String uniqueIdCardNumber() {
+  final value =
+      (DateTime.now().microsecondsSinceEpoch + _idCardSeq++).toString();
+  return value.padLeft(16, '0').substring(value.length > 16 ? value.length - 16 : 0);
+}
+
+int _idCardSeq = 0;
+
 /// Mendaftarkan akun buyer baru lalu login. **Memakai satu kuota login.**
 Future<_CachedAccount> _registerAndLogin(String label) async {
   final bare = DioClient.createBare(Env.apiBaseUrl);
@@ -158,6 +171,7 @@ Future<_CachedAccount> _registerAndLogin(String label) async {
       password: testPassword,
       fullName: label,
       phone: phone,
+      idCardNumber: uniqueIdCardNumber(),
     );
 
     try {

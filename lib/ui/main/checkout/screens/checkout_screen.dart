@@ -439,16 +439,9 @@ class _CheckoutForm extends StatelessWidget {
           ),
           const SizedBox(height: 12),
         ],
-        // Alur lama saja: pada alur Wallet tidak ada metode untuk dipilih.
-        if (state.paymentMode == CheckoutPaymentMode.legacy) ...[
-          _PaymentMethodCard(state: state),
-          const SizedBox(height: 12),
-        ],
         _SummaryCard(
           snapshot: snapshot,
-          wallet: state.paymentMode == CheckoutPaymentMode.legacy
-              ? null
-              : WalletPaymentBlock(
+          wallet: WalletPaymentBlock(
                   wallet: state.wallet,
                   meta: state.walletMeta,
                   loading: state.walletLoading,
@@ -880,68 +873,6 @@ class _CourierBlock extends StatelessWidget {
   }
 }
 
-/// Pemilihan metode pembayaran, di tempat blok dompet pada desain.
-///
-/// Ada di **checkout**, bukan di layar pembayaran: metode terikat pada
-/// transaksi saat `confirm`, dan `POST /payments/{txId}/pay` mengabaikan
-/// metode yang dikirim belakangan (sudah diuji untuk lima metode).
-class _PaymentMethodCard extends StatelessWidget {
-  const _PaymentMethodCard({required this.state});
-
-  final CheckoutReady state;
-
-  @override
-  Widget build(BuildContext context) {
-    return XpCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const _CardHeader(
-            icon: Icons.account_balance_wallet_outlined,
-            title: 'Metode Pembayaran',
-          ),
-          const SizedBox(height: 8),
-          if (state.paymentMethods.isEmpty)
-            Text(
-              'Metode pembayaran belum bisa dimuat. Muat ulang halaman ini.',
-              style: XpText.bodyS(context)
-                  .copyWith(color: const Color(0xff8C5002)),
-            )
-          else
-            Container(
-              decoration: BoxDecoration(
-                color: XpColors.primarySubtle.withValues(alpha: 0.5),
-                borderRadius: BorderRadius.circular(XpRadius.l),
-                border:
-                    Border.all(color: XpColors.primary.withValues(alpha: 0.2)),
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              child: RadioGroup<String>(
-                groupValue: state.selectedPaymentMethod.isEmpty
-                    ? null
-                    : state.selectedPaymentMethod,
-                onChanged: (value) {
-                  if (!state.canInteract || value == null) return;
-                  CheckoutCubit.get(context).selectPaymentMethod(value);
-                },
-                child: Column(
-                  children: [
-                    for (final method in state.paymentMethods)
-                      RadioListTile<String>(
-                        contentPadding: EdgeInsets.zero,
-                        value: method.code,
-                        title: Text(method.name, style: XpText.labelL(context)),
-                      ),
-                  ],
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
 /// "Ringkasan Pesanan".
 ///
 /// 🔴 `grand_total` sesi **sudah termasuk ongkir** begitu kurir dipilih
@@ -1210,11 +1141,7 @@ class _ConfirmBar extends StatelessWidget {
             // Idempotency-Key, jadi pengulangan bisa membuat order ganda.
             // Wallet: tombol hanya membuka lembar PIN — pembayaran baru
             // dikirim setelah enam digit PIN masuk.
-            onPressed: state.canPay
-                ? () => walletMode
-                    ? _openPinSheet(context, state)
-                    : CheckoutCubit.get(context).confirm()
-                : null,
+            onPressed: state.canPay ? () => _openPinSheet(context, state) : null,
             icon: state.isSubmitting
                 ? const SizedBox(
                     width: 18,
@@ -1231,6 +1158,7 @@ class _ConfirmBar extends StatelessWidget {
   }
 }
 
+/// Checkout wallet-only: order yang terbentuk selalu sudah dibayar.
 class _ConfirmedView extends StatelessWidget {
   const _ConfirmedView({required this.result, this.meta});
 
@@ -1238,79 +1166,11 @@ class _ConfirmedView extends StatelessWidget {
   final Map<String, dynamic>? meta;
 
   @override
-  Widget build(BuildContext context) {
-    if (result.paid) return _PaidView(result: result, meta: meta);
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 72,
-              height: 72,
-              decoration: BoxDecoration(
-                color: XpColors.successSubtle,
-                shape: BoxShape.circle,
-              ),
-              child:
-                  Icon(Icons.check_circle, size: 40, color: XpColors.success),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              result.isMultiStore
-                  // Keranjang multi-toko pecah jadi satu order per toko —
-                  // ditulis apa adanya supaya user tidak bingung melihat
-                  // beberapa pesanan dari satu kali checkout.
-                  ? '${result.orderIds.length} pesanan dibuat, satu untuk '
-                      'tiap toko.'
-                  : 'Pesanan berhasil dibuat.',
-              textAlign: TextAlign.center,
-              style: XpText.headingM(context),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Selesaikan pembayaran sebelum batas waktu.',
-              textAlign: TextAlign.center,
-              style:
-                  XpText.bodyS(context).copyWith(color: XpColors.textSecondary),
-            ),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              height: 52,
-              child: result.paymentTransactionId != null
-                  ? FilledButton(
-                      // `pushReplacement`: checkout sudah selesai dan sesinya
-                      // tidak bisa dipakai lagi, jadi tombol kembali tidak
-                      // boleh mengembalikan user ke layar yang sudah mati.
-                      onPressed: () => context.pushReplacement(
-                        AppRoutes.paymentPath(result.paymentTransactionId!),
-                      ),
-                      child: const Text('Lanjut ke pembayaran'),
-                    )
-                  : FilledButton(
-                      onPressed: () => Navigator.of(context).maybePop(),
-                      child: const Text('Kembali'),
-                    ),
-            ),
-            const SizedBox(height: 8),
-            TextButton(
-              onPressed: () => context.go(AppRoutes.orders),
-              child: const Text('Lihat pesanan saya'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => _PaidView(result: result, meta: meta);
 }
 
-/// Sukses pada alur Wallet: order terbentuk **dan sudah dibayar** dari saldo.
-///
-/// Dalam simulasi (mock), order di server sebenarnya tetap `pending` —
-/// ditulis terang di sini supaya daftar pesanan yang masih "Menunggu
-/// Pembayaran" tidak dianggap bug.
+/// Sukses: order terbentuk **dan sudah dibayar** dari saldo Wallet — di
+/// server langsung berstatus `paid`.
 class _PaidView extends StatelessWidget {
   const _PaidView({required this.result, this.meta});
 
@@ -1361,16 +1221,6 @@ class _PaidView extends StatelessWidget {
                   label: 'Sisa saldo Wallet',
                   value: formatRupiah(result.balanceAfter),
                 ),
-              ),
-            ],
-            if (simulated) ...[
-              const SizedBox(height: 12),
-              Text(
-                'Simulasi: pembayaran Wallet belum tersedia di backend, jadi '
-                'pesanan di server tetap berstatus Menunggu Pembayaran.',
-                textAlign: TextAlign.center,
-                style: XpText.caption(context)
-                    .copyWith(color: const Color(0xff8C5002)),
               ),
             ],
             const SizedBox(height: 24),

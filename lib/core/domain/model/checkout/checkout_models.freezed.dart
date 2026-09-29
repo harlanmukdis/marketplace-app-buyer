@@ -2083,13 +2083,14 @@ mixin _$CheckoutConfirmResult {
   @IntOrNullJson()
   @JsonKey(name: 'payment_transaction_id')
   int?
-      get paymentTransactionId; // --- kontrak YANG DIUSULKAN untuk bayar via Xpedia Wallet (docs/22 #1–#2)
+      get paymentTransactionId; // --- Pembayaran Xpedia Wallet (docs/22 #1–#2, backend `d9ecb33`)
 //
-// Belum dikirim server; di debug disisipkan mock
-// (`checkout_mock_routes.dart`). Pada alur lama ketiganya tidak ada, jadi
-// default-nya harus berarti "belum dibayar".
-  /// `true` kalau konfirmasi **sekaligus membayar** dari saldo Wallet.
-  /// `false` di alur lama: order masih harus dibayar di layar pembayaran.
+// Server TIDAK mengirim field di bawah (balasannya hanya `order_ids` +
+// `payment_transaction_id`); `CheckoutRepositoryImpl.confirm` mengisi
+// `paid` dan `balanceAfter`. Dua lainnya tetap dibaca kalau suatu saat
+// dikirim.
+  /// `true` kalau konfirmasi **sekaligus membayar** dari saldo Wallet —
+  /// selalu, sejak checkout wallet-only.
   @BoolJson()
   bool get paid;
 
@@ -2437,13 +2438,14 @@ class _CheckoutConfirmResult extends CheckoutConfirmResult {
   @IntOrNullJson()
   @JsonKey(name: 'payment_transaction_id')
   final int? paymentTransactionId;
-// --- kontrak YANG DIUSULKAN untuk bayar via Xpedia Wallet (docs/22 #1–#2)
+// --- Pembayaran Xpedia Wallet (docs/22 #1–#2, backend `d9ecb33`)
 //
-// Belum dikirim server; di debug disisipkan mock
-// (`checkout_mock_routes.dart`). Pada alur lama ketiganya tidak ada, jadi
-// default-nya harus berarti "belum dibayar".
-  /// `true` kalau konfirmasi **sekaligus membayar** dari saldo Wallet.
-  /// `false` di alur lama: order masih harus dibayar di layar pembayaran.
+// Server TIDAK mengirim field di bawah (balasannya hanya `order_ids` +
+// `payment_transaction_id`); `CheckoutRepositoryImpl.confirm` mengisi
+// `paid` dan `balanceAfter`. Dua lainnya tetap dibaca kalau suatu saat
+// dikirim.
+  /// `true` kalau konfirmasi **sekaligus membayar** dari saldo Wallet —
+  /// selalu, sejak checkout wallet-only.
   @override
   @JsonKey()
   @BoolJson()

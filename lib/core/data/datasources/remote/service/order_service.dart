@@ -218,16 +218,18 @@ class OrderService {
 
   /// `POST /orders/{id}/refund-request` — komplain sesudah barang diterima.
   ///
-  /// ⚠️ Server tidak menggerbangi status; pemanggil wajib memeriksa
-  /// `OrderModel.canRequestRefund`. Tanpa `amount` server memakai
-  /// `grand_total`.
+  /// Sejak backend `0307edf` (docs/22 #5) server **menggerbangi status**:
+  /// selain `delivered`/`completed` dibalas `422 VALIDATION_ERROR`.
+  /// `OrderModel.canRequestRefund` tetap menjaganya lebih dulu. Tanpa
+  /// `amount` server memakai `grand_total`.
   ///
-  /// [evidenceUrls] (hasil `POST /media/upload`) dikirim sebagai field
-  /// **yang diusulkan** `evidence_urls` (docs/22 #5). Controller
-  /// `refund_request_post` hari ini hanya membaca `reason` dan `amount`, jadi
-  /// field itu **diabaikan diam-diam** — tidak ditolak — sampai backend
-  /// menyimpannya. Pola yang sama sudah dipakai `POST
-  /// /orders/{id}/insurance/claims`, yang memang menerima `evidence_urls`.
+  /// [evidenceUrls] (hasil `POST /media/upload`) dikirim sebagai body
+  /// **`evidence`** — itu nama yang dibaca `refund_request_post`, walau
+  /// kolom tujuannya bernama `evidence_urls`. 🔴 Nama yang salah tidak
+  /// ditolak, hanya **dibuang diam-diam**: versi sebelumnya mengirim
+  /// `evidence_urls` dan seluruh bukti foto pembeli hilang. Bandingkan
+  /// `POST /orders/{id}/insurance/claims`, yang memang membaca
+  /// `evidence_urls`.
   Future<ApiEnvelope<dynamic>> requestRefund(
     int id, {
     required String reason,
@@ -239,7 +241,7 @@ class OrderService {
         '/orders/$id/refund-request',
         data: {
           'reason': reason,
-          if (evidenceUrls.isNotEmpty) 'evidence_urls': evidenceUrls,
+          if (evidenceUrls.isNotEmpty) 'evidence': evidenceUrls,
         },
       );
       return parseEnvelope(response, (raw) => raw, context: context);

@@ -146,8 +146,8 @@ class OrderDetailCubit extends Cubit<OrderDetailState> {
 
   /// Komplain & refund sesudah barang diterima.
   ///
-  /// [evidenceUrls] berasal dari `POST /media/upload`; dikirim sebagai field
-  /// yang diusulkan `evidence_urls` (server hari ini mengabaikannya).
+  /// [evidenceUrls] berasal dari `POST /media/upload`; dikirim sebagai body
+  /// `evidence` (lihat `OrderService.requestRefund`).
   Future<void> requestRefund(String reason, {List<String> evidenceUrls = const []}) => _act(
         allowed: (order) => order.canRequestRefund && reason.trim().isNotEmpty,
         action: () => _repository.requestRefund(orderId,

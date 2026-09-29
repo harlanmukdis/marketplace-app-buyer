@@ -32,6 +32,7 @@ class _FakeAuthService extends AuthService {
     required String password,
     required String fullName,
     required String phone,
+    required String idCardNumber,
   }) async {
     registerCalled = true;
     if (registerError != null) throw registerError!;
@@ -168,6 +169,7 @@ void main() {
         password: 'secret123',
         fullName: 'Budi',
         phone: '081200000001',
+        idCardNumber: '3171010101010001',
       );
 
       expect(service.registerCalled, isTrue);
@@ -195,6 +197,7 @@ void main() {
         password: 'secret123',
         fullName: 'Budi',
         phone: '081200000001',
+        idCardNumber: '3171010101010001',
       );
 
       expect(service.meCalls, 1,
@@ -213,6 +216,7 @@ void main() {
         password: 'secret123',
         fullName: 'Agus',
         phone: '081200000003',
+        idCardNumber: '3171010101010001',
       );
 
       // Akunnya sungguh terbentuk. Melaporkan gagal akan membuat user
@@ -232,6 +236,7 @@ void main() {
         password: 'secret123',
         fullName: 'Budi',
         phone: '081200000001',
+        idCardNumber: '3171010101010001',
       );
 
       expect(service.loginCalled, isFalse);

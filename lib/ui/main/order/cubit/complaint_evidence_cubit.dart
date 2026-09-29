@@ -81,7 +81,7 @@ abstract class ComplaintEvidenceState with _$ComplaintEvidenceState {
 ///   §3.16) vs 20 MB server, dan hanya JPG/PNG/WEBP/MP4/MOV/WEBM — `gif` dan
 ///   `pdf` memang diterima server, tapi bukan bukti kondisi barang.
 /// * URL hasilnya dikirim bersama `POST /orders/{id}/refund-request` sebagai
-///   field yang diusulkan `evidence_urls`; **server hari ini mengabaikannya**.
+///   body `evidence` (backend `0307edf`) — lihat `OrderService.requestRefund`.
 class ComplaintEvidenceCubit extends Cubit<ComplaintEvidenceState> {
   ComplaintEvidenceCubit({MediaRepository? repository})
       : _repository = repository ?? injector<MediaRepository>(),

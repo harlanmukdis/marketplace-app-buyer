@@ -7,9 +7,6 @@
 /// disalin ulang dari respons yang sekarang.
 library;
 
-import 'dart:convert';
-import 'dart:io';
-
 import 'package:flutter_test/flutter_test.dart';
 import 'package:marketplace_app_member/core/domain/model/address/address_model.dart';
 import 'package:marketplace_app_member/core/domain/model/checkout/checkout_models.dart';
@@ -287,36 +284,10 @@ void main() {
     });
   });
 
-  // Kontrak yang DIUSULKAN (belum dikirim server) — fixture-nya adalah spec
-  // untuk backend, jadi model harus bisa membacanya apa adanya.
-  group('kontrak Wallet (fixture pending_api/checkout)', () {
-    Map<String, dynamic> fixture(String name) => Map<String, dynamic>.from(
-        jsonDecode(File('assets/mock/pending_api/checkout/$name')
-            .readAsStringSync()) as Map);
-
-    test('wallet_summary.json', () {
-      final model = WalletSummaryModel.fromJson(fixture('wallet_summary.json'));
-      expect(model.walletBalance, 2500000);
-      expect(model.grandTotal, 2543000);
-      expect(model.shortfall, 43000);
-      expect(model.canPay, isFalse);
-      expect(model.minTopup, 10000);
-      expect(model.pinSet, isTrue);
-      expect(model.isInsufficient, isTrue);
-      expect(model.suggestedTopup, 43000);
-    });
-
-    test('wallet_confirm.json', () {
-      final result =
-          CheckoutConfirmResult.fromJson(fixture('wallet_confirm.json'));
-      expect(result.orderIds, [101, 102]);
-      expect(result.paymentTransactionId, 55);
-      expect(result.paid, isTrue);
-      expect(result.walletTransactionId, 9001);
-      expect(result.balanceAfter, 1457000);
-    });
-
-    test('confirm alur lama (tanpa field Wallet) berarti BELUM dibayar', () {
+  group('Wallet (checkout wallet-only, backend d9ecb33)', () {
+    test('balasan confirm server TIDAK membawa paid — model default belum', () {
+      // Server hanya mengirim `{order_ids, payment_transaction_id}`;
+      // `CheckoutRepositoryImpl.confirm` yang menandainya `paid: true`.
       final result = CheckoutConfirmResult.fromJson(const {
         'order_ids': [1],
         'payment_transaction_id': 1,
@@ -325,15 +296,16 @@ void main() {
       expect(result.balanceAfter, isNull);
     });
 
-    test('tinyint & string ikut terbaca', () {
-      final model = WalletSummaryModel.fromJson(const {
-        'wallet_balance': '750000.00',
-        'can_pay': '0',
-        'pin_set': '1',
-      });
-      expect(model.walletBalance, 750000);
-      expect(model.canPay, isFalse);
-      expect(model.pinSet, isTrue);
+    test('ringkasan saldo kurang menyarankan top up yang cukup', () {
+      const model = WalletSummaryModel(
+        walletBalance: 2500000,
+        grandTotal: 2543000,
+        shortfall: 43000,
+        canPay: false,
+        pinSet: true,
+      );
+      expect(model.isInsufficient, isTrue);
+      expect(model.suggestedTopup, 43000);
     });
   });
 }

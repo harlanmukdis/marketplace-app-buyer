@@ -237,6 +237,11 @@ abstract final class ApiErrorCode {
   static const emailTaken = 'EMAIL_TAKEN';
   static const phoneTaken = 'PHONE_TAKEN';
 
+  /// Registrasi: NIK KTP sudah dipakai akun lain (`409`, backend `3e8906d`,
+  /// docs/22 #4). Berbeda dari [idCardAlreadyUsed] milik verifikasi KTP yang
+  /// masih di-mock.
+  static const identityTaken = 'IDENTITY_TAKEN';
+
   /// Token verifikasi email sudah terpakai atau tidak sah.
   static const invalidToken = 'INVALID_TOKEN';
 

@@ -1,24 +1,15 @@
 part of 'checkout_cubit.dart';
 
-// `PaymentMethodModel` dipakai di state ini; impornya ada di checkout_cubit.dart.
-
-/// Cara checkout ini akan dibayar.
+/// Kesiapan pembayaran checkout ini.
 ///
-/// Ditentukan **dengan mendeteksi kemampuan server**, bukan dengan flag
-/// build: `GET /checkout/sessions/{id}/wallet-summary` yang menjawab berarti
-/// pembayaran Xpedia Wallet tersedia (docs/22 #1); rute yang tidak dikenal
-/// (404 HTML → `DataError.isRouteNotFound`) berarti backend masih memakai
-/// alur lama — pemilih metode + layar pembayaran terpisah. Begitu backend
-/// membangun endpointnya, build release beralih sendiri tanpa rilis ulang.
+/// Checkout wallet-only sejak backend `d9ecb33`; yang tersisa hanya apakah
+/// ringkasan saldo sudah pernah termuat.
 enum CheckoutPaymentMode {
-  /// `wallet-summary` belum dijawab. Tombol bayar mati.
+  /// Ringkasan Wallet belum pernah termuat. Tombol bayar mati.
   detecting,
 
   /// Bayar langsung dari saldo Wallet, dengan PIN 6 digit.
   wallet,
-
-  /// Alur lama: pilih metode, konfirmasi, lalu bayar di `PaymentScreen`.
-  legacy,
 }
 
 /// Status alur checkout.
@@ -33,37 +24,27 @@ sealed class CheckoutState with _$CheckoutState {
   const factory CheckoutState.ready({
     required CheckoutSnapshot snapshot,
 
-    /// Metode pembayaran yang tersedia, dari `GET /payment-methods`.
-    ///
-    /// Ada di layar checkout — **bukan** di layar pembayaran — karena metode
-    /// terikat pada transaksi saat konfirmasi; `POST /payments/{txId}/pay`
-    /// mengabaikan metode yang dikirim belakangan. Hanya dipakai pada
-    /// [CheckoutPaymentMode.legacy].
-    @Default(<PaymentMethodModel>[]) List<PaymentMethodModel> paymentMethods,
-
-    /// Kode metode terpilih. Kosong berarti belum memilih.
-    @Default('') String selectedPaymentMethod,
     @Default(CheckoutPaymentMode.detecting) CheckoutPaymentMode paymentMode,
 
-    /// Saldo vs tagihan, dari `wallet-summary`. Dipertahankan selama dimuat
+    /// Saldo vs tagihan (`GET /wallet` + `grand_total` sesi). Dipertahankan selama dimuat
     /// ulang supaya bloknya tidak berkedip setiap kurir diganti.
     WalletSummaryModel? wallet,
 
-    /// `meta` balasan `wallet-summary` — untuk lencana "Simulasi".
+    /// `meta` ringkasan Wallet — untuk lencana "Simulasi" (kini selalu kosong).
     Map<String, dynamic>? walletMeta,
 
-    /// `wallet-summary` sedang dimuat (ulang). Tombol bayar mati selama itu:
+    /// Ringkasan Wallet sedang dimuat (ulang). Tombol bayar mati selama itu:
     /// ringkasan lama bisa menyatakan "cukup" untuk total yang sudah berubah.
     @Default(false) bool walletLoading,
 
-    /// Gagal memuat `wallet-summary` karena sebab **selain** rute tak dikenal.
+    /// Gagal memuat ringkasan Wallet.
     DataError? walletError,
 
     /// Sedang mengirim pilihan kurir atau konfirmasi.
     @Default(false) bool isSubmitting,
     DataError? actionError,
 
-    /// Penolakan PIN (`INVALID_PIN`, `TOO_MANY_REQUESTS`) — ditampilkan di
+    /// Penolakan PIN (`INVALID_PIN` terjemahan repository, `TOO_MANY_REQUESTS`) — ditampilkan di
     /// dalam lembar PIN, bukan sebagai snackbar di belakangnya.
     DataError? pinError,
 
@@ -75,8 +56,7 @@ sealed class CheckoutState with _$CheckoutState {
     int? pendingTopupTxId,
   }) = CheckoutReady;
 
-  /// Order sudah terbentuk. Pada alur Wallet sekaligus **sudah dibayar**
-  /// (`result.paid`); pada alur lama layar berpindah ke pembayaran dari sini.
+  /// Order sudah terbentuk **dan sudah dibayar** dari saldo Wallet.
   const factory CheckoutState.confirmed(
     CheckoutConfirmResult result, {
     Map<String, dynamic>? meta,
@@ -93,12 +73,10 @@ sealed class CheckoutState with _$CheckoutState {
 
   /// Semua syarat membayar terpenuhi.
   ///
-  /// * Wallet: sesi siap, ringkasan saldo segar, saldo cukup, PIN sudah ada.
-  /// * Lama: sesi siap **dan** metode bayar dipilih.
+  /// Sesi siap, ringkasan saldo segar, saldo cukup, PIN (dianggap) ada.
   bool get canPay => switch (this) {
         CheckoutReady(
           :final snapshot,
-          :final selectedPaymentMethod,
           :final paymentMode,
           :final wallet,
           :final walletLoading,
@@ -107,7 +85,6 @@ sealed class CheckoutState with _$CheckoutState {
               snapshot.session.canConfirm &&
               switch (paymentMode) {
                 CheckoutPaymentMode.detecting => false,
-                CheckoutPaymentMode.legacy => selectedPaymentMethod.isNotEmpty,
                 CheckoutPaymentMode.wallet => !walletLoading &&
                     wallet != null &&
                     wallet.canPay &&

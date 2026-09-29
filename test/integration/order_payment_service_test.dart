@@ -6,7 +6,12 @@
 /// ```
 ///
 /// Test ini menjalankan alur beli sungguhan sampai order terbentuk, jadi ia
-/// meninggalkan data di database dev. Beberapa test mematok **bug server**
+/// meninggalkan data di database dev.
+///
+/// Sejak backend `d9ecb33` checkout **wallet-only**: pesanan lahir `paid` dan
+/// transaksinya `wallet`. QRIS/VA hanya tersisa untuk **top up** saldo, jadi
+/// test `/payments/{id}/pay` memakai transaksi top up, bukan pesanan. Akun
+/// pembeli disiapkan lewat `support/dev_db.dart` (PIN, saldo, kuota PIN). Beberapa test mematok **bug server**
 /// (`/orders/{id}/complete` yang membalas HTML berstatus 200, dan `/orders`
 /// tanpa `meta`) — kalau backend memperbaikinya, test itu merah lebih dulu.
 library;
@@ -14,7 +19,9 @@ library;
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:marketplace_app_member/config/env/env.dart';
+import 'package:marketplace_app_member/config/network/api_exception.dart';
 import 'package:marketplace_app_member/config/network/dio_client.dart';
+import 'package:marketplace_app_member/core/data_state.dart';
 import 'package:marketplace_app_member/core/data/datasources/remote/service/address_service.dart';
 import 'support/test_account.dart';
 import 'package:marketplace_app_member/core/data/datasources/remote/service/cart_service.dart';
@@ -22,9 +29,11 @@ import 'package:marketplace_app_member/core/data/datasources/remote/service/cata
 import 'package:marketplace_app_member/core/data/datasources/remote/service/checkout_service.dart';
 import 'package:marketplace_app_member/core/data/datasources/remote/service/order_service.dart';
 import 'package:marketplace_app_member/core/data/datasources/remote/service/payment_service.dart';
+import 'package:marketplace_app_member/core/data/datasources/remote/service/wallet_service.dart';
 import 'package:marketplace_app_member/core/domain/model/order/order_models.dart';
 import 'package:marketplace_app_member/core/domain/model/payment/payment_models.dart';
 
+import 'support/dev_db.dart';
 import 'support/seeded_product.dart';
 
 void main() {
@@ -34,6 +43,8 @@ void main() {
   late CheckoutService checkout;
   late OrderService orders;
   late PaymentService payments;
+  late WalletService wallets;
+  late int buyerId;
 
   late int variantId;
   late int addressId;
@@ -46,6 +57,7 @@ void main() {
     checkout = CheckoutService(dio);
     orders = OrderService(dio);
     payments = PaymentService(dio);
+    wallets = WalletService(dio);
 
     // Akun bersama — lihat `support/test_account.dart` (plafon 20 login per IP
     // per 15 menit). Pesanan MENUMPUK di akun ini, dan itu tidak apa-apa:
@@ -63,8 +75,12 @@ void main() {
     // Bukan produk pertama: test ini mengonsumsi stok setiap kali dijalankan,
     // jadi harus mencari varian yang masih tersedia.
     variantId = (await findVariantWithStock(catalog)).variantId;
+    buyerId = await prepareWalletCheckout(dio);
 
-    final existing = (await addresses.list()).data;
+    // Dipakai ulang, bukan dibuat per test: alamat yang pernah masuk sesi
+    // checkout tidak bisa dihapus (FK RESTRICT) dan batasnya 3 per akun.
+    final existing =
+        (await addresses.list()).data.where((a) => a.isComplete).toList();
     addressId = existing.isNotEmpty
         ? existing.first.id
         : (await addresses.create(
@@ -82,10 +98,8 @@ void main() {
 
   tearDown(() => dio.close(force: true));
 
-  /// Menjalankan alur beli sampai order terbentuk.
-  Future<({List<int> orderIds, int txId})> placeOrder({
-    String paymentMethod = 'qris',
-  }) async {
+  /// Menjalankan alur beli sampai order terbentuk — dan terbayar dari Wallet.
+  Future<({List<int> orderIds, int txId})> placeOrder() async {
     await cart.addItem(productVariantId: variantId, quantity: 1);
     final created = await checkout.createSession(addressId: addressId);
     final sessionId = created.data.id;
@@ -100,8 +114,9 @@ void main() {
           ),
     });
 
-    final confirmed =
-        await checkout.confirm(sessionId, paymentMethod: paymentMethod);
+    // Setiap confirm yang BERHASIL pun memakai kuota PIN 5/15 menit.
+    await resetPinAttempts(buyerId);
+    final confirmed = await checkout.confirm(sessionId, pin: testWalletPin);
     return (
       orderIds: confirmed.data.orderIds,
       txId: confirmed.data.paymentTransactionId!,
@@ -168,7 +183,8 @@ void main() {
 
       expect(order.items, isNotEmpty);
       expect(order.statusHistory, isNotEmpty);
-      expect(order.status, OrderStatus.pending);
+      // Wallet-only: lunas saat konfirmasi, tidak pernah `pending`.
+      expect(order.status, OrderStatus.paid);
       expect(order.orderNumber, startsWith('ORD-'));
     });
 
@@ -204,7 +220,20 @@ void main() {
     });
 
     test('pesanan milik user lain dibalas 403, bukan 404', () async {
-      await expectLater(orders.fetchOrder(1), throwsA(anything));
+      // Pesanan akun ini dibaca oleh akun lain — dulu test ini menebak id 1,
+      // yang di DB baru justru milik akun ini sendiri.
+      final placed = await placeOrder();
+      final other = DioClient.createBare(Env.apiBaseUrl);
+      try {
+        await sharedAccount(other, purpose: 'alamat');
+        await OrderService(other).fetchOrder(placed.orderIds.first);
+        fail('pesanan orang lain seharusnya ditolak');
+      } on ApiException catch (e) {
+        expect(e.error.statusCode, 403);
+        expect(e.error.code, ApiErrorCode.permissionDenied);
+      } finally {
+        other.close(force: true);
+      }
     });
   });
 
@@ -218,7 +247,20 @@ void main() {
       final order = (await orders.fetchOrder(id)).data;
       expect(order.status, OrderStatus.cancelled);
       expect(order.statusHistory.map((h) => h.toStatus),
-          containsAllInOrder(['pending', 'cancelled']));
+          containsAllInOrder(['paid', 'cancelled']));
+    });
+
+    test('✅ membatalkan pesanan yang sudah dibayar mengembalikan saldo',
+        () async {
+      final placed = await placeOrder();
+      final before = (await wallets.fetchWallet()).data.balance;
+
+      await orders.cancel(placed.orderIds.first, reason: 'uji otomatis');
+
+      final after = (await wallets.fetchWallet()).data;
+      expect(after.balance, greaterThan(before),
+          reason: 'pesanan paid dibatalkan → refund ke Wallet');
+      expect(after.transactions.first.type.credit, isTrue);
     });
 
     test('confirm-delivery dari status salah dibalas 422 yang rapi', () async {
@@ -276,6 +318,16 @@ void main() {
       expect(order.awaitsPartialDecision, isFalse);
       expect(order.canCancel, isTrue);
 
+      // Komplain sebelum barang diterima kini ditolak server (backend
+      // `0307edf`, docs/22 #5) — dulu diterima tanpa gerbang status.
+      try {
+        await orders.requestRefund(id,
+            reason: 'uji otomatis', evidenceUrls: ['https://contoh.id/a.jpg']);
+        fail('komplain pada pesanan paid seharusnya ditolak');
+      } on ApiException catch (e) {
+        expect(e.error.code, ApiErrorCode.validationError);
+      }
+
       // Pembatalan pembeli kini mencatat pihak penyebabnya.
       await orders.cancel(id, reason: 'uji otomatis');
       final cancelled = (await orders.fetchOrder(id)).data;
@@ -284,33 +336,44 @@ void main() {
   });
 
   group('pembayaran', () {
+    /// Transaksi top up — satu-satunya yang masih dibayar lewat QRIS/VA.
+    Future<int> topupTx({String paymentMethod = 'qris'}) async {
+      final result =
+          await wallets.topup(amount: 25000, paymentMethod: paymentMethod);
+      return result.data.paymentTransactionId;
+    }
+
     test('daftar metode berisi qris dan virtual_account', () async {
       final result = await payments.fetchMethods();
       final codes = result.data.map((m) => m.code).toSet();
       expect(codes, containsAll(['qris', 'virtual_account']));
     });
 
-    test('transaksi menempel pada sesi checkout, order_id null', () async {
+    test('✅ transaksi pesanan: wallet, LUNAS sejak lahir, order_id null',
+        () async {
       final placed = await placeOrder();
       final payment = (await payments.fetchPayment(placed.txId)).data;
 
       expect(payment.checkoutSessionId, isNotEmpty);
-      expect(payment.isPending, isTrue);
+      expect(payment.isPending, isFalse);
+      expect(payment.status, 'paid');
+      expect(payment.paymentMethod, 'wallet');
       expect(payment.amount, greaterThan(0));
     });
 
-    test('pay dengan metode qris menghasilkan qr_string', () async {
-      final placed = await placeOrder();
-      final instruction = (await payments.pay(placed.txId)).data;
+    test('pay top up dengan metode qris menghasilkan qr_string', () async {
+      final txId = await topupTx();
+      final instruction = (await payments.pay(txId)).data;
 
       expect(instruction.kind, PaymentInstructionKind.qris);
       expect(instruction.qrString, isNotEmpty);
       expect(instruction.expiresAt, isNotNull);
     });
 
-    test('pay dengan metode virtual_account menghasilkan va_number', () async {
-      final placed = await placeOrder(paymentMethod: 'virtual_account');
-      final instruction = (await payments.pay(placed.txId)).data;
+    test('pay top up dengan metode virtual_account menghasilkan va_number',
+        () async {
+      final txId = await topupTx(paymentMethod: 'virtual_account');
+      final instruction = (await payments.pay(txId)).data;
 
       expect(instruction.kind, PaymentInstructionKind.virtualAccount);
       expect(instruction.vaNumber, isNotEmpty);
@@ -318,14 +381,13 @@ void main() {
     });
 
     test(
-      '🔴 metode ditentukan saat CONFIRM, bukan saat pay',
+      '🔴 metode ditentukan saat transaksi DIBUAT, bukan saat pay',
       () async {
-        // Ini alasan pemilihan metode ada di layar checkout, bukan layar
-        // pembayaran: body `payment_method` pada /pay diabaikan server.
-        final placed = await placeOrder(paymentMethod: 'virtual_account');
+        // Body `payment_method` pada /pay diabaikan server.
+        final txId = await topupTx(paymentMethod: 'virtual_account');
 
         final withQris = await dio.post<dynamic>(
-          '/payments/${placed.txId}/pay',
+          '/payments/$txId/pay',
           data: {'payment_method': 'qris'},
         );
 
@@ -338,9 +400,8 @@ void main() {
 
     test('✅ expired_at dan created_at kini SEZONA — selisihnya 1 jam',
         () async {
-      // Sama seperti payment_deadline di order: dulu 8 jam, kini 1 jam.
-      final placed = await placeOrder();
-      final payment = (await payments.fetchPayment(placed.txId)).data;
+      final txId = await topupTx();
+      final payment = (await payments.fetchPayment(txId)).data;
 
       final gap = payment.expiredAt!.difference(payment.createdAt!);
       expect(gap, const Duration(hours: 1));

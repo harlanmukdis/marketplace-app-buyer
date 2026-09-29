@@ -43,6 +43,7 @@ class _FakeAuthRepository implements AuthRepository {
     required String password,
     required String fullName,
     required String phone,
+    required String idCardNumber,
   }) async =>
       throw UnimplementedError();
 

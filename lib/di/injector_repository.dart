@@ -113,7 +113,10 @@ void initializeRepository() {
   );
 
   injector.registerLazySingleton<CheckoutRepository>(
-    () => CheckoutRepositoryImpl(injector<CheckoutService>()),
+    () => CheckoutRepositoryImpl(
+      injector<CheckoutService>(),
+      injector<WalletService>(),
+    ),
   );
 
   injector.registerLazySingleton<OrderRepository>(

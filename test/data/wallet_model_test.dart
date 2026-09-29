@@ -65,6 +65,16 @@ void main() {
       expect(tx('fee').isCredit, isFalse);
     });
 
+    test('pembayaran pesanan (checkout wallet-only) mengurangi saldo', () {
+      // Jenis baru sejak backend d9ecb33. Sebelum dipetakan, ia jatuh ke
+      // `unknown` yang dianggap kredit — setiap belanja tampil sebagai
+      // pemasukan.
+      expect(tx('order_payment').type, WalletTxType.orderPayment);
+      expect(tx('order_payment').isCredit, isFalse);
+      expect(tx('order_payment').signedAmount, -75000);
+      expect(tx('order_payment').label, 'Pembayaran pesanan');
+    });
+
     test('topup, cashback, dan refund menambah saldo', () {
       expect(tx('topup').isCredit, isTrue);
       expect(tx('cashback').isCredit, isTrue);

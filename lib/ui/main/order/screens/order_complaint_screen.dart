@@ -18,10 +18,8 @@ import 'package:marketplace_app_member/util/format_helper.dart';
 /// Ajukan Komplain / Refund (desain §3.16 `ajukan_komplain_refund`).
 ///
 /// Bukti foto/video diunggah lewat `POST /media/upload` (**sungguhan**) lalu
-/// URL-nya ikut dikirim ke `POST /orders/{id}/refund-request` sebagai field
-/// **yang diusulkan** `evidence_urls` (docs/22 #5). ⚠️ Controller-nya hari ini
-/// hanya membaca `reason` dan `amount`, jadi bukti yang sudah terunggah
-/// **belum tersimpan pada komplain** sampai backend membacanya.
+/// URL-nya ikut dikirim ke `POST /orders/{id}/refund-request` sebagai body
+/// `evidence` dan tersimpan pada komplain (backend `0307edf`, docs/22 #5).
 ///
 /// Bukti **opsional**: desain menandainya "*Wajib disertakan", sedangkan
 /// aturan desain 7 hanya "diizinkan" — keputusan produk yang belum diambil,

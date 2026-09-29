@@ -1,8 +1,0 @@
-{
-  "order_ids": [101, 102],
-  "payment_transaction_id": 55,
-  "paid": true,
-  "wallet_transaction_id": 9001,
-  "balance_after": "1457000.00",
-  "paid_at": "2026-09-29 10:15:00"
-}

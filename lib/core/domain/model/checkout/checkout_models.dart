@@ -238,14 +238,15 @@ abstract class CheckoutConfirmResult with _$CheckoutConfirmResult {
     @JsonKey(name: 'payment_transaction_id')
     int? paymentTransactionId,
 
-    // --- kontrak YANG DIUSULKAN untuk bayar via Xpedia Wallet (docs/22 #1–#2)
+    // --- Pembayaran Xpedia Wallet (docs/22 #1–#2, backend `d9ecb33`)
     //
-    // Belum dikirim server; di debug disisipkan mock
-    // (`checkout_mock_routes.dart`). Pada alur lama ketiganya tidak ada, jadi
-    // default-nya harus berarti "belum dibayar".
+    // Server TIDAK mengirim field di bawah (balasannya hanya `order_ids` +
+    // `payment_transaction_id`); `CheckoutRepositoryImpl.confirm` mengisi
+    // `paid` dan `balanceAfter`. Dua lainnya tetap dibaca kalau suatu saat
+    // dikirim.
 
-    /// `true` kalau konfirmasi **sekaligus membayar** dari saldo Wallet.
-    /// `false` di alur lama: order masih harus dibayar di layar pembayaran.
+    /// `true` kalau konfirmasi **sekaligus membayar** dari saldo Wallet —
+    /// selalu, sejak checkout wallet-only.
     @BoolJson() @Default(false) bool paid,
 
     /// Baris `wallet_transactions` hasil pendebitan.
@@ -264,21 +265,12 @@ abstract class CheckoutConfirmResult with _$CheckoutConfirmResult {
   bool get isMultiStore => orderIds.length > 1;
 }
 
-/// Ringkasan pembayaran Xpedia Wallet untuk satu sesi checkout —
-/// **kontrak yang diusulkan**, `GET /checkout/sessions/{id}/wallet-summary`.
+/// Ringkasan pembayaran Xpedia Wallet untuk satu sesi checkout.
 ///
-/// 🔴 Endpoint ini **belum ada** di marketplace-api (docs/22 #1: checkout
-/// wajib Wallet). Di debug dijawab mock; di build yang mock-nya mati, rute
-/// tak dikenal dibalas 404 HTML (`DataError.isRouteNotFound`) dan checkout
-/// kembali ke pemilih metode pembayaran lama. Jadi begitu backend
-/// membangunnya dengan bentuk ini, alur Wallet menyala sendiri.
-///
-/// Kenapa dihitung server, bukan dirakit aplikasi dari `GET /wallet` +
-/// `grand_total`: saldo yang **boleh dipakai** (dikurangi saldo tertahan),
-/// total final (ongkir + voucher), dan apakah PIN sudah dibuat hanya diketahui
-/// server — dan `GET /wallet` sama sekali tidak memberi tahu soal PIN
-/// (CLAUDE.md, "Dompet"). Menghitungnya di dua tempat mengundang layar yang
-/// bilang "saldo cukup" lalu server menolak.
+/// `GET /checkout/sessions/{id}/wallet-summary` yang diusulkan **tidak
+/// dibangun** backend, jadi model ini dirakit `CheckoutRepositoryImpl` dari
+/// `GET /wallet` (saldo tersedia = `balance − held_balance`) dan `grand_total`
+/// sesi. `pinSet` tidak bisa diketahui dari server mana pun.
 @freezed
 abstract class WalletSummaryModel with _$WalletSummaryModel {
   const WalletSummaryModel._();
@@ -319,9 +311,10 @@ abstract class WalletSummaryModel with _$WalletSummaryModel {
   }
 }
 
-/// Kode error **yang diusulkan** untuk bayar via Wallet. Belum ada di
-/// `ApiErrorCode` karena backend belum mengirimnya — pindahkan ke sana (dan
-/// ke `errorMessageFor`) begitu endpointnya dibangun.
+/// Kode error bayar via Wallet yang **dibuat aplikasi**: server mengirim
+/// `CHECKOUT_CONFIRM_FAILED` untuk PIN salah, PIN belum dibuat, dan sesi
+/// kedaluwarsa sekaligus. `CheckoutRepositoryImpl.confirm` menerjemahkan yang
+/// menyangkut PIN jadi [invalidPin].
 abstract final class WalletPayErrorCode {
   /// PIN salah. `details.attempts_left` = sisa percobaan sebelum 429.
   static const invalidPin = 'INVALID_PIN';

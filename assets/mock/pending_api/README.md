@@ -76,50 +76,30 @@ Dua tahap, sesuai saran docs/22 #10 ("OTP ke kontak lama → OTP ke kontak baru
 | `GET /me/sessions`, `DELETE /me/sessions/{id}` | Dipakai layar Keamanan Akun apa adanya. **Usulan field `is_current`** (boolean) per baris — app kini menebaknya dari `created_at` yang paling dekat dengan saat access token diterbitkan, dan otomatis memakai `is_current` begitu dikirim. 🔴 **Temuan**: `Jwt_auth::refresh()` menyisipkan baris `user_sessions` baru tiap refresh **tanpa mencabut yang lama**, jadi refresh token lama tetap sah 30 hari dan daftar sesi tumbuh satu baris per 15 menit. App mengelompokkan baris per `device_id`+`user_agent`+`ip_address` dan mencabut semuanya saat "Keluarkan"; perbaikan sebenarnya adalah merotasi (mencabut) baris lama saat refresh. `DELETE` juga membalas `200` untuk id apa pun dan tidak menolak sesi yang sedang dipakai. |
 | `POST /auth/forgot-password`, `POST /auth/reset-password` | Sudah dipakai layar Lupa/Atur Ulang Kata Sandi. `dev_reset_token` (development) dipakai tombol debug "Buka tautan reset (dev)". Tautan email menunjuk `base_url/reset-password?token=` — belum ada deep link ke app, jadi app menyediakan kolom tempel kode. `reset-password` tidak memvalidasi panjang `new_password` sama sekali. |
 
-### Checkout & Wallet
+### Checkout & Wallet — ✅ dibangun backend, mock DIHAPUS (29 September 2026)
 
-Rute mock: `lib/config/network/mock/routes/checkout_mock_routes.dart`.
-Konvensi fixture domain ini: **isi `data` saja** (bukan amplop lengkap),
-kecuali [`checkout/wallet_confirm_errors.json`](checkout/wallet_confirm_errors.json)
-yang berisi blok `error` per kode beserta status HTTP-nya. Keadaan mock (saldo
-simulasi, percobaan PIN) disimpan di memori dan hilang saat app dimulai
-ulang. Semua endpoint **butuh token**.
+Backend `d9ecb33` (docs/22 #1–#2) menjadikan checkout **wallet-only**, jadi
+rute mock `checkout_mock_routes.dart` beserta fixture `checkout/*` sudah
+dihapus dan app memakai server sungguhan. Kontraknya **berbeda** dari usulan
+di sini; catatan untuk backend:
 
-Menutup docs/22 **#1** (checkout wajib Xpedia Wallet), **#2** (PIN 6 digit
-untuk setiap pembayaran) dan **#12** (minimum top up Rp 10.000).
-Aturan desain yang membentuk kontraknya (design_buyer.md §5): saldo dan total
-tagihan tampil di **satu blok**; saldo kurang → tombol Bayar mati + selisih +
-"Top Up"; **tidak ada bayar satu ketukan**.
+| Usulan | Yang dibangun | Dampak ke app |
+|---|---|---|
+| `GET /checkout/sessions/{id}/wallet-summary` | **Tidak dibangun** | App merakit ringkasannya sendiri dari `GET /wallet` + `grand_total` sesi. `pin_set` tidak bisa diketahui — masih diusulkan. |
+| `confirm` `{payment_method: "wallet", pin}` | `{pin}` saja; `payment_method` tidak lagi dibaca | Pemilih metode QRIS/VA dibuang dari checkout. |
+| Balasan + `paid`, `wallet_transaction_id`, `balance_after`, `paid_at` | Hanya `{order_ids, payment_transaction_id}` | App menandai `paid` sendiri dan membaca sisa saldo dari `GET /wallet`. |
+| `422 PIN_NOT_SET`, `422 INVALID_PIN` (`attempts_left`) | 🔴 Keduanya **`422 CHECKOUT_CONFIRM_FAILED`** — kode yang sama dengan sesi kedaluwarsa | App membaca ulang sesi: masih `stock_reserved` → masalah PIN. Salah vs belum-dibuat tetap tak bisa dibedakan. **Usulan: kirim `INVALID_PIN` / `PIN_NOT_SET`.** |
+| `INSUFFICIENT_BALANCE` dengan `details: {balance, required}` | Kode sama, **`details: null`** | Selisih dihitung app dari ringkasannya sendiri. |
+| Rate limit hanya menghitung PIN **salah** | 🔴 Menghitung **setiap** verifikasi, termasuk yang benar, dan kuotanya **dibagi** dengan penarikan (5 / 15 menit / user) | Pembeli yang tak pernah salah PIN hanya bisa checkout 5× per 15 menit. **Usulan: hitung yang salah saja.** |
 
-#### Ringkasan saldo untuk satu sesi — docs/22 #1, #12
-
-| | |
-|---|---|
-| **`GET /checkout/sessions/{id}/wallet-summary`** | Saldo Wallet vs tagihan sesi ini. Dipanggil app setiap kali sesi dimuat ulang (ganti kurir/alamat mengubah `grand_total`). |
-| Respons `200` | [`checkout/wallet_summary.json`](checkout/wallet_summary.json). `wallet_balance` = saldo yang **boleh dipakai** (`balance − held_balance`); `grand_total` = `grand_total` sesi (sudah termasuk ongkir & voucher); `shortfall` = `max(0, grand_total − wallet_balance)`; `can_pay` (boolean) = `shortfall == 0`; `min_topup` = minimum top up dari `admin_settings` (fallback `10000`); `pin_set` (boolean) = PIN Wallet sudah dibuat. Uang boleh string berdesimal seperti kolom lain. |
-| Error | `404 SESSION_NOT_FOUND` (sesi tak dikenal / milik orang lain). |
-| Kenapa endpoint sendiri | `GET /wallet` tidak memberi tahu apakah PIN sudah ada (tidak ada cara menanyakannya hari ini), dan menghitung "cukup/tidak" di dua tempat mengundang layar yang bilang cukup lalu server menolak. |
-| Deteksi di app | Rute tak dikenal (404 HTML hari ini) → app memakai **alur lama** (pemilih metode + layar pembayaran). Jadi begitu endpoint ini dibangun, alur Wallet menyala sendiri di build release. |
-| Perilaku mock | Dijawab seluruhnya oleh mock. `grand_total` diambil dari `GET /checkout/sessions/{id}` sungguhan terakhir; saldo dari fixture (**Rp 2.500.000 simulasi**, bukan `GET /wallet` — saldo dev selalu 0). `meta.mock_pin` berisi PIN simulasi untuk petunjuk di layar — **backend tidak boleh mengirim field itu**. `--dart-define=MOCK_WALLET_BALANCE=0` memaksa saldo kurang; `--dart-define=MOCK_WALLET_PIN_SET=false` memaksa "PIN belum dibuat" (membuat PIN lewat `POST /me/withdrawal-pin` sungguhan menyalakannya lagi). |
-
-#### Konfirmasi + bayar dengan Wallet — docs/22 #1, #2
-
-| | |
-|---|---|
-| **`POST /checkout/sessions/{id}/confirm`** | Endpoint yang sudah ada, body diperluas: `{"payment_method": "wallet", "pin": "123456"}`. Metode lain tetap berperilaku seperti hari ini (sampai Wallet dijadikan satu-satunya metode). |
-| Yang diharapkan server | Dalam **satu transaksi DB**: verifikasi PIN → cek saldo → buat order (seperti sekarang) → debit `wallets` + baris `wallet_transactions` (`type` pembayaran) → `payment_transactions.status = paid` → order `paid`. `wallet` perlu ditambahkan ke ENUM `payment_transactions.payment_method`. |
-| Respons `200` | [`checkout/wallet_confirm.json`](checkout/wallet_confirm.json): field hari ini (`order_ids` array, `payment_transaction_id`) **ditambah** `paid: true`, `wallet_transaction_id`, `balance_after`, `paid_at` (WIB). |
-| Error | Urutan pemeriksaan: `422 PIN_NOT_SET` → `429 TOO_MANY_REQUESTS` (≥5 PIN **salah** per 15 menit per user) → `422 VALIDATION_ERROR` (PIN bukan 6 digit) → `422 INVALID_PIN` (`details.attempts_left`) → `422 INSUFFICIENT_BALANCE` (`details: {balance, required}` dalam rupiah penuh — kode dan bentuk yang sudah dikenal app) → `422 CHECKOUT_CONFIRM_FAILED` (seperti hari ini). Saldo sengaja diperiksa **sesudah** PIN supaya orang yang tidak tahu PIN tidak bisa mengintip cukup-tidaknya saldo. Contoh: [`checkout/wallet_confirm_errors.json`](checkout/wallet_confirm_errors.json). |
-| 🔴 Rate limit | Hitung **percobaan salah saja**, lalu kosongkan saat PIN benar. Batas login dan PIN penarikan hari ini ikut menghitung percobaan benar (CLAUDE.md "Rate limit auth"), yang mengunci pembeli yang tidak pernah salah. |
-| PIN | Satu PIN Wallet untuk bayar **dan** tarik saldo — dibuat/diganti lewat `POST /me/withdrawal-pin` yang sudah ada. Tidak ada endpoint reset PIN; app mengarahkan "Lupa PIN" ke Xpedia 911. |
-| Idempotensi | `Idempotency-Key` belum ada di backend; app tidak pernah mengulang `confirm` otomatis, dan konfirmasi kedua tetap harus `422 CHECKOUT_CONFIRM_FAILED` (tanpa debit ganda). |
-| Perilaku mock | PIN simulasi yang benar: **`123456`**. PIN, saldo, dan batas percobaan diperiksa mock; bila lolos, request **diteruskan ke server sungguhan** dengan `payment_method` diganti `qris` dan `pin` dibuang, sehingga **order sungguhan terbentuk tapi tetap `pending`** di server (tidak ada yang membayar QRIS-nya). Balasannya diperkaya `paid`/`wallet_transaction_id` (rentang 900000+)/`balance_after`/`paid_at` (`meta.mock_fields`), dan saldo simulasi dikurangi. Layar sukses menyebut status `pending` itu terang-terangan. |
+Jenis mutasi dompet baru `order_payment` (debit) sudah dipetakan app.
+Minimum top up Rp 10.000 kini ditegakkan server (backend `7ce3b92`).
 
 #### Tidak di-mock (endpoint sudah ada, kosong di dev)
 
 | Endpoint | Catatan untuk backend |
 |---|---|
-| `POST /wallet/topup` | Dipakai dari blok saldo kurang di checkout (minimum Rp 10.000 ditegakkan app — docs/22 #12, server belum). Saldo simulasi checkout **tidak** ikut bertambah; di dev transaksi top up tidak bisa dibayar (callback pembayaran rusak, lihat CLAUDE.md). |
+| `POST /wallet/topup` | Dipakai dari blok saldo kurang di checkout (minimum Rp 10.000 — kini ditegakkan app **dan** server). Di dev transaksi top up tidak bisa dibayar (callback pembayaran rusak, lihat CLAUDE.md); test integrasi menyuntik saldo lewat SQL (`test/integration/support/dev_db.dart`). |
 | `GET /me/vouchers`, `POST /vouchers/claim` | Layar Voucher Saya. Selalu `[]` — tidak ada voucher yang di-seed. `GET /me/vouchers` ikut mengembalikan voucher `expired`/`inactive` (query tidak menyaring status); app menonaktifkan tombol "Pakai"-nya. |
 | `GET /cart/recommended-vouchers`, `POST /cart/vouchers/auto-apply` | 🔴 Keduanya **500 HTML kalau tidak ada baris keranjang tercentang** (`store_id IN ()` di `list_eligible_vouchers`). App tidak memanggilnya saat `item_count == 0`; perbaikan server: kembalikan `[]` bila `by_store` kosong. |
 | `POST /cart/apply-voucher`, `DELETE /cart/vouchers/{code}` | Sudah dipakai. Kode `VOUCHER_QUOTA_EXCEEDED`, `VOUCHER_ALREADY_USED`, `VOUCHER_MIN_SPEND_NOT_MET` dikirim apa adanya dari `RuntimeException` dan kini dipetakan app. |

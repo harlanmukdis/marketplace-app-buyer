@@ -1,13 +1,22 @@
+import 'dart:async';
+
 import 'package:marketplace_app_member/config/network/api_exception.dart';
 import 'package:marketplace_app_member/core/data/datasources/remote/service/checkout_service.dart';
+import 'package:marketplace_app_member/core/data/datasources/remote/service/wallet_service.dart';
 import 'package:marketplace_app_member/core/data_state.dart';
 import 'package:marketplace_app_member/core/domain/model/checkout/checkout_models.dart';
 import 'package:marketplace_app_member/core/domain/repositories/checkout_repository.dart';
 
 class CheckoutRepositoryImpl implements CheckoutRepository {
-  CheckoutRepositoryImpl(this._service);
+  CheckoutRepositoryImpl(this._service, this._wallet);
 
   final CheckoutService _service;
+  final WalletService _wallet;
+
+  /// Minimum top up (blueprint Rp 10.000). Sejak backend `7ce3b92` ikut
+  /// ditegakkan server di `POST /wallet/topup`, tapi nilainya tidak dikirim ke
+  /// mana pun — jadi tetap disalin di sini.
+  static const double minimumTopup = 10000;
 
   @override
   Future<DataState<CheckoutSnapshot>> startSession({
@@ -62,28 +71,90 @@ class CheckoutRepositoryImpl implements CheckoutRepository {
   @override
   Future<DataState<CheckoutConfirmResult>> confirm(
     String sessionId, {
-    required String paymentMethod,
-    String? pin,
+    required String pin,
   }) async {
     try {
-      final env = await _service.confirm(
-        sessionId,
-        paymentMethod: paymentMethod,
-        pin: pin,
+      final env = await _service.confirm(sessionId, pin: pin);
+      // Server wallet-only: konfirmasi yang berhasil PASTI sudah dibayar,
+      // walau balasannya tidak menyebutnya.
+      final result = env.data.copyWith(
+        paid: true,
+        balanceAfter: await _availableBalanceOrNull(),
       );
-      return DataSuccess(env.data, meta: env.meta, statusCode: env.statusCode);
+      return DataSuccess(result, meta: env.meta, statusCode: env.statusCode);
     } on ApiException catch (e) {
-      return DataFailed(e.error);
+      if (e.error.code != ApiErrorCode.checkoutConfirmFailed) {
+        return DataFailed(e.error);
+      }
+      return DataFailed(await _explainConfirmFailure(sessionId, e.error));
+    }
+  }
+
+  /// `CHECKOUT_CONFIRM_FAILED` dipakai server untuk empat hal: PIN salah, PIN
+  /// belum dibuat, sesi kedaluwarsa, dan sesi yang sudah dikonfirmasi —
+  /// bedanya hanya di `message`, yang tidak boleh dicocokkan.
+  ///
+  /// Dua yang terakhir mengubah status sesi, dua yang pertama tidak (PIN
+  /// diperiksa sebelum transaksi apa pun dimulai). Jadi sesi yang **masih**
+  /// `stock_reserved` dan belum lewat tenggat berarti masalahnya di PIN —
+  /// dilaporkan sebagai [WalletPayErrorCode.invalidPin] supaya tampil di
+  /// lembar PIN. Salah dan belum-dibuat tetap tidak bisa dibedakan; pesannya
+  /// menyebut keduanya.
+  Future<DataError> _explainConfirmFailure(
+    String sessionId,
+    DataError original,
+  ) async {
+    try {
+      final session = (await _service.fetchSession(sessionId)).data;
+      final expires = session.expiresAt;
+      final stillOpen = session.isStockReserved &&
+          (expires == null || expires.isAfter(DateTime.now()));
+      if (!stillOpen) return original;
+      return DataError(
+        code: WalletPayErrorCode.invalidPin,
+        message: original.message,
+        details: const {'pin_maybe_not_set': true},
+        statusCode: original.statusCode,
+        kind: original.kind,
+      );
+    } on ApiException {
+      return original;
+    }
+  }
+
+  /// Saldo yang bisa dipakai, atau `null` kalau `GET /wallet` gagal — hanya
+  /// pelengkap layar sukses, tidak boleh menggagalkan apa pun.
+  Future<double?> _availableBalanceOrNull() async {
+    try {
+      return (await _wallet.fetchWallet()).data.availableBalance;
+    } on ApiException {
+      return null;
     }
   }
 
   @override
   Future<DataState<WalletSummaryModel>> fetchWalletSummary(
       String sessionId) async {
+    // Ditembak paralel, di-`await` terpisah (lihat `_load`).
+    final walletFuture = _wallet.fetchWallet();
+    final sessionFuture = _service.fetchSession(sessionId);
     try {
-      final env = await _service.fetchWalletSummary(sessionId);
-      return DataSuccess(env.data, meta: env.meta, statusCode: env.statusCode);
+      final wallet = (await walletFuture).data;
+      final session = (await sessionFuture).data;
+      final balance = wallet.availableBalance;
+      final total = session.grandTotal;
+      final shortfall = total > balance ? total - balance : 0.0;
+      return DataSuccess(WalletSummaryModel(
+        walletBalance: balance,
+        grandTotal: total,
+        shortfall: shortfall,
+        canPay: shortfall == 0,
+        minTopup: minimumTopup,
+        pinSet: true,
+      ));
     } on ApiException catch (e) {
+      // Pastikan future yang satunya tidak jadi unhandled error.
+      unawaited(sessionFuture.then((_) {}, onError: (_) {}));
       return DataFailed(e.error);
     }
   }

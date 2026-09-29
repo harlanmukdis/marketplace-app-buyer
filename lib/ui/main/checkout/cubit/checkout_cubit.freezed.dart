@@ -155,8 +155,6 @@ extension CheckoutStatePatterns on CheckoutState {
     TResult Function()? preparing,
     TResult Function(
             CheckoutSnapshot snapshot,
-            List<PaymentMethodModel> paymentMethods,
-            String selectedPaymentMethod,
             CheckoutPaymentMode paymentMode,
             WalletSummaryModel? wallet,
             Map<String, dynamic>? walletMeta,
@@ -180,8 +178,6 @@ extension CheckoutStatePatterns on CheckoutState {
       case CheckoutReady() when ready != null:
         return ready(
             _that.snapshot,
-            _that.paymentMethods,
-            _that.selectedPaymentMethod,
             _that.paymentMode,
             _that.wallet,
             _that.walletMeta,
@@ -219,8 +215,6 @@ extension CheckoutStatePatterns on CheckoutState {
     required TResult Function() preparing,
     required TResult Function(
             CheckoutSnapshot snapshot,
-            List<PaymentMethodModel> paymentMethods,
-            String selectedPaymentMethod,
             CheckoutPaymentMode paymentMode,
             WalletSummaryModel? wallet,
             Map<String, dynamic>? walletMeta,
@@ -244,8 +238,6 @@ extension CheckoutStatePatterns on CheckoutState {
       case CheckoutReady():
         return ready(
             _that.snapshot,
-            _that.paymentMethods,
-            _that.selectedPaymentMethod,
             _that.paymentMode,
             _that.wallet,
             _that.walletMeta,
@@ -280,8 +272,6 @@ extension CheckoutStatePatterns on CheckoutState {
     TResult? Function()? preparing,
     TResult? Function(
             CheckoutSnapshot snapshot,
-            List<PaymentMethodModel> paymentMethods,
-            String selectedPaymentMethod,
             CheckoutPaymentMode paymentMode,
             WalletSummaryModel? wallet,
             Map<String, dynamic>? walletMeta,
@@ -304,8 +294,6 @@ extension CheckoutStatePatterns on CheckoutState {
       case CheckoutReady() when ready != null:
         return ready(
             _that.snapshot,
-            _that.paymentMethods,
-            _that.selectedPaymentMethod,
             _that.paymentMode,
             _that.wallet,
             _that.walletMeta,
@@ -351,9 +339,6 @@ class CheckoutPreparing extends CheckoutState {
 class CheckoutReady extends CheckoutState {
   const CheckoutReady(
       {required this.snapshot,
-      final List<PaymentMethodModel> paymentMethods =
-          const <PaymentMethodModel>[],
-      this.selectedPaymentMethod = '',
       this.paymentMode = CheckoutPaymentMode.detecting,
       this.wallet,
       final Map<String, dynamic>? walletMeta,
@@ -364,47 +349,21 @@ class CheckoutReady extends CheckoutState {
       this.pinError,
       this.isToppingUp = false,
       this.pendingTopupTxId})
-      : _paymentMethods = paymentMethods,
-        _walletMeta = walletMeta,
+      : _walletMeta = walletMeta,
         super._();
 
   final CheckoutSnapshot snapshot;
-
-  /// Metode pembayaran yang tersedia, dari `GET /payment-methods`.
-  ///
-  /// Ada di layar checkout — **bukan** di layar pembayaran — karena metode
-  /// terikat pada transaksi saat konfirmasi; `POST /payments/{txId}/pay`
-  /// mengabaikan metode yang dikirim belakangan. Hanya dipakai pada
-  /// [CheckoutPaymentMode.legacy].
-  final List<PaymentMethodModel> _paymentMethods;
-
-  /// Metode pembayaran yang tersedia, dari `GET /payment-methods`.
-  ///
-  /// Ada di layar checkout — **bukan** di layar pembayaran — karena metode
-  /// terikat pada transaksi saat konfirmasi; `POST /payments/{txId}/pay`
-  /// mengabaikan metode yang dikirim belakangan. Hanya dipakai pada
-  /// [CheckoutPaymentMode.legacy].
-  @JsonKey()
-  List<PaymentMethodModel> get paymentMethods {
-    if (_paymentMethods is EqualUnmodifiableListView) return _paymentMethods;
-    // ignore: implicit_dynamic_type
-    return EqualUnmodifiableListView(_paymentMethods);
-  }
-
-  /// Kode metode terpilih. Kosong berarti belum memilih.
-  @JsonKey()
-  final String selectedPaymentMethod;
   @JsonKey()
   final CheckoutPaymentMode paymentMode;
 
-  /// Saldo vs tagihan, dari `wallet-summary`. Dipertahankan selama dimuat
+  /// Saldo vs tagihan (`GET /wallet` + `grand_total` sesi). Dipertahankan selama dimuat
   /// ulang supaya bloknya tidak berkedip setiap kurir diganti.
   final WalletSummaryModel? wallet;
 
-  /// `meta` balasan `wallet-summary` — untuk lencana "Simulasi".
+  /// `meta` ringkasan Wallet — untuk lencana "Simulasi" (kini selalu kosong).
   final Map<String, dynamic>? _walletMeta;
 
-  /// `meta` balasan `wallet-summary` — untuk lencana "Simulasi".
+  /// `meta` ringkasan Wallet — untuk lencana "Simulasi" (kini selalu kosong).
   Map<String, dynamic>? get walletMeta {
     final value = _walletMeta;
     if (value == null) return null;
@@ -413,12 +372,12 @@ class CheckoutReady extends CheckoutState {
     return EqualUnmodifiableMapView(value);
   }
 
-  /// `wallet-summary` sedang dimuat (ulang). Tombol bayar mati selama itu:
+  /// Ringkasan Wallet sedang dimuat (ulang). Tombol bayar mati selama itu:
   /// ringkasan lama bisa menyatakan "cukup" untuk total yang sudah berubah.
   @JsonKey()
   final bool walletLoading;
 
-  /// Gagal memuat `wallet-summary` karena sebab **selain** rute tak dikenal.
+  /// Gagal memuat ringkasan Wallet.
   final DataError? walletError;
 
   /// Sedang mengirim pilihan kurir atau konfirmasi.
@@ -426,7 +385,7 @@ class CheckoutReady extends CheckoutState {
   final bool isSubmitting;
   final DataError? actionError;
 
-  /// Penolakan PIN (`INVALID_PIN`, `TOO_MANY_REQUESTS`) — ditampilkan di
+  /// Penolakan PIN (`INVALID_PIN` terjemahan repository, `TOO_MANY_REQUESTS`) — ditampilkan di
   /// dalam lembar PIN, bukan sebagai snackbar di belakangnya.
   final DataError? pinError;
 
@@ -452,10 +411,6 @@ class CheckoutReady extends CheckoutState {
             other is CheckoutReady &&
             (identical(other.snapshot, snapshot) ||
                 other.snapshot == snapshot) &&
-            const DeepCollectionEquality()
-                .equals(other._paymentMethods, _paymentMethods) &&
-            (identical(other.selectedPaymentMethod, selectedPaymentMethod) ||
-                other.selectedPaymentMethod == selectedPaymentMethod) &&
             (identical(other.paymentMode, paymentMode) ||
                 other.paymentMode == paymentMode) &&
             (identical(other.wallet, wallet) || other.wallet == wallet) &&
@@ -481,8 +436,6 @@ class CheckoutReady extends CheckoutState {
   int get hashCode => Object.hash(
       runtimeType,
       snapshot,
-      const DeepCollectionEquality().hash(_paymentMethods),
-      selectedPaymentMethod,
       paymentMode,
       wallet,
       const DeepCollectionEquality().hash(_walletMeta),
@@ -496,7 +449,7 @@ class CheckoutReady extends CheckoutState {
 
   @override
   String toString() {
-    return 'CheckoutState.ready(snapshot: $snapshot, paymentMethods: $paymentMethods, selectedPaymentMethod: $selectedPaymentMethod, paymentMode: $paymentMode, wallet: $wallet, walletMeta: $walletMeta, walletLoading: $walletLoading, walletError: $walletError, isSubmitting: $isSubmitting, actionError: $actionError, pinError: $pinError, isToppingUp: $isToppingUp, pendingTopupTxId: $pendingTopupTxId)';
+    return 'CheckoutState.ready(snapshot: $snapshot, paymentMode: $paymentMode, wallet: $wallet, walletMeta: $walletMeta, walletLoading: $walletLoading, walletError: $walletError, isSubmitting: $isSubmitting, actionError: $actionError, pinError: $pinError, isToppingUp: $isToppingUp, pendingTopupTxId: $pendingTopupTxId)';
   }
 }
 
@@ -509,8 +462,6 @@ abstract mixin class $CheckoutReadyCopyWith<$Res>
   @useResult
   $Res call(
       {CheckoutSnapshot snapshot,
-      List<PaymentMethodModel> paymentMethods,
-      String selectedPaymentMethod,
       CheckoutPaymentMode paymentMode,
       WalletSummaryModel? wallet,
       Map<String, dynamic>? walletMeta,
@@ -538,8 +489,6 @@ class _$CheckoutReadyCopyWithImpl<$Res>
   @pragma('vm:prefer-inline')
   $Res call({
     Object? snapshot = null,
-    Object? paymentMethods = null,
-    Object? selectedPaymentMethod = null,
     Object? paymentMode = null,
     Object? wallet = freezed,
     Object? walletMeta = freezed,
@@ -556,14 +505,6 @@ class _$CheckoutReadyCopyWithImpl<$Res>
           ? _self.snapshot
           : snapshot // ignore: cast_nullable_to_non_nullable
               as CheckoutSnapshot,
-      paymentMethods: null == paymentMethods
-          ? _self._paymentMethods
-          : paymentMethods // ignore: cast_nullable_to_non_nullable
-              as List<PaymentMethodModel>,
-      selectedPaymentMethod: null == selectedPaymentMethod
-          ? _self.selectedPaymentMethod
-          : selectedPaymentMethod // ignore: cast_nullable_to_non_nullable
-              as String,
       paymentMode: null == paymentMode
           ? _self.paymentMode
           : paymentMode // ignore: cast_nullable_to_non_nullable

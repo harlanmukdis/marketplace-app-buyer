@@ -53,6 +53,7 @@ class _FakeAuthRepository implements AuthRepository {
     required String password,
     required String fullName,
     required String phone,
+    required String idCardNumber,
   }) async =>
       registerResult;
 
@@ -160,6 +161,7 @@ void main() {
         password: 'secret123',
         fullName: 'Budi',
         phone: '081200000001',
+        idCardNumber: '3171010101010001',
       );
 
       // Bukan authenticated (tidak ada refresh token) dan bukan gagal

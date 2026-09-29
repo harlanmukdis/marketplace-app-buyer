@@ -6,7 +6,7 @@
 > - `CLAUDE.md` = aturan, konvensi, dan seluruh keanehan backend yang sudah diuji ke server.
 > - Dokumen ini = **apa saja yang sudah ada**, di mana letaknya, sumber datanya (API sungguhan / mock), dan apa yang belum.
 >
-> Terakhir diperbarui: 29 September 2026 (sinkron backend `6546a65`, desain Stitch Xpedia, mock API putaran 2).
+> Terakhir diperbarui: 29 September 2026 malam (sinkron backend `45568d9` — **sebagian**, sisanya di §7; desain Stitch Xpedia, mock API putaran 2).
 
 ---
 
@@ -14,16 +14,19 @@
 
 Backend (`marketplace-api`, `https://github.com/albertnagawan14/marketplace-api`) bergerak lebih cepat dari app ini. Sudah **tiga kali** perubahan backend diam-diam membatalkan akalan yang tertanam di kode. Jadi **sebelum mengerjakan apa pun**, AI atau developer wajib menjalankan langkah ini.
 
-**Commit backend terakhir yang sudah disinkronkan: `6546a65`** (29 September 2026).
+**Commit backend terakhir yang sudah disinkronkan: `45568d9`** (`origin/main`, 29 September 2026) — sebagian; item yang belum dikerjakan ada di §7.
+
+⚠️ **Repo API lokal ada di branch `main-harlan`, bukan `main`.** Branch itu punya commit sendiri (dokumen v2, perbaikan CORS di `index.php`) yang tidak ada di `origin/main`, jadi `git pull --ff-only` tidak jalan dan `git diff <acuan>..origin/main` menyesatkan (CORS terlihat "dihapus"). Bandingkan dari merge-base (tiga titik), lalu **merge** `origin/main` ke `main-harlan`:
 
 ```bash
 cd <marketplace-api>
-git fetch origin && git pull --ff-only
-git log --oneline 6546a65..HEAD                              # ada commit baru?
-git diff 6546a65..HEAD --stat
-git diff 6546a65..HEAD -- application/config/routes.php     # endpoint baru / dihapus / berganti
-git diff 6546a65..HEAD -- database/                          # skema berubah → jalankan file schema barunya saja
-git diff 6546a65..HEAD -- CHANGELOG.md docs/                 # catatan rilis & gap analysis
+git fetch origin
+git log --oneline 45568d9..origin/main                        # ada commit baru?
+git diff 45568d9...origin/main --stat                         # TIGA titik
+git diff 45568d9...origin/main -- application/config/routes.php
+git diff 45568d9...origin/main -- database/                   # skema berubah → jalankan file schema barunya saja
+git diff 45568d9...origin/main -- CHANGELOG.md docs/
+git merge --no-edit origin/main                               # sesudah dilaporkan ke user
 ```
 
 Kalau **tidak ada commit baru**, lanjutkan pekerjaan. Kalau **ada**, sinkronkan dulu sebelum mengerjakan fitur:
@@ -35,11 +38,11 @@ Kalau **tidak ada commit baru**, lanjutkan pekerjaan. Kalau **ada**, sinkronkan 
    - ubah kolom "Sumber" di §5 dari MOCK menjadi API.
 2. **Endpoint atau field yang berubah atau dihapus:** cari pemakainya di `lib/core/data/datasources/`, lalu perbarui service, model, dan test.
 3. **Kode error baru:** tambahkan ke `ApiErrorCode` (`lib/core/data_state.dart`) dan `errorMessageFor` (`lib/util/error_message.dart`).
-4. **Skema DB berubah:** jalankan file `database/schema/NN_*.sql` yang baru saja, bukan seluruh folder (supaya seed tidak ganda). Tanda skema tertinggal: endpoint mendadak `500`.
+4. **Skema DB berubah:** jalankan file `database/schema/NN_*.sql` yang baru saja, bukan seluruh folder (supaya seed tidak ganda). Tanda skema tertinggal: endpoint mendadak `500`. Pakai klien **XAMPP** (`/Applications/XAMPP/xamppfiles/bin/mysql`): `mysql` Homebrew v9 tidak bisa login ke MariaDB 10.4 XAMPP (ERROR 2059).
 5. **Jalankan detektor.** `flutter test test/integration --concurrency=1` memaku perilaku server, termasuk bug-bugnya. Test merah biasanya berarti backend berubah, bukan app yang rusak. Baca perubahannya, lalu perbarui app dan test-nya.
 6. **Verifikasi ke server, jangan percaya dokumen.** Urutan otoritas: `routes.php` > kode controller/model > `docs/23` > Postman > docs lain.
 7. **Catat hasilnya:**
-   - perbarui commit acuan di atas (`6546a65` → hash baru) dan tanggal "Terakhir diperbarui";
+   - perbarui commit acuan di atas (`45568d9` → hash baru) dan tanggal "Terakhir diperbarui";
    - tambahkan temuan ke CLAUDE.md (bagian "Backend v…");
    - perbarui tabel §5 dan checklist §7 di dokumen ini;
    - commit perubahan app bersama dokumennya.
@@ -66,7 +69,8 @@ curl -s http://localhost:8000/api/v1/health
 ```
 
 - Akun seed: `budi.santoso@kedaikopi.id` / `RahasiaAman123` (dan 8 lainnya — lihat panduan backend docs/23 §3).
-- Login dibatasi **5×/email & 20×/IP per 15 menit, login BERHASIL ikut dihitung**. Kalau kena `429`: `DELETE FROM auth_rate_limits;` di DB `marketplace`.
+- Login dibatasi **5×/email & 20×/IP per 15 menit, login BERHASIL ikut dihitung**. Kalau kena `429`: `DELETE FROM auth_rate_limits;` di DB `marketplace` (klien XAMPP, lihat §0 langkah 4).
+- Checkout **wallet-only**: test integrasi menyuntik PIN `123456` + saldo lewat SQL (`test/integration/support/dev_db.dart`), jadi MySQL XAMPP wajib bisa dijangkau dari `flutter test`.
 - Test integrasi: `flutter test test/integration --concurrency=1` (wajib serial, maks 2 putaran per 15 menit).
 - E2E app sungguhan: `flutter test integration_test/member_journey_test.dart -d macos`.
 
@@ -110,7 +114,7 @@ Legenda sumber data: **API** = endpoint sungguhan · **MOCK** = endpoint belum a
 | Fitur | Layar (`lib/ui/main/…`) | Sumber | Catatan |
 |---|---|---|---|
 | Splash, onboarding, welcome | `lib/features/…` | — | sudah gaya Xpedia |
-| Login / Daftar | `auth/screens/login_screen.dart`, `register_screen.dart` | API | login berbasis email; register tanpa token → otomatis login |
+| Login / Daftar | `auth/screens/login_screen.dart`, `register_screen.dart` | API | login berbasis email; daftar **wajib NIK 16 digit & unik** (`409 IDENTITY_TAKEN`, backend `3e8906d`); register tanpa token → otomatis login |
 | Lupa & atur ulang sandi | `auth/screens/forgot_password_screen.dart`, `reset_password_screen.dart` | API | debug: tombol "Buka tautan reset (dev)" pakai `dev_reset_token` |
 | My Xpedia (tab profil) | `profile/screens/my_xpedia_screen.dart` | API `/me` | pintu ke semua layar akun |
 | Ubah profil | `profile/screens/edit_profile_screen.dart` | API + MOCK | nama terkunci bila KTP terverifikasi (`IDENTITY_LOCKED`) |
@@ -131,8 +135,8 @@ Legenda sumber data: **API** = endpoint sungguhan · **MOCK** = endpoint belum a
 | Wishlist (tab) | `wishlist/screens/wishlist_screen.dart` | API + MOCK `alert_enabled` | lonceng pantau harga = mock (docs/22 #13); hapus pakai **product_id** |
 | Keranjang | `cart/screens/cart_screen.dart` | API | kuantitas dibatasi app (server tidak validasi); voucher; estimasi koin |
 | Voucher | `voucher/screens/voucher_screen.dart` | API | klaim/pasang/lepas/auto-apply; di dev selalu kosong (tak ada seed) |
-| Checkout | `checkout/screens/checkout_screen.dart` | API + MOCK wallet | blok Xpedia Wallet + PIN (mock, PIN `123456`) → order sungguhan tetap `pending`. Tanpa mock: kembali ke pemilih metode lama |
-| Pembayaran (QRIS/VA) | `payment/screens/payment_screen.dart` | API | dipakai alur lama & topup |
+| Checkout | `checkout/screens/checkout_screen.dart` | API (wallet-only) | saldo dari `GET /wallet` + PIN → order lahir `paid`. Pemilih metode lama dibuang. PIN salah/belum dibuat/sesi kedaluwarsa sama-sama `CHECKOUT_CONFIRM_FAILED` — dibedakan dengan membaca ulang sesi. 🔴 kuota PIN 5/15 mnt ikut menghitung PIN benar |
+| Pembayaran (QRIS/VA) | `payment/screens/payment_screen.dart` | API | kini **hanya untuk top up** saldo |
 
 ### Pesanan
 | Fitur | Layar | Sumber | Catatan |
@@ -140,7 +144,7 @@ Legenda sumber data: **API** = endpoint sungguhan · **MOCK** = endpoint belum a
 | Daftar pesanan (tab) | `order/screens/order_list_screen.dart` | API `/orders` | tanpa filter status (server mengabaikannya) |
 | Detail pesanan | `order/screens/order_detail_screen.dart` | API + MOCK | batal (pending/paid), konfirmasi diterima (+kode segel Secure+ `SEAL-XXXXXXXX`), selesai, keputusan kirim-sebagian, Secure+ opt-in, bayar ulang via `OrderPaymentLinkStore` |
 | Ajukan pembatalan sesudah resi | `order/screens/order_cancel_screen.dart` | MOCK `/orders/{id}/cancellation-request` | docs/22 #3 |
-| Komplain / refund + bukti | `order/screens/order_complaint_screen.dart` | API `refund-request` + `/media/upload` | `evidence_urls` dikirim tapi server belum menyimpan |
+| Komplain / refund + bukti | `order/screens/order_complaint_screen.dart` | API `refund-request` + `/media/upload` | bukti dikirim sebagai body **`evidence`** dan tersimpan (backend `0307edf`); hanya `delivered`/`completed` |
 | Lacak paket | `order/screens/order_tracking_screen.dart` | API + MOCK `tracking_history` | linimasa kurir = mock |
 | Invoice + PDF | `order/screens/order_invoice_screen.dart` | API `/orders/{id}/invoice` + LOKAL | PDF dirakit di perangkat (`pdf`/`printing`), alamat disensor app; hanya `completed` |
 | Tulis ulasan | `review/screens/review_form_screen.dart` | API | hanya pesanan `completed` |
@@ -149,7 +153,7 @@ Legenda sumber data: **API** = endpoint sungguhan · **MOCK** = endpoint belum a
 ### Dompet, reward, komunikasi
 | Fitur | Layar | Sumber | Catatan |
 |---|---|---|---|
-| Dompet: saldo, mutasi, topup | `wallet/screens/wallet_screen.dart` | API | min topup Rp10.000 (app) |
+| Dompet: saldo, mutasi, topup | `wallet/screens/wallet_screen.dart` | API | min topup Rp10.000 (app + server); mutasi `order_payment` = debit |
 | Tarik saldo | `wallet/screens/withdraw_sheet.dart` | API | butuh PIN + rekening; validasi lokal dulu (limiter PIN hitung percobaan benar) |
 | PIN Wallet | `wallet/screens/withdrawal_pin_screen.dart` | API `/me/withdrawal-pin` | tidak ada cara cek PIN sudah ada |
 | Rekening bank (maks 3) | `wallet/screens/bank_accounts_screen.dart` | API `/me/bank-accounts` | nama pemilik = nama akun |
@@ -163,11 +167,23 @@ Legenda sumber data: **API** = endpoint sungguhan · **MOCK** = endpoint belum a
 - Kode: `lib/config/network/mock/pending_api_mock.dart` + `routes/{account,checkout,order,discovery}_mock_routes.dart`.
 - Fixture + **kontrak untuk tim backend**: `assets/mock/pending_api/<domain>/*.json` dan **`assets/mock/pending_api/README.md`** (baca ini untuk detail tiap endpoint).
 - Aktif hanya di debug (`PENDING_API_MOCK`, default `kDebugMode`). Matikan: `flutter run --dart-define=PENDING_API_MOCK=false`.
-- Nilai simulasi: PIN `123456`, OTP `123456`, saldo Wallet simulasi Rp2.500.000. Opsi debug lain (`MOCK_WALLET_BALANCE`, `MOCK_WALLET_PIN_SET`, `MOCK_CANCELLATION_OUTCOME`, …) ada di README mock.
+- Nilai simulasi: OTP `123456`. Opsi debug lain (`MOCK_CANCELLATION_OUTCOME`, …) ada di README mock. Mock checkout/Wallet **sudah dihapus** — checkout memakai server sungguhan.
 - **Saat backend membangun endpoint: hapus rute mock-nya saja**, lalu jalankan layar terkait terhadap server; sesuaikan model hanya bila bentuk respons berbeda dari fixture.
 - `test/integration/` tidak terpengaruh mock (pakai `DioClient.createBare`).
 
 ## 7. Belum dikerjakan / keputusan terbuka
+
+### Sisa sinkron backend `45568d9` (12 commit docs/22)
+Sudah: #1–#2 checkout wallet-only, #4 NIK saat daftar, #5 bukti refund (`evidence`), #9 & #12 (ditegakkan server, dipatok test). Belum:
+- [ ] **#10 ganti email/HP** — server membangun `/me/{email,phone}/change-request` + `change-confirm {token}`, **beda kontrak** dari mock `/me/contact-change` + OTP. Layar & service harus ditulis ulang.
+- [ ] **#3 pembatalan sesudah resi** — `POST /orders/{id}/cancellation-request` ada; `GET`-nya **tidak** (mock GET tetap). Hapus mock POST, sesuaikan bentuk.
+- [ ] **#8 ubah ulasan** — `PATCH /reviews/{id}` ada; `GET /me/reviews` tidak (mock tetap).
+- [ ] **#13 lonceng wishlist** — `PATCH /wishlist/items/{productId} {alert_enabled}` ada; cek `GET /wishlist` membawa `alert_enabled`, lalu hapus mock.
+- [ ] **#4/#11 kunci nama** — server menolak `full_name` dengan `VALIDATION_ERROR`, bukan `IDENTITY_LOCKED` usulan mock. Endpoint verifikasi KTP tetap tidak ada.
+- [ ] **#6/#14 invoice** — server kini menyensor alamat; cek nama field lalu lepas sensor lokal.
+- [ ] **#7 rating toko** — kini dari ulasan terverifikasi; cek ulang catatan "`rating_avg` salah" di CLAUDE.md.
+- [ ] **e2e `member_journey_test`** — sudah disesuaikan untuk NIK & checkout wallet-only, tapi **sudah merah sebelumnya** di langkah katalog (chip "Semua" tergulir keluar saat mencari grid produk di bawah lipatan). Perlu diperbarui untuk beranda Xpedia.
+- [ ] 🔴 Laporkan ke backend: hapus alamat yang pernah dipakai checkout → **500 HTML** (FK `RESTRICT` dari `checkout_sessions`); dengan batas 3 alamat, pembeli tak bisa lagi mengganti alamat lama.
 
 - [ ] Cek visual **dark mode** semua layar baru.
 - [ ] Lokalisasi **en/ar** untuk layar baru (copy saat ini Bahasa Indonesia hardcoded) — butuh keputusan produk.

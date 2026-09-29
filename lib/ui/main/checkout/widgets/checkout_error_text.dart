@@ -4,16 +4,17 @@ import 'package:marketplace_app_member/core/domain/model/checkout/checkout_model
 import 'package:marketplace_app_member/util/error_message.dart';
 import 'package:marketplace_app_member/util/format_helper.dart';
 
-/// Pesan untuk kode error pembayaran Wallet yang **belum** dikenal
-/// `errorMessageFor` — kodenya baru diusulkan ke backend
+/// Pesan untuk kode error pembayaran Wallet yang dibuat aplikasi
 /// ([WalletPayErrorCode]). Sisanya diteruskan ke `errorMessageFor`, jadi
 /// `error.message` server tetap tidak pernah tampil.
-///
-/// Begitu kodenya masuk `ApiErrorCode`, pindahkan cabang-cabang ini ke
-/// `lib/util/error_message.dart` dan hapus berkas ini.
 String checkoutErrorText(BuildContext context, DataError error) {
   switch (error.code) {
     case WalletPayErrorCode.invalidPin:
+      // Server tidak membedakan PIN salah dari PIN yang belum pernah dibuat.
+      if (error.details?['pin_maybe_not_set'] == true) {
+        return 'PIN salah. Kalau belum pernah membuat PIN Wallet, buat dulu '
+            'di menu Xpedia Wallet.';
+      }
       final left = _int(error.details?['attempts_left']);
       if (left == null) return 'PIN salah. Coba lagi.';
       if (left <= 0) {

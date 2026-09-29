@@ -93,6 +93,7 @@ class AuthCubit extends Cubit<AuthState> {
     required String password,
     required String fullName,
     required String phone,
+    required String idCardNumber,
   }) async {
     emit(const AuthState.loading());
 
@@ -101,6 +102,7 @@ class AuthCubit extends Cubit<AuthState> {
       password: password,
       fullName: fullName,
       phone: phone,
+      idCardNumber: idCardNumber,
     );
 
     switch (result) {

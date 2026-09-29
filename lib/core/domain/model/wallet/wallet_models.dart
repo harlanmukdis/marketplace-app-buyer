@@ -22,6 +22,12 @@ enum WalletTxType {
   fee('fee', 'Biaya', credit: false),
   adjustment('adjustment', 'Penyesuaian', credit: true),
 
+  /// Membayar pesanan dari saldo — checkout wallet-only sejak backend
+  /// `d9ecb33` (skema `42_wallet_only_checkout.sql`). Tanpa entri ini ia jatuh
+  /// ke [unknown] yang dianggap kredit, sehingga setiap belanja tampil sebagai
+  /// pemasukan di riwayat dompet.
+  orderPayment('order_payment', 'Pembayaran pesanan', credit: false),
+
   /// Jenis yang belum dikenal aplikasi.
   ///
   /// Sengaja dianggap **kredit** supaya tidak menampilkan tanda minus pada

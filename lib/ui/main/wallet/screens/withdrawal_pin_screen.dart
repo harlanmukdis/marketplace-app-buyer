@@ -19,10 +19,9 @@ import 'package:marketplace_app_member/ui/main/wallet/widgets/pin_pad.dart';
 /// menyuruh user memasukkan PIN lama yang tidak pernah ada.
 ///
 /// Satu PIN Xpedia Wallet untuk **penarikan dan pembayaran** (blueprint Buyer
-/// Ch.6). Di backend hari ini PIN baru dipakai penarikan; checkout Wallet +
-/// PIN masih kontrak yang diusulkan dan di-mock (`checkout_mock_routes.dart`,
-/// docs/22 #2) — begitu backend membangunnya, PIN yang dibuat di sini yang
-/// diverifikasi.
+/// Ch.6) — sejak backend `d9ecb33` checkout memverifikasi PIN yang sama, dan
+/// 🔴 kuota 5 percobaan per 15 menit-nya **dibagi** antara checkout dan
+/// penarikan (percobaan benar ikut dihitung).
 class WithdrawalPinScreen extends StatelessWidget {
   const WithdrawalPinScreen({super.key});
 

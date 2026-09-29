@@ -12,14 +12,15 @@ import 'package:marketplace_app_member/ui/main/shell/xp_app_bars.dart';
 
 /// Layar pendaftaran.
 ///
-/// Empat field, semuanya wajib: nama, **nomor HP** (tanpa itu server membalas
+/// Lima field, semuanya wajib: nama, **nomor HP** (tanpa itu server membalas
 /// `422 VALIDATION_ERROR` dengan `details: null` — tidak menyebut field mana),
+/// **NIK KTP** (wajib sejak backend `3e8906d`, docs/22 #4 "1 KTP = 1 akun"),
 /// email (identitas login), dan kata sandi. `POST /auth/register` tidak
 /// mengembalikan token, jadi `AuthCubit.register` merangkainya dengan login.
 ///
-/// Urutan field dipatok test integrasi (`find.byType(TextFormField)` indeks
-/// 0–3: nama, telepon, email, kata sandi) — jangan menyisipkan field di
-/// antaranya.
+/// Urutan field dipatok e2e test (`find.byType(TextFormField)` indeks 0–4:
+/// nama, telepon, NIK, email, kata sandi) — ubah
+/// `integration_test/member_journey_test.dart` kalau urutannya diubah.
 class RegisterScreen extends StatelessWidget {
   const RegisterScreen({super.key});
 
@@ -43,6 +44,7 @@ class _RegisterBodyState extends State<_RegisterBody> {
   final _formKey = GlobalKey<FormState>();
   final _fullName = TextEditingController();
   final _phone = TextEditingController();
+  final _idCard = TextEditingController();
   final _email = TextEditingController();
   final _password = TextEditingController();
 
@@ -52,10 +54,15 @@ class _RegisterBodyState extends State<_RegisterBody> {
   void dispose() {
     _fullName.dispose();
     _phone.dispose();
+    _idCard.dispose();
     _email.dispose();
     _password.dispose();
     super.dispose();
   }
+
+  /// NIK sering diketik berkelompok ("3171 0101 …"); server menuntut tepat
+  /// 16 digit tanpa pemisah.
+  String get _normalizedIdCard => _idCard.text.replaceAll(RegExp(r'[\s.-]'), '');
 
   void _submit() {
     if (!(_formKey.currentState?.validate() ?? false)) return;
@@ -66,6 +73,7 @@ class _RegisterBodyState extends State<_RegisterBody> {
       password: _password.text,
       fullName: _fullName.text.trim(),
       phone: _phone.text.trim(),
+      idCardNumber: _normalizedIdCard,
     );
   }
 
@@ -163,6 +171,36 @@ class _RegisterBodyState extends State<_RegisterBody> {
                       validator: (v) => (v == null || v.trim().isEmpty)
                           ? l.phoneRequired
                           : null,
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Server tidak membalas NIK yang salah format dengan kode
+                    // tersendiri (hanya VALIDATION_ERROR), jadi formatnya
+                    // dijaga di sini supaya pesannya bisa tepat.
+                    const AuthFieldLabel('NIK (Nomor KTP)', isRequired: true),
+                    const SizedBox(height: 8),
+                    AuthTextField(
+                      controller: _idCard,
+                      readOnly: isLoading,
+                      hintText: '16 digit sesuai KTP',
+                      keyboardType: TextInputType.number,
+                      prefixIcon: Icons.badge_outlined,
+                      textDirection: TextDirection.ltr,
+                      textInputAction: TextInputAction.next,
+                      validator: (_) {
+                        final nik = _normalizedIdCard;
+                        if (nik.isEmpty) return 'NIK wajib diisi';
+                        if (!RegExp(r'^\d{16}$').hasMatch(nik)) {
+                          return 'NIK harus 16 digit angka';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Satu NIK hanya untuk satu akun Xpedia.',
+                      style: XpText.bodyS(context)
+                          .copyWith(color: XpColors.textSecondary),
                     ),
                     const SizedBox(height: 16),
 

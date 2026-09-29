@@ -48,6 +48,8 @@ String errorMessageFor(BuildContext context, DataError error) {
       return l.phoneAlreadyRegistered;
     case ApiErrorCode.emailTaken:
       return l.emailAlreadyRegistered;
+    case ApiErrorCode.identityTaken:
+      return 'NIK ini sudah terdaftar di akun Xpedia lain.';
 
     // Sengaja TIDAK memakai `l.somethingWentWrong` maupun pesan kredensial:
     // panduan FE §2 menuntut 429 dibedakan, karena user yang membacanya
