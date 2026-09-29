@@ -187,3 +187,4 @@ Daftar lengkap di CLAUDE.md "Backend v1.6–v1.28" → "Temuan backend baru". Ya
 
 - Remote `main` sempat berisi riwayat **app seller** (repo salah). Sudah ditimpa dengan riwayat buyer. Kalau `git pull` tiba-tiba memunculkan ratusan konflik dengan `pubspec` bernama seller: **`git rebase --abort`** (atau `git merge --abort`), jangan diteruskan, lalu cek remote.
 - Pastikan remote folder seller tidak menunjuk ke repo buyer.
+- Push gagal `Permission denied (publickey)` padahal kunci ada → kunci SSH ber-passphrase belum dimuat ke agent: `ssh-add --apple-use-keychain ~/.ssh/id_ed25519` (macOS), lalu `ssh -T git@github.com` untuk mengecek.
