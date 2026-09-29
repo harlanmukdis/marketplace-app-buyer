@@ -38,7 +38,6 @@ abstract class ReviewModel with _$ReviewModel {
 
     /// 1–5.
     @IntJson() @Default(0) int rating,
-
     @StringOrNullJson() String? comment,
     @BoolJson() @JsonKey(name: 'is_anonymous') @Default(false) bool isAnonymous,
     @StringJson() @Default('published') String status,
@@ -191,8 +190,7 @@ class ReviewDraft {
         'rating': rating,
         if ((comment ?? '').trim().isNotEmpty) 'comment': comment!.trim(),
         'is_anonymous': isAnonymous ? 1 : 0,
-        if (media.isNotEmpty)
-          'media': [for (final m in media) m.toJson()],
+        if (media.isNotEmpty) 'media': [for (final m in media) m.toJson()],
       };
 }
 
@@ -205,4 +203,97 @@ class ReviewMediaDraft {
   final String url;
 
   Map<String, dynamic> toJson() => {'type': type, 'url': url};
+}
+
+/// Ulasan milik pembeli sendiri, dari `GET /me/reviews` (docs/22 #8).
+///
+/// ⚠️ **Kontrak yang diusulkan — endpoint-nya belum ada di backend.** Di build
+/// debug dijawab `order_mock_routes.dart`; lihat
+/// `assets/mock/pending_api/README.md`.
+///
+/// Berbeda dari [ReviewModel] (ulasan publik di halaman produk), bentuk ini
+/// membawa **nama produk dan jendela ubah**: layar "Ulasan Saya" harus bisa
+/// menampilkan barang yang diulas tanpa `GET /products/{id}` per baris, dan
+/// harus tahu apakah tombol "Ubah" masih boleh muncul.
+@freezed
+abstract class MyReviewModel with _$MyReviewModel {
+  const MyReviewModel._();
+
+  const factory MyReviewModel({
+    @IntJson() required int id,
+    @IntJson() @JsonKey(name: 'order_id') @Default(0) int orderId,
+    @IntJson() @JsonKey(name: 'order_item_id') @Default(0) int orderItemId,
+    @IntJson() @JsonKey(name: 'product_id') @Default(0) int productId,
+    @IntJson() @JsonKey(name: 'store_id') @Default(0) int storeId,
+    @StringOrNullJson() @JsonKey(name: 'product_name') String? productName,
+
+    /// Snapshot opsi varian dari baris pesanan, mis. `{"warna": "Navy"}`.
+    @JsonMapJson()
+    @JsonKey(name: 'variant_options')
+    Map<String, dynamic>? variantOptions,
+    @IntJson() @Default(0) int rating,
+    @StringOrNullJson() String? comment,
+    @BoolJson() @JsonKey(name: 'is_anonymous') @Default(false) bool isAnonymous,
+    @ServerDateTimeJson() @JsonKey(name: 'created_at') DateTime? createdAt,
+    @ServerDateTimeJson() @JsonKey(name: 'updated_at') DateTime? updatedAt,
+
+    /// `created_at` + 30 hari (desain §3.24: "dapat memperbarui penilaian ini
+    /// dalam kurun waktu 30 hari setelah dikirimkan").
+    @ServerDateTimeJson()
+    @JsonKey(name: 'editable_until')
+    DateTime? editableUntil,
+
+    /// Dihitung server. Aplikasi tetap memeriksa [editableUntil] juga (lihat
+    /// [canEdit]) supaya layar yang dibiarkan terbuka melewati tenggat tidak
+    /// menawarkan tombol yang pasti ditolak.
+    @BoolJson() @JsonKey(name: 'is_editable') @Default(false) bool isEditable,
+  }) = _MyReviewModel;
+
+  factory MyReviewModel.fromJson(Map<String, dynamic> json) =>
+      _$MyReviewModelFromJson(json);
+
+  /// Jendela ubah 30 hari, dari kebijakan di desain.
+  static const editWindow = Duration(days: 30);
+
+  bool canEdit([DateTime? now]) {
+    if (!isEditable) return false;
+    final until = editableUntil;
+    return until == null || until.isAfter((now ?? DateTime.now()).toUtc());
+  }
+
+  bool get hasComment => (comment ?? '').trim().isNotEmpty;
+
+  bool get wasEdited =>
+      updatedAt != null && createdAt != null && updatedAt!.isAfter(createdAt!);
+
+  String get optionLabel {
+    final options = variantOptions;
+    if (options == null || options.isEmpty) return '';
+    return options.values
+        .map((v) => v?.toString() ?? '')
+        .where((v) => v.isNotEmpty)
+        .join(' · ');
+  }
+}
+
+/// Isian `PATCH /reviews/{id}` (diusulkan, docs/22 #8). Bidangnya sama dengan
+/// [ReviewDraft] tanpa media — mengganti lampiran bukan bagian kebijakan
+/// "perbarui penilaian" di desain.
+class ReviewUpdateDraft {
+  const ReviewUpdateDraft(
+      {required this.rating, this.comment, this.isAnonymous = false});
+
+  final int rating;
+  final String? comment;
+  final bool isAnonymous;
+
+  bool get isValid => rating >= 1 && rating <= 5;
+
+  /// `comment` selalu dikirim — string kosong berarti "hapus teks ulasan",
+  /// berbeda dari membuat ulasan yang boleh tanpa field itu sama sekali.
+  Map<String, dynamic> toJson() => {
+        'rating': rating,
+        'comment': (comment ?? '').trim(),
+        'is_anonymous': isAnonymous ? 1 : 0,
+      };
 }

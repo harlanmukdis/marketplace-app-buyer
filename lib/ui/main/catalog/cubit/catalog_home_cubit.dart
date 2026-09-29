@@ -51,7 +51,9 @@ class CatalogHomeCubit extends Cubit<CatalogHomeState> {
         minRating: query?.minRating,
         minPrice: query?.minPrice,
         maxPrice: query?.maxPrice,
-        sort: query?.sort ?? ProductSort.latest,
+        sort: query?.sort ?? ProductSort.recommended,
+        destCity: query?.destCity,
+        destProvince: query?.destProvince,
         page: 1,
         perPage: pageSize,
       ),
@@ -92,8 +94,27 @@ class CatalogHomeCubit extends Cubit<CatalogHomeState> {
     return load(query: current.copyWith(sort: sort));
   }
 
-  /// Menghapus seluruh filter dan kembali ke listing default.
-  Future<void> clearFilters() => load(query: const CatalogQuery());
+  /// Menghapus seluruh filter dan kembali ke listing default. Tujuan kirim
+  /// dipertahankan — itu bukan filter pilihan user, melainkan alamatnya.
+  Future<void> clearFilters() {
+    final current = _currentQuery;
+    return load(
+      query: CatalogQuery(
+        destCity: current?.destCity,
+        destProvince: current?.destProvince,
+      ),
+    );
+  }
+
+  /// Menyetel tujuan kirim dari alamat utama, lalu memuat ulang kalau
+  /// berubah. Dipanggil beranda begitu alamat pembeli diketahui.
+  Future<void> setDestination({String? city, String? province}) {
+    final current = _currentQuery ?? const CatalogQuery();
+    if (current.destCity == city && current.destProvince == province) {
+      return Future.value();
+    }
+    return load(query: current.copyWith(destCity: city, destProvince: province));
+  }
 
   /// Memuat ulang permintaan terakhir — untuk tombol "coba lagi" dan
   /// pull-to-refresh.
@@ -119,7 +140,9 @@ class CatalogHomeCubit extends Cubit<CatalogHomeState> {
       minRating: query?.minRating,
       minPrice: query?.minPrice,
       maxPrice: query?.maxPrice,
-      sort: query?.sort ?? ProductSort.latest,
+      sort: query?.sort ?? ProductSort.recommended,
+        destCity: query?.destCity,
+        destProvince: query?.destProvince,
       page: nextPage,
       perPage: pageSize,
     );
@@ -165,6 +188,7 @@ class CatalogHomeCubit extends Cubit<CatalogHomeState> {
           facets: ProductFacets.fromMeta(meta),
           page: page,
           hasMore: _hasMore(meta, data.length),
+          total: asIntOrNull(meta['total']),
           query: query,
         ),
       DataEmpty() => CatalogHomeState.empty(

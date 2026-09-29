@@ -91,59 +91,99 @@ void main() {
     });
   });
 
-  group('POST /wallet/withdraw', () {
-    test(
-      '🔴 di bawah minimum dan saldo kurang memakai KODE ERROR YANG SAMA',
-      () async {
-        // Inilah alasan WalletCubit memvalidasi minimum sendiri: kedua sebab
-        // yang sangat berbeda ini tidak bisa dibedakan dari `error.code`,
-        // sementara panduan FE melarang mencocokkan `error.message`.
-        Object? belowMinimum;
-        Object? insufficient;
+  // Sejak backend v1.x (blueprint Wallet) penarikan menuntut PIN 6 digit dan
+  // rekening tersimpan. Setiap percobaan menghabiskan kuota PIN — 5 per 15
+  // menit per user, **benar atau salah** — jadi berkas ini sengaja hanya
+  // menembak `/wallet/withdraw` DUA kali per putaran, supaya dua putaran
+  // beruntun tetap muat.
+  group('rekening & PIN penarikan', () {
+    const pin = '246810';
 
+    test('nama pemilik rekening harus sama dengan nama akun', () async {
+      await expectLater(
+        wallet.addBankAccount(
+          bankName: 'BCA',
+          accountNumber: '1234567890',
+          accountHolderName: 'Orang Lain',
+        ),
+        throwsA(predicate((e) => e.toString().contains('VALIDATION_ERROR'))),
+      );
+    });
+
+    test('rekening atas nama sendiri tersimpan, lalu bisa dihapus', () async {
+      // `sharedAccount(purpose: 'ringan')` mendaftar dengan full_name 'ringan';
+      // server membandingkannya tanpa memandang huruf besar-kecil.
+      final id = (await wallet.addBankAccount(
+        bankName: 'BCA',
+        accountNumber: '9876543210',
+        accountHolderName: 'RINGAN',
+      ))
+          .data;
+      expect(id, greaterThan(0));
+
+      final listed = (await wallet.fetchBankAccounts()).data;
+      final account = listed.firstWhere((a) => a.id == id);
+      expect(account.maskedNumber, '•••• 3210');
+
+      await wallet.deleteBankAccount(id);
+      final after = (await wallet.fetchBankAccounts()).data;
+      expect(after.any((a) => a.id == id), isFalse);
+    });
+
+    test('PIN bukan 6 digit ditolak VALIDATION_ERROR', () async {
+      await expectLater(
+        wallet.setWithdrawalPin(pin: '12ab'),
+        throwsA(predicate((e) => e.toString().contains('VALIDATION_ERROR'))),
+      );
+    });
+
+    test('PIN bisa disetel; mengganti menuntut PIN lama', () async {
+      // Akun bersama dipakai lintas putaran, jadi PIN-nya mungkin sudah ada
+      // dari putaran sebelumnya — server tidak punya cara menanyakannya.
+      // Satu panggilan menutup kedua kasus: `current_pin` diabaikan saat PIN
+      // belum ada, dan diverifikasi saat sudah ada (`set_withdrawal_pin`).
+      //
+      // ⚠️ Jalur GANTI PIN punya kuota sendiri (5 per 15 menit, benar atau
+      // salah). Test ini memakai dua per putaran, jadi dua putaran beruntun
+      // tetap muat.
+      await wallet.setWithdrawalPin(pin: pin, currentPin: pin);
+
+      await expectLater(
+        wallet.setWithdrawalPin(pin: '135790', currentPin: '000000'),
+        throwsA(predicate((e) => e.toString().contains('VALIDATION_ERROR'))),
+        reason: 'PIN lama salah',
+      );
+    });
+
+    test(
+      '🔴 semua penolakan penarikan memakai KODE YANG SAMA',
+      () async {
+        // Inilah alasan WalletCubit memvalidasi minimum, saldo, rekening, dan
+        // format PIN sendiri: sebab-sebab yang tindakannya berbeda tidak bisa
+        // dibedakan dari `error.code`.
+        Object? belowMinimum;
+        Object? noAccount;
         try {
-          await wallet.withdraw(const WithdrawalDraft(
-            amount: 10000,
-            bankName: 'BCA',
-            bankAccountNumber: '1234567890',
-            bankAccountName: 'Uji Wallet',
-          ));
+          await wallet.withdraw(const WithdrawalDraft(amount: 10000, pin: pin));
         } catch (e) {
           belowMinimum = e;
         }
-
         try {
           await wallet.withdraw(const WithdrawalDraft(
-            amount: 1000000,
-            bankName: 'BCA',
-            bankAccountNumber: '1234567890',
-            bankAccountName: 'Uji Wallet',
+            amount: WithdrawalDraft.minimumAmount,
+            pin: pin,
           ));
         } catch (e) {
-          insufficient = e;
+          noAccount = e;
         }
 
-        expect(belowMinimum, isNotNull);
-        expect(insufficient, isNotNull);
         expect(belowMinimum.toString(), contains('WITHDRAWAL_REJECTED'));
-        expect(insufficient.toString(), contains('WITHDRAWAL_REJECTED'));
+        expect(noAccount.toString(), contains('WITHDRAWAL_REJECTED'));
+
+        // Penolakan tidak boleh meninggalkan saldo negatif.
+        final after = await wallet.fetchWallet();
+        expect(after.data.balance, 0);
       },
     );
-
-    test('saldo nol menolak penarikan berapa pun di atas minimum', () async {
-      await expectLater(
-        wallet.withdraw(const WithdrawalDraft(
-          amount: WithdrawalDraft.minimumAmount,
-          bankName: 'BCA',
-          bankAccountNumber: '1234567890',
-          bankAccountName: 'Uji Wallet',
-        )),
-        throwsA(anything),
-      );
-
-      // Penolakan tidak boleh meninggalkan saldo negatif.
-      final after = await wallet.fetchWallet();
-      expect(after.data.balance, 0);
-    });
   });
 }

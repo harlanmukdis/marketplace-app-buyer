@@ -12,6 +12,7 @@ import 'core/utils/constant.dart';
 import 'core/utils/local_network.dart';
 import 'core/utils/localizations.dart';
 import 'di/injector.dart';
+import 'ui/main/shell/app_scope.dart';
 import 'generated/l10n.dart';
 
 Future<void> main() async {
@@ -54,9 +55,13 @@ class MyApp extends StatelessWidget {
     return GestureDetector(
       onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
       child: MaterialApp.router(
-        builder: DevicePreview.appBuilder,
+        // AppScope menaungi seluruh rute — termasuk layar yang di-push di atas
+        // HomeLayout — supaya cubit lintas-layar (toko, keranjang, wishlist)
+        // terlihat dari mana pun.
+        builder: (context, child) =>
+            DevicePreview.appBuilder(context, AppScope(child: child!)),
         debugShowCheckedModeBanner: false,
-        title: 'Shopapay',
+        title: 'Xpedia',
         theme:
             CachedHelper.getData(kAppTheme) == kDark ? darkTheme : lightTheme,
         locale: Locale(CachedHelper.getData(kAppLanguage)),

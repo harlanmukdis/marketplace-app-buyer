@@ -9,10 +9,15 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:marketplace_app_member/core/data_state.dart';
 import 'package:marketplace_app_member/core/domain/model/checkout/checkout_models.dart';
 import 'package:marketplace_app_member/core/domain/model/payment/payment_models.dart';
+import 'package:marketplace_app_member/core/domain/model/wallet/wallet_models.dart';
 import 'package:marketplace_app_member/core/domain/repositories/checkout_repository.dart';
 import 'package:marketplace_app_member/core/domain/repositories/payment_repository.dart';
+import 'package:marketplace_app_member/core/domain/repositories/wallet_repository.dart';
+import 'package:marketplace_app_member/core/utils/local_network.dart';
 import 'package:marketplace_app_member/di/injector.dart';
+import 'package:marketplace_app_member/core/services/order_payment_link_store.dart';
 import 'package:marketplace_app_member/ui/main/checkout/cubit/checkout_cubit.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 const _option1 = ShippingOptionModel(
   courierCode: 'jnt',
@@ -53,12 +58,50 @@ CheckoutSnapshot _snapshot({
 DataError _error(String code) =>
     DataError(code: code, message: code, kind: DataErrorKind.api);
 
+/// Balasan server hari ini untuk `wallet-summary`: 404 **HTML**, yang
+/// sampai sebagai `badResponse` + 404 → `isRouteNotFound`.
+const _routeNotFound = DataError(
+  code: ClientErrorCode.badResponse,
+  message: 'Respons server bukan objek JSON.',
+  statusCode: 404,
+  kind: DataErrorKind.server,
+);
+
+const _enough = WalletSummaryModel(
+  walletBalance: 5000000,
+  grandTotal: 3049000,
+  canPay: true,
+  pinSet: true,
+);
+
+const _short = WalletSummaryModel(
+  walletBalance: 750000,
+  grandTotal: 3049000,
+  shortfall: 2299000,
+  canPay: false,
+  pinSet: true,
+);
+
+const _bothCouriers = {
+  '1': {'courier_code': 'jnt', 'service_code': 'ez'},
+  '2': {'courier_code': 'jne', 'service_code': 'reg'},
+};
+
 class _FakeCheckoutRepository implements CheckoutRepository {
   DataState<CheckoutSnapshot> snapshotResult = DataSuccess(_snapshot());
   DataState<CheckoutConfirmResult> confirmResult =
       const DataSuccess(CheckoutConfirmResult(orderIds: [1, 2]));
 
+  /// Default: server hari ini, yang belum mengenal pembayaran Wallet.
+  DataState<WalletSummaryModel> walletResult = const DataFailed(_routeNotFound);
+
   final List<String> calls = [];
+
+  /// Dicatat terpisah dari [calls] supaya test alur lama tidak perlu tahu
+  /// bahwa cubit selalu mendeteksi Wallet lebih dulu.
+  final List<String> walletCalls = [];
+  String? lastPin;
+  String? lastPaymentMethod;
   Map<String, CourierChoice>? lastSelection;
 
   @override
@@ -99,9 +142,19 @@ class _FakeCheckoutRepository implements CheckoutRepository {
   Future<DataState<CheckoutConfirmResult>> confirm(
     String sessionId, {
     required String paymentMethod,
+    String? pin,
   }) async {
     calls.add('confirm:$sessionId');
+    lastPaymentMethod = paymentMethod;
+    lastPin = pin;
     return confirmResult;
+  }
+
+  @override
+  Future<DataState<WalletSummaryModel>> fetchWalletSummary(
+      String sessionId) async {
+    walletCalls.add(sessionId);
+    return walletResult;
   }
 
   @override
@@ -131,15 +184,44 @@ class _FakePaymentRepository implements PaymentRepository {
       throw UnimplementedError();
 }
 
+class _FakeWalletRepository implements WalletRepository {
+  final topups = <double>[];
+
+  @override
+  Future<DataState<WalletTopupResult>> topup({
+    required double amount,
+    String paymentMethod = 'qris',
+  }) async {
+    topups.add(amount);
+    return DataSuccess(
+        WalletTopupResult(paymentTransactionId: 77, amount: amount));
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+/// `start` lalu tunggu deteksi Wallet (yang sengaja tidak di-`await` cubit)
+/// selesai.
+Future<void> _start(CheckoutCubit cubit) async {
+  await cubit.start(addressId: 5);
+  await Future<void>.delayed(Duration.zero);
+}
+
 void main() {
   late _FakeCheckoutRepository repository;
   late _FakePaymentRepository payments;
+  late _FakeWalletRepository wallets;
 
-  setUp(() {
+  setUp(() async {
+    SharedPreferences.setMockInitialValues({});
+    await CachedHelper.init();
     repository = _FakeCheckoutRepository();
     payments = _FakePaymentRepository();
+    wallets = _FakeWalletRepository();
     injector.registerSingleton<CheckoutRepository>(repository);
     injector.registerSingleton<PaymentRepository>(payments);
+    injector.registerSingleton<WalletRepository>(wallets);
   });
 
   tearDown(() async {
@@ -174,12 +256,11 @@ void main() {
       // Membatalkannya akan mencoba melepas reservasi milik order yang sudah
       // terbentuk.
       final cubit = CheckoutCubit();
-      await cubit.start(addressId: 5);
-      repository.snapshotResult = DataSuccess(_snapshot(couriers: {
-        '1': {'courier_code': 'jnt', 'service_code': 'ez'},
-        '2': {'courier_code': 'jne', 'service_code': 'reg'},
-      }));
+      await _start(cubit);
+      repository.snapshotResult =
+          DataSuccess(_snapshot(couriers: _bothCouriers));
       await cubit.refresh();
+      await Future<void>.delayed(Duration.zero);
       await cubit.confirm();
       repository.calls.clear();
 
@@ -267,7 +348,7 @@ void main() {
   group('konfirmasi', () {
     test('ditolak selagi ada toko tanpa kurir', () async {
       final cubit = CheckoutCubit();
-      await cubit.start(addressId: 5);
+      await _start(cubit);
       repository.calls.clear();
 
       await cubit.confirm();
@@ -284,7 +365,7 @@ void main() {
         '2': {'courier_code': 'jne', 'service_code': 'reg'},
       }));
       final cubit = CheckoutCubit();
-      await cubit.start(addressId: 5);
+      await _start(cubit);
 
       await cubit.confirm();
 
@@ -302,7 +383,7 @@ void main() {
         '2': {'courier_code': 'jne', 'service_code': 'reg'},
       }));
       final cubit = CheckoutCubit();
-      await cubit.start(addressId: 5);
+      await _start(cubit);
       repository.calls.clear();
 
       final first = cubit.confirm();
@@ -320,7 +401,7 @@ void main() {
         '2': {'courier_code': 'jne', 'service_code': 'reg'},
       }));
       final cubit = CheckoutCubit();
-      await cubit.start(addressId: 5);
+      await _start(cubit);
       repository.confirmResult =
           DataFailed(_error(ApiErrorCode.stockInsufficient));
 
@@ -330,5 +411,274 @@ void main() {
       expect(state.actionError?.code, ApiErrorCode.stockInsufficient);
       await cubit.close();
     });
+  });
+
+  group('deteksi pembayaran Wallet', () {
+    test('rute tak dikenal (404 HTML) → alur lama, tidak dideteksi ulang',
+        () async {
+      final cubit = CheckoutCubit();
+      await _start(cubit);
+
+      final state = cubit.state as CheckoutReady;
+      expect(state.paymentMode, CheckoutPaymentMode.legacy);
+      expect(state.walletError, isNull);
+
+      await cubit.refresh();
+      await Future<void>.delayed(Duration.zero);
+      expect(repository.walletCalls, hasLength(1),
+          reason: 'rute yang tidak ada tidak muncul di tengah checkout');
+      await cubit.close();
+    });
+
+    test('wallet-summary menjawab → alur Wallet', () async {
+      repository.walletResult =
+          const DataSuccess(_enough, meta: {'mock': true});
+      final cubit = CheckoutCubit();
+      await _start(cubit);
+
+      final state = cubit.state as CheckoutReady;
+      expect(state.paymentMode, CheckoutPaymentMode.wallet);
+      expect(state.wallet, _enough);
+      expect(state.walletMeta, {'mock': true});
+      await cubit.close();
+    });
+
+    test('kegagalan lain TIDAK memindahkan ke alur lama', () async {
+      // Begitu Wallet wajib, menyerah ke pemilih metode karena satu request
+      // gagal akan menawarkan cara bayar yang tidak berlaku lagi.
+      repository.walletResult = DataFailed(_error('CLIENT_NETWORK'));
+      final cubit = CheckoutCubit();
+      await _start(cubit);
+
+      final state = cubit.state as CheckoutReady;
+      expect(state.paymentMode, CheckoutPaymentMode.detecting);
+      expect(state.walletError?.code, 'CLIENT_NETWORK');
+      expect(state.canPay, isFalse);
+      await cubit.close();
+    });
+
+    test('selagi mendeteksi, konfirmasi alur lama ditolak', () async {
+      repository.snapshotResult =
+          DataSuccess(_snapshot(couriers: _bothCouriers));
+      repository.walletResult = DataFailed(_error('CLIENT_NETWORK'));
+      final cubit = CheckoutCubit();
+      await _start(cubit);
+      repository.calls.clear();
+
+      await cubit.confirm();
+
+      expect(repository.calls, isEmpty);
+      await cubit.close();
+    });
+
+    test('total berubah (kurir dipilih) → ringkasan saldo dimuat ulang',
+        () async {
+      repository.walletResult = const DataSuccess(_enough);
+      final cubit = CheckoutCubit();
+      await _start(cubit);
+
+      await cubit.selectCourier('1', _option1);
+      await Future<void>.delayed(Duration.zero);
+
+      expect(repository.walletCalls, hasLength(2));
+      await cubit.close();
+    });
+  });
+
+  group('bayar dengan Wallet', () {
+    setUp(() {
+      repository.snapshotResult =
+          DataSuccess(_snapshot(couriers: _bothCouriers));
+      repository.walletResult = const DataSuccess(_enough);
+      repository.confirmResult = const DataSuccess(
+        CheckoutConfirmResult(
+          orderIds: [11, 12],
+          paymentTransactionId: 55,
+          paid: true,
+          walletTransactionId: 900001,
+          balanceAfter: 1951000,
+        ),
+        meta: {
+          'mock_fields': ['paid']
+        },
+      );
+    });
+
+    test('PIN dikirim bersama payment_method wallet → CheckoutConfirmed',
+        () async {
+      final cubit = CheckoutCubit();
+      await _start(cubit);
+      expect(cubit.state.canPay, isTrue);
+
+      await cubit.payWithWallet('123456');
+
+      expect(repository.lastPaymentMethod, 'wallet');
+      expect(repository.lastPin, '123456');
+      final state = cubit.state as CheckoutConfirmed;
+      expect(state.result.paid, isTrue);
+      expect(state.meta, {
+        'mock_fields': ['paid']
+      });
+      await cubit.close();
+    });
+
+    test('tautan order → transaksi disimpan (kedua alur)', () async {
+      final cubit = CheckoutCubit();
+      await _start(cubit);
+
+      await cubit.payWithWallet('123456');
+
+      expect(OrderPaymentLinkStore.transactionFor(11), 55);
+      expect(OrderPaymentLinkStore.transactionFor(12), 55);
+      await cubit.close();
+    });
+
+    test('tombol bayar alur lama tidak bisa melewati PIN', () async {
+      final cubit = CheckoutCubit();
+      await _start(cubit);
+      repository.calls.clear();
+
+      await cubit.confirm();
+
+      expect(repository.calls, isEmpty, reason: 'tidak ada bayar satu ketukan');
+      expect((cubit.state as CheckoutReady).actionError?.code,
+          ClientErrorCode.localValidation);
+      await cubit.close();
+    });
+
+    test('saldo kurang ditolak TANPA menyentuh jaringan', () async {
+      // Percobaan PIN dibatasi server; jangan dihabiskan untuk penolakan
+      // yang sudah pasti.
+      repository.walletResult = const DataSuccess(_short);
+      final cubit = CheckoutCubit();
+      await _start(cubit);
+      repository.calls.clear();
+      expect(cubit.state.canPay, isFalse);
+
+      await cubit.payWithWallet('123456');
+
+      expect(repository.calls, isEmpty);
+      await cubit.close();
+    });
+
+    test('PIN belum dibuat → tombol mati, bayar ditolak lokal', () async {
+      repository.walletResult =
+          const DataSuccess(WalletSummaryModel(canPay: true, pinSet: false));
+      final cubit = CheckoutCubit();
+      await _start(cubit);
+      repository.calls.clear();
+
+      expect(cubit.state.canPay, isFalse);
+      await cubit.payWithWallet('123456');
+      expect(repository.calls, isEmpty);
+      await cubit.close();
+    });
+
+    test('PIN salah masuk pinError, sesi tetap hidup', () async {
+      final cubit = CheckoutCubit();
+      await _start(cubit);
+      repository.confirmResult = const DataFailed(DataError(
+        code: 'INVALID_PIN',
+        message: 'PIN salah',
+        details: {'attempts_left': 4},
+        statusCode: 422,
+        kind: DataErrorKind.api,
+      ));
+
+      await cubit.payWithWallet('111111');
+
+      final state = cubit.state as CheckoutReady;
+      expect(state.pinError?.code, 'INVALID_PIN');
+      expect(state.actionError, isNull);
+      expect(state.isSubmitting, isFalse);
+
+      repository.calls.clear();
+      await cubit.close();
+      await Future<void>.delayed(Duration.zero);
+      expect(repository.calls, contains('cancel:sesi-1'),
+          reason: 'reservasi masih milik sesi yang belum dikonfirmasi');
+    });
+
+    test('INSUFFICIENT_BALANCE dari server → actionError + saldo dimuat ulang',
+        () async {
+      final cubit = CheckoutCubit();
+      await _start(cubit);
+      repository.confirmResult =
+          DataFailed(_error(ApiErrorCode.insufficientBalance));
+      final before = repository.walletCalls.length;
+
+      await cubit.payWithWallet('123456');
+      await Future<void>.delayed(Duration.zero);
+
+      expect(repository.walletCalls.length, before + 1);
+      await cubit.close();
+    });
+
+    test('pembayaran kedua diabaikan selagi yang pertama berjalan', () async {
+      final cubit = CheckoutCubit();
+      await _start(cubit);
+      repository.calls.clear();
+
+      await Future.wait([
+        cubit.payWithWallet('123456'),
+        cubit.payWithWallet('123456'),
+      ]);
+
+      expect(repository.calls.where((c) => c.startsWith('confirm:')).length, 1);
+      await cubit.close();
+    });
+
+    test('PIN bukan 6 digit ditolak lokal', () async {
+      final cubit = CheckoutCubit();
+      await _start(cubit);
+      repository.calls.clear();
+
+      await cubit.payWithWallet('12a4');
+
+      expect(repository.calls, isEmpty);
+      expect((cubit.state as CheckoutReady).pinError?.code,
+          ClientErrorCode.localValidation);
+      await cubit.close();
+    });
+  });
+
+  group('top up dari checkout', () {
+    setUp(() => repository.walletResult = const DataSuccess(_short));
+
+    test('di bawah Rp 10.000 ditolak lokal', () async {
+      final cubit = CheckoutCubit();
+      await _start(cubit);
+
+      await cubit.startTopup(5000);
+
+      expect(wallets.topups, isEmpty);
+      expect((cubit.state as CheckoutReady).actionError?.code,
+          ClientErrorCode.localValidation);
+      await cubit.close();
+    });
+
+    test('berhasil → transaksi menunggu dibuka, lalu saldo dimuat ulang',
+        () async {
+      final cubit = CheckoutCubit();
+      await _start(cubit);
+
+      await cubit.startTopup(2299000);
+      expect(wallets.topups, [2299000]);
+      expect((cubit.state as CheckoutReady).pendingTopupTxId, 77);
+
+      final before = repository.walletCalls.length;
+      cubit.topupHandled();
+      expect((cubit.state as CheckoutReady).pendingTopupTxId, isNull);
+      await cubit.reloadWallet();
+      expect(repository.walletCalls.length, before + 1);
+      await cubit.close();
+    });
+  });
+
+  test('saran top up: selisih dibulatkan ke atas, tak pernah di bawah minimum',
+      () {
+    expect(
+        const WalletSummaryModel(shortfall: 2298500.5).suggestedTopup, 2299000);
+    expect(const WalletSummaryModel(shortfall: 1200).suggestedTopup, 10000);
   });
 }

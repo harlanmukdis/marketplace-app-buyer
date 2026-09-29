@@ -60,4 +60,24 @@ class WishlistService {
       throw ApiException.fromDio(e, context: context);
     }
   }
+
+  /// `PATCH /wishlist/items/{product_id}` `{alert_enabled}` — pantau harga &
+  /// stok (docs/22 #13).
+  ///
+  /// 🔶 **Endpoint usulan.** Rute `wishlist/items/(:num)` sudah ada, tapi
+  /// controllernya hanya punya `items_delete`. Kuncinya **id produk**, sama
+  /// dengan hapus — satu baris wishlist per produk. Di debug dijawab mock.
+  Future<ApiEnvelope<dynamic>> setAlert(int productId,
+      {required bool enabled}) async {
+    final context = 'PATCH /wishlist/items/$productId';
+    try {
+      final response = await _dio.patch<dynamic>(
+        '/wishlist/items/$productId',
+        data: {'alert_enabled': enabled},
+      );
+      return parseEnvelope(response, (raw) => raw, context: context);
+    } on DioException catch (e) {
+      throw ApiException.fromDio(e, context: context);
+    }
+  }
 }

@@ -144,8 +144,15 @@ extension WalletStatePatterns on WalletState {
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>({
     TResult Function()? loading,
-    TResult Function(WalletModel wallet, bool isSubmitting,
-            DataError? actionError, WalletTopupResult? pendingTopup)?
+    TResult Function(
+            WalletModel wallet,
+            List<BankAccountModel> bankAccounts,
+            DataError? bankAccountsError,
+            bool withdrawalSubmitted,
+            bool pinSaved,
+            bool isSubmitting,
+            DataError? actionError,
+            WalletTopupResult? pendingTopup)?
         ready,
     TResult Function(DataError error)? error,
     required TResult orElse(),
@@ -155,7 +162,14 @@ extension WalletStatePatterns on WalletState {
       case WalletLoading() when loading != null:
         return loading();
       case WalletReady() when ready != null:
-        return ready(_that.wallet, _that.isSubmitting, _that.actionError,
+        return ready(
+            _that.wallet,
+            _that.bankAccounts,
+            _that.bankAccountsError,
+            _that.withdrawalSubmitted,
+            _that.pinSaved,
+            _that.isSubmitting,
+            _that.actionError,
             _that.pendingTopup);
       case WalletError() when error != null:
         return error(_that.error);
@@ -180,8 +194,15 @@ extension WalletStatePatterns on WalletState {
   @optionalTypeArgs
   TResult when<TResult extends Object?>({
     required TResult Function() loading,
-    required TResult Function(WalletModel wallet, bool isSubmitting,
-            DataError? actionError, WalletTopupResult? pendingTopup)
+    required TResult Function(
+            WalletModel wallet,
+            List<BankAccountModel> bankAccounts,
+            DataError? bankAccountsError,
+            bool withdrawalSubmitted,
+            bool pinSaved,
+            bool isSubmitting,
+            DataError? actionError,
+            WalletTopupResult? pendingTopup)
         ready,
     required TResult Function(DataError error) error,
   }) {
@@ -190,7 +211,14 @@ extension WalletStatePatterns on WalletState {
       case WalletLoading():
         return loading();
       case WalletReady():
-        return ready(_that.wallet, _that.isSubmitting, _that.actionError,
+        return ready(
+            _that.wallet,
+            _that.bankAccounts,
+            _that.bankAccountsError,
+            _that.withdrawalSubmitted,
+            _that.pinSaved,
+            _that.isSubmitting,
+            _that.actionError,
             _that.pendingTopup);
       case WalletError():
         return error(_that.error);
@@ -212,8 +240,15 @@ extension WalletStatePatterns on WalletState {
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>({
     TResult? Function()? loading,
-    TResult? Function(WalletModel wallet, bool isSubmitting,
-            DataError? actionError, WalletTopupResult? pendingTopup)?
+    TResult? Function(
+            WalletModel wallet,
+            List<BankAccountModel> bankAccounts,
+            DataError? bankAccountsError,
+            bool withdrawalSubmitted,
+            bool pinSaved,
+            bool isSubmitting,
+            DataError? actionError,
+            WalletTopupResult? pendingTopup)?
         ready,
     TResult? Function(DataError error)? error,
   }) {
@@ -222,7 +257,14 @@ extension WalletStatePatterns on WalletState {
       case WalletLoading() when loading != null:
         return loading();
       case WalletReady() when ready != null:
-        return ready(_that.wallet, _that.isSubmitting, _that.actionError,
+        return ready(
+            _that.wallet,
+            _that.bankAccounts,
+            _that.bankAccountsError,
+            _that.withdrawalSubmitted,
+            _that.pinSaved,
+            _that.isSubmitting,
+            _that.actionError,
             _that.pendingTopup);
       case WalletError() when error != null:
         return error(_that.error);
@@ -257,12 +299,44 @@ class WalletLoading extends WalletState {
 class WalletReady extends WalletState {
   const WalletReady(
       {required this.wallet,
+      final List<BankAccountModel> bankAccounts = const <BankAccountModel>[],
+      this.bankAccountsError,
+      this.withdrawalSubmitted = false,
+      this.pinSaved = false,
       this.isSubmitting = false,
       this.actionError,
       this.pendingTopup})
-      : super._();
+      : _bankAccounts = bankAccounts,
+        super._();
 
   final WalletModel wallet;
+
+  /// Rekening tersimpan. Kegagalan memuatnya **tidak** menggagalkan layar
+  /// — saldo tetap tampil, hanya penarikan yang belum bisa dipakai.
+  final List<BankAccountModel> _bankAccounts;
+
+  /// Rekening tersimpan. Kegagalan memuatnya **tidak** menggagalkan layar
+  /// — saldo tetap tampil, hanya penarikan yang belum bisa dipakai.
+  @JsonKey()
+  List<BankAccountModel> get bankAccounts {
+    if (_bankAccounts is EqualUnmodifiableListView) return _bankAccounts;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_bankAccounts);
+  }
+
+  /// Kegagalan memuat [bankAccounts]. Dipisah supaya layar rekening tidak
+  /// menampilkan "belum ada rekening" padahal daftarnya hanya gagal dimuat
+  /// — user akan menambah rekening yang sebenarnya sudah ada.
+  final DataError? bankAccountsError;
+
+  /// Penarikan terakhir berhasil diajukan — dipakai layar untuk menutup
+  /// lembar penarikan dan menampilkan konfirmasi.
+  @JsonKey()
+  final bool withdrawalSubmitted;
+
+  /// PIN baru saja berhasil disetel.
+  @JsonKey()
+  final bool pinSaved;
 
   /// Sedang mengirim topup atau penarikan.
   @JsonKey()
@@ -286,6 +360,14 @@ class WalletReady extends WalletState {
         (other.runtimeType == runtimeType &&
             other is WalletReady &&
             (identical(other.wallet, wallet) || other.wallet == wallet) &&
+            const DeepCollectionEquality()
+                .equals(other._bankAccounts, _bankAccounts) &&
+            (identical(other.bankAccountsError, bankAccountsError) ||
+                other.bankAccountsError == bankAccountsError) &&
+            (identical(other.withdrawalSubmitted, withdrawalSubmitted) ||
+                other.withdrawalSubmitted == withdrawalSubmitted) &&
+            (identical(other.pinSaved, pinSaved) ||
+                other.pinSaved == pinSaved) &&
             (identical(other.isSubmitting, isSubmitting) ||
                 other.isSubmitting == isSubmitting) &&
             (identical(other.actionError, actionError) ||
@@ -295,12 +377,20 @@ class WalletReady extends WalletState {
   }
 
   @override
-  int get hashCode =>
-      Object.hash(runtimeType, wallet, isSubmitting, actionError, pendingTopup);
+  int get hashCode => Object.hash(
+      runtimeType,
+      wallet,
+      const DeepCollectionEquality().hash(_bankAccounts),
+      bankAccountsError,
+      withdrawalSubmitted,
+      pinSaved,
+      isSubmitting,
+      actionError,
+      pendingTopup);
 
   @override
   String toString() {
-    return 'WalletState.ready(wallet: $wallet, isSubmitting: $isSubmitting, actionError: $actionError, pendingTopup: $pendingTopup)';
+    return 'WalletState.ready(wallet: $wallet, bankAccounts: $bankAccounts, bankAccountsError: $bankAccountsError, withdrawalSubmitted: $withdrawalSubmitted, pinSaved: $pinSaved, isSubmitting: $isSubmitting, actionError: $actionError, pendingTopup: $pendingTopup)';
   }
 }
 
@@ -313,6 +403,10 @@ abstract mixin class $WalletReadyCopyWith<$Res>
   @useResult
   $Res call(
       {WalletModel wallet,
+      List<BankAccountModel> bankAccounts,
+      DataError? bankAccountsError,
+      bool withdrawalSubmitted,
+      bool pinSaved,
       bool isSubmitting,
       DataError? actionError,
       WalletTopupResult? pendingTopup});
@@ -333,6 +427,10 @@ class _$WalletReadyCopyWithImpl<$Res> implements $WalletReadyCopyWith<$Res> {
   @pragma('vm:prefer-inline')
   $Res call({
     Object? wallet = null,
+    Object? bankAccounts = null,
+    Object? bankAccountsError = freezed,
+    Object? withdrawalSubmitted = null,
+    Object? pinSaved = null,
     Object? isSubmitting = null,
     Object? actionError = freezed,
     Object? pendingTopup = freezed,
@@ -342,6 +440,22 @@ class _$WalletReadyCopyWithImpl<$Res> implements $WalletReadyCopyWith<$Res> {
           ? _self.wallet
           : wallet // ignore: cast_nullable_to_non_nullable
               as WalletModel,
+      bankAccounts: null == bankAccounts
+          ? _self._bankAccounts
+          : bankAccounts // ignore: cast_nullable_to_non_nullable
+              as List<BankAccountModel>,
+      bankAccountsError: freezed == bankAccountsError
+          ? _self.bankAccountsError
+          : bankAccountsError // ignore: cast_nullable_to_non_nullable
+              as DataError?,
+      withdrawalSubmitted: null == withdrawalSubmitted
+          ? _self.withdrawalSubmitted
+          : withdrawalSubmitted // ignore: cast_nullable_to_non_nullable
+              as bool,
+      pinSaved: null == pinSaved
+          ? _self.pinSaved
+          : pinSaved // ignore: cast_nullable_to_non_nullable
+              as bool,
       isSubmitting: null == isSubmitting
           ? _self.isSubmitting
           : isSubmitting // ignore: cast_nullable_to_non_nullable

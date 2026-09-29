@@ -2082,7 +2082,27 @@ mixin _$CheckoutConfirmResult {
   List<int> get orderIds;
   @IntOrNullJson()
   @JsonKey(name: 'payment_transaction_id')
-  int? get paymentTransactionId;
+  int?
+      get paymentTransactionId; // --- kontrak YANG DIUSULKAN untuk bayar via Xpedia Wallet (docs/22 #1–#2)
+//
+// Belum dikirim server; di debug disisipkan mock
+// (`checkout_mock_routes.dart`). Pada alur lama ketiganya tidak ada, jadi
+// default-nya harus berarti "belum dibayar".
+  /// `true` kalau konfirmasi **sekaligus membayar** dari saldo Wallet.
+  /// `false` di alur lama: order masih harus dibayar di layar pembayaran.
+  @BoolJson()
+  bool get paid;
+
+  /// Baris `wallet_transactions` hasil pendebitan.
+  @IntOrNullJson()
+  @JsonKey(name: 'wallet_transaction_id')
+  int? get walletTransactionId;
+
+  /// Saldo sesudah dipotong — ditampilkan di layar sukses supaya pembeli
+  /// tidak perlu membuka dompet untuk memastikannya.
+  @DoubleOrNullJson()
+  @JsonKey(name: 'balance_after')
+  double? get balanceAfter;
 
   /// Create a copy of CheckoutConfirmResult
   /// with the given fields replaced by the non-null parameter values.
@@ -2102,17 +2122,27 @@ mixin _$CheckoutConfirmResult {
             other is CheckoutConfirmResult &&
             const DeepCollectionEquality().equals(other.orderIds, orderIds) &&
             (identical(other.paymentTransactionId, paymentTransactionId) ||
-                other.paymentTransactionId == paymentTransactionId));
+                other.paymentTransactionId == paymentTransactionId) &&
+            (identical(other.paid, paid) || other.paid == paid) &&
+            (identical(other.walletTransactionId, walletTransactionId) ||
+                other.walletTransactionId == walletTransactionId) &&
+            (identical(other.balanceAfter, balanceAfter) ||
+                other.balanceAfter == balanceAfter));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode => Object.hash(runtimeType,
-      const DeepCollectionEquality().hash(orderIds), paymentTransactionId);
+  int get hashCode => Object.hash(
+      runtimeType,
+      const DeepCollectionEquality().hash(orderIds),
+      paymentTransactionId,
+      paid,
+      walletTransactionId,
+      balanceAfter);
 
   @override
   String toString() {
-    return 'CheckoutConfirmResult(orderIds: $orderIds, paymentTransactionId: $paymentTransactionId)';
+    return 'CheckoutConfirmResult(orderIds: $orderIds, paymentTransactionId: $paymentTransactionId, paid: $paid, walletTransactionId: $walletTransactionId, balanceAfter: $balanceAfter)';
   }
 }
 
@@ -2126,7 +2156,14 @@ abstract mixin class $CheckoutConfirmResultCopyWith<$Res> {
       {@JsonKey(name: 'order_ids') List<int> orderIds,
       @IntOrNullJson()
       @JsonKey(name: 'payment_transaction_id')
-      int? paymentTransactionId});
+      int? paymentTransactionId,
+      @BoolJson() bool paid,
+      @IntOrNullJson()
+      @JsonKey(name: 'wallet_transaction_id')
+      int? walletTransactionId,
+      @DoubleOrNullJson()
+      @JsonKey(name: 'balance_after')
+      double? balanceAfter});
 }
 
 /// @nodoc
@@ -2144,6 +2181,9 @@ class _$CheckoutConfirmResultCopyWithImpl<$Res>
   $Res call({
     Object? orderIds = null,
     Object? paymentTransactionId = freezed,
+    Object? paid = null,
+    Object? walletTransactionId = freezed,
+    Object? balanceAfter = freezed,
   }) {
     return _then(_self.copyWith(
       orderIds: null == orderIds
@@ -2154,6 +2194,18 @@ class _$CheckoutConfirmResultCopyWithImpl<$Res>
           ? _self.paymentTransactionId
           : paymentTransactionId // ignore: cast_nullable_to_non_nullable
               as int?,
+      paid: null == paid
+          ? _self.paid
+          : paid // ignore: cast_nullable_to_non_nullable
+              as bool,
+      walletTransactionId: freezed == walletTransactionId
+          ? _self.walletTransactionId
+          : walletTransactionId // ignore: cast_nullable_to_non_nullable
+              as int?,
+      balanceAfter: freezed == balanceAfter
+          ? _self.balanceAfter
+          : balanceAfter // ignore: cast_nullable_to_non_nullable
+              as double?,
     ));
   }
 }
@@ -2255,14 +2307,22 @@ extension CheckoutConfirmResultPatterns on CheckoutConfirmResult {
             @JsonKey(name: 'order_ids') List<int> orderIds,
             @IntOrNullJson()
             @JsonKey(name: 'payment_transaction_id')
-            int? paymentTransactionId)?
+            int? paymentTransactionId,
+            @BoolJson() bool paid,
+            @IntOrNullJson()
+            @JsonKey(name: 'wallet_transaction_id')
+            int? walletTransactionId,
+            @DoubleOrNullJson()
+            @JsonKey(name: 'balance_after')
+            double? balanceAfter)?
         $default, {
     required TResult orElse(),
   }) {
     final _that = this;
     switch (_that) {
       case _CheckoutConfirmResult() when $default != null:
-        return $default(_that.orderIds, _that.paymentTransactionId);
+        return $default(_that.orderIds, _that.paymentTransactionId, _that.paid,
+            _that.walletTransactionId, _that.balanceAfter);
       case _:
         return orElse();
     }
@@ -2287,13 +2347,21 @@ extension CheckoutConfirmResultPatterns on CheckoutConfirmResult {
             @JsonKey(name: 'order_ids') List<int> orderIds,
             @IntOrNullJson()
             @JsonKey(name: 'payment_transaction_id')
-            int? paymentTransactionId)
+            int? paymentTransactionId,
+            @BoolJson() bool paid,
+            @IntOrNullJson()
+            @JsonKey(name: 'wallet_transaction_id')
+            int? walletTransactionId,
+            @DoubleOrNullJson()
+            @JsonKey(name: 'balance_after')
+            double? balanceAfter)
         $default,
   ) {
     final _that = this;
     switch (_that) {
       case _CheckoutConfirmResult():
-        return $default(_that.orderIds, _that.paymentTransactionId);
+        return $default(_that.orderIds, _that.paymentTransactionId, _that.paid,
+            _that.walletTransactionId, _that.balanceAfter);
       case _:
         throw StateError('Unexpected subclass');
     }
@@ -2317,13 +2385,21 @@ extension CheckoutConfirmResultPatterns on CheckoutConfirmResult {
             @JsonKey(name: 'order_ids') List<int> orderIds,
             @IntOrNullJson()
             @JsonKey(name: 'payment_transaction_id')
-            int? paymentTransactionId)?
+            int? paymentTransactionId,
+            @BoolJson() bool paid,
+            @IntOrNullJson()
+            @JsonKey(name: 'wallet_transaction_id')
+            int? walletTransactionId,
+            @DoubleOrNullJson()
+            @JsonKey(name: 'balance_after')
+            double? balanceAfter)?
         $default,
   ) {
     final _that = this;
     switch (_that) {
       case _CheckoutConfirmResult() when $default != null:
-        return $default(_that.orderIds, _that.paymentTransactionId);
+        return $default(_that.orderIds, _that.paymentTransactionId, _that.paid,
+            _that.walletTransactionId, _that.balanceAfter);
       case _:
         return null;
     }
@@ -2337,7 +2413,12 @@ class _CheckoutConfirmResult extends CheckoutConfirmResult {
       {@JsonKey(name: 'order_ids') final List<int> orderIds = const <int>[],
       @IntOrNullJson()
       @JsonKey(name: 'payment_transaction_id')
-      this.paymentTransactionId})
+      this.paymentTransactionId,
+      @BoolJson() this.paid = false,
+      @IntOrNullJson()
+      @JsonKey(name: 'wallet_transaction_id')
+      this.walletTransactionId,
+      @DoubleOrNullJson() @JsonKey(name: 'balance_after') this.balanceAfter})
       : _orderIds = orderIds,
         super._();
   factory _CheckoutConfirmResult.fromJson(Map<String, dynamic> json) =>
@@ -2356,6 +2437,30 @@ class _CheckoutConfirmResult extends CheckoutConfirmResult {
   @IntOrNullJson()
   @JsonKey(name: 'payment_transaction_id')
   final int? paymentTransactionId;
+// --- kontrak YANG DIUSULKAN untuk bayar via Xpedia Wallet (docs/22 #1–#2)
+//
+// Belum dikirim server; di debug disisipkan mock
+// (`checkout_mock_routes.dart`). Pada alur lama ketiganya tidak ada, jadi
+// default-nya harus berarti "belum dibayar".
+  /// `true` kalau konfirmasi **sekaligus membayar** dari saldo Wallet.
+  /// `false` di alur lama: order masih harus dibayar di layar pembayaran.
+  @override
+  @JsonKey()
+  @BoolJson()
+  final bool paid;
+
+  /// Baris `wallet_transactions` hasil pendebitan.
+  @override
+  @IntOrNullJson()
+  @JsonKey(name: 'wallet_transaction_id')
+  final int? walletTransactionId;
+
+  /// Saldo sesudah dipotong — ditampilkan di layar sukses supaya pembeli
+  /// tidak perlu membuka dompet untuk memastikannya.
+  @override
+  @DoubleOrNullJson()
+  @JsonKey(name: 'balance_after')
+  final double? balanceAfter;
 
   /// Create a copy of CheckoutConfirmResult
   /// with the given fields replaced by the non-null parameter values.
@@ -2380,17 +2485,27 @@ class _CheckoutConfirmResult extends CheckoutConfirmResult {
             other is _CheckoutConfirmResult &&
             const DeepCollectionEquality().equals(other._orderIds, _orderIds) &&
             (identical(other.paymentTransactionId, paymentTransactionId) ||
-                other.paymentTransactionId == paymentTransactionId));
+                other.paymentTransactionId == paymentTransactionId) &&
+            (identical(other.paid, paid) || other.paid == paid) &&
+            (identical(other.walletTransactionId, walletTransactionId) ||
+                other.walletTransactionId == walletTransactionId) &&
+            (identical(other.balanceAfter, balanceAfter) ||
+                other.balanceAfter == balanceAfter));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode => Object.hash(runtimeType,
-      const DeepCollectionEquality().hash(_orderIds), paymentTransactionId);
+  int get hashCode => Object.hash(
+      runtimeType,
+      const DeepCollectionEquality().hash(_orderIds),
+      paymentTransactionId,
+      paid,
+      walletTransactionId,
+      balanceAfter);
 
   @override
   String toString() {
-    return 'CheckoutConfirmResult(orderIds: $orderIds, paymentTransactionId: $paymentTransactionId)';
+    return 'CheckoutConfirmResult(orderIds: $orderIds, paymentTransactionId: $paymentTransactionId, paid: $paid, walletTransactionId: $walletTransactionId, balanceAfter: $balanceAfter)';
   }
 }
 
@@ -2406,7 +2521,14 @@ abstract mixin class _$CheckoutConfirmResultCopyWith<$Res>
       {@JsonKey(name: 'order_ids') List<int> orderIds,
       @IntOrNullJson()
       @JsonKey(name: 'payment_transaction_id')
-      int? paymentTransactionId});
+      int? paymentTransactionId,
+      @BoolJson() bool paid,
+      @IntOrNullJson()
+      @JsonKey(name: 'wallet_transaction_id')
+      int? walletTransactionId,
+      @DoubleOrNullJson()
+      @JsonKey(name: 'balance_after')
+      double? balanceAfter});
 }
 
 /// @nodoc
@@ -2424,6 +2546,9 @@ class __$CheckoutConfirmResultCopyWithImpl<$Res>
   $Res call({
     Object? orderIds = null,
     Object? paymentTransactionId = freezed,
+    Object? paid = null,
+    Object? walletTransactionId = freezed,
+    Object? balanceAfter = freezed,
   }) {
     return _then(_CheckoutConfirmResult(
       orderIds: null == orderIds
@@ -2434,6 +2559,492 @@ class __$CheckoutConfirmResultCopyWithImpl<$Res>
           ? _self.paymentTransactionId
           : paymentTransactionId // ignore: cast_nullable_to_non_nullable
               as int?,
+      paid: null == paid
+          ? _self.paid
+          : paid // ignore: cast_nullable_to_non_nullable
+              as bool,
+      walletTransactionId: freezed == walletTransactionId
+          ? _self.walletTransactionId
+          : walletTransactionId // ignore: cast_nullable_to_non_nullable
+              as int?,
+      balanceAfter: freezed == balanceAfter
+          ? _self.balanceAfter
+          : balanceAfter // ignore: cast_nullable_to_non_nullable
+              as double?,
+    ));
+  }
+}
+
+/// @nodoc
+mixin _$WalletSummaryModel {
+  /// Saldo yang bisa dipakai membayar (sudah dikurangi saldo tertahan).
+  @DoubleJson()
+  @JsonKey(name: 'wallet_balance')
+  double get walletBalance;
+
+  /// Sama dengan `grand_total` sesi — sudah termasuk ongkir dan voucher.
+  @DoubleJson()
+  @JsonKey(name: 'grand_total')
+  double get grandTotal;
+
+  /// `max(0, grand_total − wallet_balance)`.
+  @DoubleJson()
+  double get shortfall;
+  @BoolJson()
+  @JsonKey(name: 'can_pay')
+  bool get canPay;
+
+  /// Minimum top up (blueprint: Rp 10.000). Dikirim server supaya tidak
+  /// hardcoded di dua tempat seperti minimum penarikan.
+  @DoubleJson()
+  @JsonKey(name: 'min_topup')
+  double get minTopup;
+
+  /// Sudahkah PIN Wallet dibuat. Tanpa field ini aplikasi tidak punya cara
+  /// mengetahuinya sebelum pembayaran ditolak.
+  @BoolJson()
+  @JsonKey(name: 'pin_set')
+  bool get pinSet;
+
+  /// Create a copy of WalletSummaryModel
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  $WalletSummaryModelCopyWith<WalletSummaryModel> get copyWith =>
+      _$WalletSummaryModelCopyWithImpl<WalletSummaryModel>(
+          this as WalletSummaryModel, _$identity);
+
+  /// Serializes this WalletSummaryModel to a JSON map.
+  Map<String, dynamic> toJson();
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is WalletSummaryModel &&
+            (identical(other.walletBalance, walletBalance) ||
+                other.walletBalance == walletBalance) &&
+            (identical(other.grandTotal, grandTotal) ||
+                other.grandTotal == grandTotal) &&
+            (identical(other.shortfall, shortfall) ||
+                other.shortfall == shortfall) &&
+            (identical(other.canPay, canPay) || other.canPay == canPay) &&
+            (identical(other.minTopup, minTopup) ||
+                other.minTopup == minTopup) &&
+            (identical(other.pinSet, pinSet) || other.pinSet == pinSet));
+  }
+
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @override
+  int get hashCode => Object.hash(runtimeType, walletBalance, grandTotal,
+      shortfall, canPay, minTopup, pinSet);
+
+  @override
+  String toString() {
+    return 'WalletSummaryModel(walletBalance: $walletBalance, grandTotal: $grandTotal, shortfall: $shortfall, canPay: $canPay, minTopup: $minTopup, pinSet: $pinSet)';
+  }
+}
+
+/// @nodoc
+abstract mixin class $WalletSummaryModelCopyWith<$Res> {
+  factory $WalletSummaryModelCopyWith(
+          WalletSummaryModel value, $Res Function(WalletSummaryModel) _then) =
+      _$WalletSummaryModelCopyWithImpl;
+  @useResult
+  $Res call(
+      {@DoubleJson() @JsonKey(name: 'wallet_balance') double walletBalance,
+      @DoubleJson() @JsonKey(name: 'grand_total') double grandTotal,
+      @DoubleJson() double shortfall,
+      @BoolJson() @JsonKey(name: 'can_pay') bool canPay,
+      @DoubleJson() @JsonKey(name: 'min_topup') double minTopup,
+      @BoolJson() @JsonKey(name: 'pin_set') bool pinSet});
+}
+
+/// @nodoc
+class _$WalletSummaryModelCopyWithImpl<$Res>
+    implements $WalletSummaryModelCopyWith<$Res> {
+  _$WalletSummaryModelCopyWithImpl(this._self, this._then);
+
+  final WalletSummaryModel _self;
+  final $Res Function(WalletSummaryModel) _then;
+
+  /// Create a copy of WalletSummaryModel
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? walletBalance = null,
+    Object? grandTotal = null,
+    Object? shortfall = null,
+    Object? canPay = null,
+    Object? minTopup = null,
+    Object? pinSet = null,
+  }) {
+    return _then(_self.copyWith(
+      walletBalance: null == walletBalance
+          ? _self.walletBalance
+          : walletBalance // ignore: cast_nullable_to_non_nullable
+              as double,
+      grandTotal: null == grandTotal
+          ? _self.grandTotal
+          : grandTotal // ignore: cast_nullable_to_non_nullable
+              as double,
+      shortfall: null == shortfall
+          ? _self.shortfall
+          : shortfall // ignore: cast_nullable_to_non_nullable
+              as double,
+      canPay: null == canPay
+          ? _self.canPay
+          : canPay // ignore: cast_nullable_to_non_nullable
+              as bool,
+      minTopup: null == minTopup
+          ? _self.minTopup
+          : minTopup // ignore: cast_nullable_to_non_nullable
+              as double,
+      pinSet: null == pinSet
+          ? _self.pinSet
+          : pinSet // ignore: cast_nullable_to_non_nullable
+              as bool,
+    ));
+  }
+}
+
+/// Adds pattern-matching-related methods to [WalletSummaryModel].
+extension WalletSummaryModelPatterns on WalletSummaryModel {
+  /// A variant of `map` that fallback to returning `orElse`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult maybeMap<TResult extends Object?>(
+    TResult Function(_WalletSummaryModel value)? $default, {
+    required TResult orElse(),
+  }) {
+    final _that = this;
+    switch (_that) {
+      case _WalletSummaryModel() when $default != null:
+        return $default(_that);
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// Callbacks receives the raw object, upcasted.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case final Subclass2 value:
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult map<TResult extends Object?>(
+    TResult Function(_WalletSummaryModel value) $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _WalletSummaryModel():
+        return $default(_that);
+      case _:
+        throw StateError('Unexpected subclass');
+    }
+  }
+
+  /// A variant of `map` that fallback to returning `null`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? mapOrNull<TResult extends Object?>(
+    TResult? Function(_WalletSummaryModel value)? $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _WalletSummaryModel() when $default != null:
+        return $default(_that);
+      case _:
+        return null;
+    }
+  }
+
+  /// A variant of `when` that fallback to an `orElse` callback.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult maybeWhen<TResult extends Object?>(
+    TResult Function(
+            @DoubleJson() @JsonKey(name: 'wallet_balance') double walletBalance,
+            @DoubleJson() @JsonKey(name: 'grand_total') double grandTotal,
+            @DoubleJson() double shortfall,
+            @BoolJson() @JsonKey(name: 'can_pay') bool canPay,
+            @DoubleJson() @JsonKey(name: 'min_topup') double minTopup,
+            @BoolJson() @JsonKey(name: 'pin_set') bool pinSet)?
+        $default, {
+    required TResult orElse(),
+  }) {
+    final _that = this;
+    switch (_that) {
+      case _WalletSummaryModel() when $default != null:
+        return $default(_that.walletBalance, _that.grandTotal, _that.shortfall,
+            _that.canPay, _that.minTopup, _that.pinSet);
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// As opposed to `map`, this offers destructuring.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case Subclass2(:final field2):
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult when<TResult extends Object?>(
+    TResult Function(
+            @DoubleJson() @JsonKey(name: 'wallet_balance') double walletBalance,
+            @DoubleJson() @JsonKey(name: 'grand_total') double grandTotal,
+            @DoubleJson() double shortfall,
+            @BoolJson() @JsonKey(name: 'can_pay') bool canPay,
+            @DoubleJson() @JsonKey(name: 'min_topup') double minTopup,
+            @BoolJson() @JsonKey(name: 'pin_set') bool pinSet)
+        $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _WalletSummaryModel():
+        return $default(_that.walletBalance, _that.grandTotal, _that.shortfall,
+            _that.canPay, _that.minTopup, _that.pinSet);
+      case _:
+        throw StateError('Unexpected subclass');
+    }
+  }
+
+  /// A variant of `when` that fallback to returning `null`
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? whenOrNull<TResult extends Object?>(
+    TResult? Function(
+            @DoubleJson() @JsonKey(name: 'wallet_balance') double walletBalance,
+            @DoubleJson() @JsonKey(name: 'grand_total') double grandTotal,
+            @DoubleJson() double shortfall,
+            @BoolJson() @JsonKey(name: 'can_pay') bool canPay,
+            @DoubleJson() @JsonKey(name: 'min_topup') double minTopup,
+            @BoolJson() @JsonKey(name: 'pin_set') bool pinSet)?
+        $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _WalletSummaryModel() when $default != null:
+        return $default(_that.walletBalance, _that.grandTotal, _that.shortfall,
+            _that.canPay, _that.minTopup, _that.pinSet);
+      case _:
+        return null;
+    }
+  }
+}
+
+/// @nodoc
+@JsonSerializable()
+class _WalletSummaryModel extends WalletSummaryModel {
+  const _WalletSummaryModel(
+      {@DoubleJson() @JsonKey(name: 'wallet_balance') this.walletBalance = 0,
+      @DoubleJson() @JsonKey(name: 'grand_total') this.grandTotal = 0,
+      @DoubleJson() this.shortfall = 0,
+      @BoolJson() @JsonKey(name: 'can_pay') this.canPay = false,
+      @DoubleJson() @JsonKey(name: 'min_topup') this.minTopup = 10000,
+      @BoolJson() @JsonKey(name: 'pin_set') this.pinSet = false})
+      : super._();
+  factory _WalletSummaryModel.fromJson(Map<String, dynamic> json) =>
+      _$WalletSummaryModelFromJson(json);
+
+  /// Saldo yang bisa dipakai membayar (sudah dikurangi saldo tertahan).
+  @override
+  @DoubleJson()
+  @JsonKey(name: 'wallet_balance')
+  final double walletBalance;
+
+  /// Sama dengan `grand_total` sesi — sudah termasuk ongkir dan voucher.
+  @override
+  @DoubleJson()
+  @JsonKey(name: 'grand_total')
+  final double grandTotal;
+
+  /// `max(0, grand_total − wallet_balance)`.
+  @override
+  @JsonKey()
+  @DoubleJson()
+  final double shortfall;
+  @override
+  @BoolJson()
+  @JsonKey(name: 'can_pay')
+  final bool canPay;
+
+  /// Minimum top up (blueprint: Rp 10.000). Dikirim server supaya tidak
+  /// hardcoded di dua tempat seperti minimum penarikan.
+  @override
+  @DoubleJson()
+  @JsonKey(name: 'min_topup')
+  final double minTopup;
+
+  /// Sudahkah PIN Wallet dibuat. Tanpa field ini aplikasi tidak punya cara
+  /// mengetahuinya sebelum pembayaran ditolak.
+  @override
+  @BoolJson()
+  @JsonKey(name: 'pin_set')
+  final bool pinSet;
+
+  /// Create a copy of WalletSummaryModel
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  _$WalletSummaryModelCopyWith<_WalletSummaryModel> get copyWith =>
+      __$WalletSummaryModelCopyWithImpl<_WalletSummaryModel>(this, _$identity);
+
+  @override
+  Map<String, dynamic> toJson() {
+    return _$WalletSummaryModelToJson(
+      this,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _WalletSummaryModel &&
+            (identical(other.walletBalance, walletBalance) ||
+                other.walletBalance == walletBalance) &&
+            (identical(other.grandTotal, grandTotal) ||
+                other.grandTotal == grandTotal) &&
+            (identical(other.shortfall, shortfall) ||
+                other.shortfall == shortfall) &&
+            (identical(other.canPay, canPay) || other.canPay == canPay) &&
+            (identical(other.minTopup, minTopup) ||
+                other.minTopup == minTopup) &&
+            (identical(other.pinSet, pinSet) || other.pinSet == pinSet));
+  }
+
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @override
+  int get hashCode => Object.hash(runtimeType, walletBalance, grandTotal,
+      shortfall, canPay, minTopup, pinSet);
+
+  @override
+  String toString() {
+    return 'WalletSummaryModel(walletBalance: $walletBalance, grandTotal: $grandTotal, shortfall: $shortfall, canPay: $canPay, minTopup: $minTopup, pinSet: $pinSet)';
+  }
+}
+
+/// @nodoc
+abstract mixin class _$WalletSummaryModelCopyWith<$Res>
+    implements $WalletSummaryModelCopyWith<$Res> {
+  factory _$WalletSummaryModelCopyWith(
+          _WalletSummaryModel value, $Res Function(_WalletSummaryModel) _then) =
+      __$WalletSummaryModelCopyWithImpl;
+  @override
+  @useResult
+  $Res call(
+      {@DoubleJson() @JsonKey(name: 'wallet_balance') double walletBalance,
+      @DoubleJson() @JsonKey(name: 'grand_total') double grandTotal,
+      @DoubleJson() double shortfall,
+      @BoolJson() @JsonKey(name: 'can_pay') bool canPay,
+      @DoubleJson() @JsonKey(name: 'min_topup') double minTopup,
+      @BoolJson() @JsonKey(name: 'pin_set') bool pinSet});
+}
+
+/// @nodoc
+class __$WalletSummaryModelCopyWithImpl<$Res>
+    implements _$WalletSummaryModelCopyWith<$Res> {
+  __$WalletSummaryModelCopyWithImpl(this._self, this._then);
+
+  final _WalletSummaryModel _self;
+  final $Res Function(_WalletSummaryModel) _then;
+
+  /// Create a copy of WalletSummaryModel
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $Res call({
+    Object? walletBalance = null,
+    Object? grandTotal = null,
+    Object? shortfall = null,
+    Object? canPay = null,
+    Object? minTopup = null,
+    Object? pinSet = null,
+  }) {
+    return _then(_WalletSummaryModel(
+      walletBalance: null == walletBalance
+          ? _self.walletBalance
+          : walletBalance // ignore: cast_nullable_to_non_nullable
+              as double,
+      grandTotal: null == grandTotal
+          ? _self.grandTotal
+          : grandTotal // ignore: cast_nullable_to_non_nullable
+              as double,
+      shortfall: null == shortfall
+          ? _self.shortfall
+          : shortfall // ignore: cast_nullable_to_non_nullable
+              as double,
+      canPay: null == canPay
+          ? _self.canPay
+          : canPay // ignore: cast_nullable_to_non_nullable
+              as bool,
+      minTopup: null == minTopup
+          ? _self.minTopup
+          : minTopup // ignore: cast_nullable_to_non_nullable
+              as double,
+      pinSet: null == pinSet
+          ? _self.pinSet
+          : pinSet // ignore: cast_nullable_to_non_nullable
+              as bool,
     ));
   }
 }

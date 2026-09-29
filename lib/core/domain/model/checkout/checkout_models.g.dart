@@ -134,6 +134,12 @@ _CheckoutConfirmResult _$CheckoutConfirmResultFromJson(
           const <int>[],
       paymentTransactionId:
           const IntOrNullJson().fromJson(json['payment_transaction_id']),
+      paid: json['paid'] == null
+          ? false
+          : const BoolJson().fromJson(json['paid']),
+      walletTransactionId:
+          const IntOrNullJson().fromJson(json['wallet_transaction_id']),
+      balanceAfter: const DoubleOrNullJson().fromJson(json['balance_after']),
     );
 
 Map<String, dynamic> _$CheckoutConfirmResultToJson(
@@ -142,4 +148,40 @@ Map<String, dynamic> _$CheckoutConfirmResultToJson(
       'order_ids': instance.orderIds,
       'payment_transaction_id':
           const IntOrNullJson().toJson(instance.paymentTransactionId),
+      'paid': const BoolJson().toJson(instance.paid),
+      'wallet_transaction_id':
+          const IntOrNullJson().toJson(instance.walletTransactionId),
+      'balance_after': const DoubleOrNullJson().toJson(instance.balanceAfter),
+    };
+
+_WalletSummaryModel _$WalletSummaryModelFromJson(Map<String, dynamic> json) =>
+    _WalletSummaryModel(
+      walletBalance: json['wallet_balance'] == null
+          ? 0
+          : const DoubleJson().fromJson(json['wallet_balance']),
+      grandTotal: json['grand_total'] == null
+          ? 0
+          : const DoubleJson().fromJson(json['grand_total']),
+      shortfall: json['shortfall'] == null
+          ? 0
+          : const DoubleJson().fromJson(json['shortfall']),
+      canPay: json['can_pay'] == null
+          ? false
+          : const BoolJson().fromJson(json['can_pay']),
+      minTopup: json['min_topup'] == null
+          ? 10000
+          : const DoubleJson().fromJson(json['min_topup']),
+      pinSet: json['pin_set'] == null
+          ? false
+          : const BoolJson().fromJson(json['pin_set']),
+    );
+
+Map<String, dynamic> _$WalletSummaryModelToJson(_WalletSummaryModel instance) =>
+    <String, dynamic>{
+      'wallet_balance': const DoubleJson().toJson(instance.walletBalance),
+      'grand_total': const DoubleJson().toJson(instance.grandTotal),
+      'shortfall': const DoubleJson().toJson(instance.shortfall),
+      'can_pay': const BoolJson().toJson(instance.canPay),
+      'min_topup': const DoubleJson().toJson(instance.minTopup),
+      'pin_set': const BoolJson().toJson(instance.pinSet),
     };

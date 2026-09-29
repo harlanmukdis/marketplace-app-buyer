@@ -27,7 +27,9 @@ abstract class AuthSessionModel with _$AuthSessionModel {
 
     /// UU PDP: kebijakan privasi berubah dan user harus menyetujui ulang.
     /// Sesi tetap sah, tapi aplikasi wajib menampilkan layar persetujuan.
-    @BoolJson() @JsonKey(name: 'requires_reconsent') @Default(false)
+    @BoolJson()
+    @JsonKey(name: 'requires_reconsent')
+    @Default(false)
     bool requiresReconsent,
   }) = _AuthSessionModel;
 
@@ -54,7 +56,8 @@ abstract class RegisterResultModel with _$RegisterResultModel {
     /// Hanya ada saat backend berjalan dalam mode dev. Jangan pernah
     /// ditampilkan ke user — ini token verifikasi yang di produksi dikirim
     /// lewat email.
-    @StringOrNullJson() @JsonKey(name: 'dev_verification_token')
+    @StringOrNullJson()
+    @JsonKey(name: 'dev_verification_token')
     String? devVerificationToken,
   }) = _RegisterResultModel;
 

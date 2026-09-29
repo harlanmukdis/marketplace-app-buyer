@@ -86,3 +86,28 @@ Map<String, dynamic> _$WalletTopupResultToJson(_WalletTopupResult instance) =>
       'topup_reference': const StringOrNullJson().toJson(instance.reference),
       'amount': const DoubleJson().toJson(instance.amount),
     };
+
+_BankAccountModel _$BankAccountModelFromJson(Map<String, dynamic> json) =>
+    _BankAccountModel(
+      id: const IntJson().fromJson(json['id']),
+      bankName: json['bank_name'] == null
+          ? ''
+          : const StringJson().fromJson(json['bank_name']),
+      accountNumber: json['account_number'] == null
+          ? ''
+          : const StringJson().fromJson(json['account_number']),
+      accountHolderName: json['account_holder_name'] == null
+          ? ''
+          : const StringJson().fromJson(json['account_holder_name']),
+      createdAt: const ServerDateTimeJson().fromJson(json['created_at']),
+    );
+
+Map<String, dynamic> _$BankAccountModelToJson(_BankAccountModel instance) =>
+    <String, dynamic>{
+      'id': const IntJson().toJson(instance.id),
+      'bank_name': const StringJson().toJson(instance.bankName),
+      'account_number': const StringJson().toJson(instance.accountNumber),
+      'account_holder_name':
+          const StringJson().toJson(instance.accountHolderName),
+      'created_at': const ServerDateTimeJson().toJson(instance.createdAt),
+    };

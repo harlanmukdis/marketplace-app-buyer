@@ -79,7 +79,6 @@ abstract class NotificationModel with _$NotificationModel {
 
     /// Jenis mentah; pakai [kind] untuk memilih ikon.
     @StringJson() @JsonKey(name: 'type') @Default('') String typeCode,
-
     @StringJson() @Default('') String title,
     @StringJson() @Default('') String body,
 
@@ -90,7 +89,6 @@ abstract class NotificationModel with _$NotificationModel {
     /// jebakan yang sama persis dengan `selected_couriers` di sesi checkout,
     /// dan alasan field ini memakai [JsonMapJson].
     @JsonMapJson() Map<String, dynamic>? data,
-
     @BoolJson() @JsonKey(name: 'is_read') @Default(false) bool isRead,
     @ServerDateTimeJson() @JsonKey(name: 'created_at') DateTime? createdAt,
   }) = _NotificationModel;

@@ -121,5 +121,62 @@ void main() {
           {..._messageJson, 'read_at': '2026-09-20 17:00:00'});
       expect(m.isRead, isTrue);
     });
+
+    group('delivery — empat keadaan centang', () {
+      test('tanpa delivered_at/read_at/status berarti terkirim (1 centang)',
+          () {
+        final m = ChatMessageModel.fromJson(_messageJson);
+        expect(m.delivery, MessageDelivery.sent);
+      });
+
+      test('status "sent" dari server tetap satu centang', () {
+        final m = ChatMessageModel.fromJson({
+          ..._messageJson,
+          'delivered_at': null,
+          'status': 'sent',
+        });
+        expect(m.delivery, MessageDelivery.sent);
+      });
+
+      test('delivered_at terisi berarti sampai (2 centang abu)', () {
+        final m = ChatMessageModel.fromJson({
+          ..._messageJson,
+          'delivered_at': '2026-09-20 16:57:00',
+          'status': 'delivered',
+        });
+        expect(m.deliveredAt, isNotNull);
+        expect(m.deliveryStatus, 'delivered');
+        expect(m.delivery, MessageDelivery.delivered);
+      });
+
+      test('status "delivered" saja cukup walau delivered_at tidak ikut', () {
+        final m =
+            ChatMessageModel.fromJson({..._messageJson, 'status': 'delivered'});
+        expect(m.delivery, MessageDelivery.delivered);
+      });
+
+      test('read_at mengalahkan delivered_at (2 centang biru)', () {
+        final m = ChatMessageModel.fromJson({
+          ..._messageJson,
+          'delivered_at': '2026-09-20 16:57:00',
+          'read_at': '2026-09-20 16:58:00',
+          'status': 'read',
+        });
+        expect(m.delivery, MessageDelivery.read);
+      });
+
+      test('status "read" tanpa read_at tetap dibaca', () {
+        final m = ChatMessageModel.fromJson({..._messageJson, 'status': 'read'});
+        expect(m.delivery, MessageDelivery.read);
+      });
+
+      test('"pending" tidak pernah datang dari server', () {
+        // Keadaan menunggu hanya milik aplikasi (pesan yang sedang dikirim);
+        // nilai status asing jatuh ke terkirim, bukan menunggu.
+        final m =
+            ChatMessageModel.fromJson({..._messageJson, 'status': 'pending'});
+        expect(m.delivery, MessageDelivery.sent);
+      });
+    });
   });
 }

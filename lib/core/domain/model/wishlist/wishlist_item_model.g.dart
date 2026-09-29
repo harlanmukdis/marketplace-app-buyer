@@ -24,6 +24,7 @@ _WishlistItemModel _$WishlistItemModelFromJson(Map<String, dynamic> json) =>
           ? 'active'
           : const StringJson().fromJson(json['product_status']),
       addedAt: const ServerDateTimeJson().fromJson(json['added_at']),
+      alertEnabled: const _BoolOrNullJson().fromJson(json['alert_enabled']),
     );
 
 Map<String, dynamic> _$WishlistItemModelToJson(_WishlistItemModel instance) =>
@@ -36,4 +37,5 @@ Map<String, dynamic> _$WishlistItemModelToJson(_WishlistItemModel instance) =>
       'image_url': const StringOrNullJson().toJson(instance.imageUrl),
       'product_status': const StringJson().toJson(instance.productStatus),
       'added_at': const ServerDateTimeJson().toJson(instance.addedAt),
+      'alert_enabled': const _BoolOrNullJson().toJson(instance.alertEnabled),
     };

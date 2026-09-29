@@ -19,4 +19,19 @@ abstract class WalletRepository {
   /// saldo langsung berkurang saat pengajuan dibuat, jadi layar harus
   /// menampilkan angka yang baru.
   Future<DataState<WalletModel>> withdraw(WithdrawalDraft draft);
+
+  Future<DataState<void>> setWithdrawalPin(
+      {required String pin, String? currentPin});
+
+  Future<DataState<List<BankAccountModel>>> fetchBankAccounts();
+
+  /// Menambah rekening lalu mengembalikan daftar hasil baca ulang.
+  Future<DataState<List<BankAccountModel>>> addBankAccount({
+    required String bankName,
+    required String accountNumber,
+    required String accountHolderName,
+  });
+
+  /// Menghapus rekening lalu mengembalikan daftar hasil baca ulang.
+  Future<DataState<List<BankAccountModel>>> deleteBankAccount(int id);
 }

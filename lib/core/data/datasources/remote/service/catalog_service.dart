@@ -18,7 +18,13 @@ enum ProductSort {
   trending('trending'),
   priceAsc('price_asc'),
   priceDesc('price_desc'),
-  rating('rating');
+  rating('rating'),
+
+  /// Peringkat server menurut `natural_performance_score` (backend v1.x).
+  /// Ini yang dipakai beranda dan pencarian: blueprint melarang kontrol
+  /// urutan di sisi pembeli (design_buyer.md §5 no. 1) — relevansi dan
+  /// kelayakan kirim ditentukan server.
+  recommended('recommended');
 
   const ProductSort(this.code);
   final String code;
@@ -52,9 +58,15 @@ class CatalogService {
 
   /// `GET /products` — listing sekaligus pencarian.
   ///
-  /// ⚠️ Hasilnya **tidak membawa gambar, stok, varian, maupun kurir**; semua
-  /// itu hanya ada di [fetchProduct]. Jangan menembak detail per kartu untuk
+  /// ⚠️ Hasilnya **tidak membawa stok, varian, maupun kurir**; semua itu
+  /// hanya ada di [fetchProduct]. Jangan menembak detail per kartu untuk
   /// menambalnya — itu N+1 request untuk satu layar.
+  ///
+  /// 🔴 **Sejak backend v1.x listing menyembunyikan produk**: `discontinued`
+  /// dan `ready_stock` yang stoknya nol tidak pernah muncul, di semua
+  /// `sort_by` termasuk pencarian. Detail tetap mengembalikannya — jadi
+  /// produk dari tautan langsung atau wishlist bisa dibuka walau tidak bisa
+  /// ditemukan lewat pencarian.
   ///
   /// `meta` yang dikembalikan membawa `page`/`per_page`/`total` **dan**
   /// `facets` untuk sidebar filter, jadi jangan dibuang di repository.
@@ -68,6 +80,8 @@ class CatalogService {
     String? city,
     String? province,
     String? courier,
+    String? destCity,
+    String? destProvince,
     ProductSort sort = ProductSort.latest,
     int page = 1,
     int perPage = 20,
@@ -86,6 +100,12 @@ class CatalogService {
           if (city != null && city.isNotEmpty) 'city': city,
           if (province != null && province.isNotEmpty) 'province': province,
           if (courier != null && courier.isNotEmpty) 'courier': courier,
+          // Tujuan kirim pembeli — BUKAN lokasi gudang seperti `city`.
+          // Produk yang jangkauan kirimnya tidak mencakup tujuan ini dibuang
+          // server, jadi yang tampil memang bisa dibeli ke alamat itu.
+          if (destCity != null && destCity.isNotEmpty) 'dest_city': destCity,
+          if (destProvince != null && destProvince.isNotEmpty)
+            'dest_province': destProvince,
           'sort_by': sort.code,
           'page': page,
           // Server memotong di 100; dipatok di sini juga supaya permintaan yang

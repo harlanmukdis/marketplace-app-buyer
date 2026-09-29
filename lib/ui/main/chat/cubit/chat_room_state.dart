@@ -17,6 +17,16 @@ sealed class ChatRoomState with _$ChatRoomState {
 
     /// Sedang mengirim pesan.
     @Default(false) bool isSending,
+
+    /// Isi pesan yang sedang dikirim, dirender sebagai gelembung "menunggu"
+    /// (ikon jam) di ujung percakapan.
+    ///
+    /// Bukan [ChatMessageModel] palsu: pesan sungguhan baru ada setelah baca
+    /// ulang (balasan `POST` hanya `{id}`), dan menyisipkan model karangan ke
+    /// [messages] berarti ia ikut diurutkan dan digabung seolah datang dari
+    /// server. Dikosongkan lagi begitu pengiriman selesai, berhasil maupun
+    /// gagal.
+    String? pendingText,
     DataError? actionError,
   }) = ChatRoomReady;
 

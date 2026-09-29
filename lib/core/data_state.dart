@@ -271,6 +271,50 @@ abstract final class ApiErrorCode {
   /// `/search/*` mati karena Elasticsearch tidak jalan. Keadaan normal di
   /// dev — layar seharusnya beralih ke `GET /products?q=`.
   static const searchUnavailable = 'SEARCH_UNAVAILABLE';
+
+  // --- backend v1.6–v1.28 (blueprint Xpedia) ---
+
+  /// Chat berisi nomor HP, email, URL, atau nama platform lain. Pesannya
+  /// **tidak tersimpan**; tiga pelanggaran dalam 24 jam memicu fraud flag
+  /// diam-diam.
+  static const chatContentBlocked = 'CHAT_CONTENT_BLOCKED';
+
+  /// Toko tidak mengirim ke alamat tujuan (`POST /checkout/sessions`).
+  /// `details` null — produk mana yang gagal hanya tertulis di `message`.
+  static const shippingCoverageUnavailable = 'SHIPPING_COVERAGE_UNAVAILABLE';
+
+  /// Kode segel Secure+ salah/kosong di `confirm-delivery`.
+  static const invalidSealCode = 'INVALID_SEAL_CODE';
+
+  /// Invoice diminta untuk pesanan yang belum `completed`.
+  static const invoiceNotAvailable = 'INVOICE_NOT_AVAILABLE';
+
+  /// Semua penolakan penarikan (minimum, PIN, rekening, saldo) — lihat
+  /// `WalletService.withdraw`.
+  static const withdrawalRejected = 'WITHDRAWAL_REJECTED';
+
+  static const ticketNotFound = 'TICKET_NOT_FOUND';
+
+  // --- API yang diusulkan (di-mock; lihat assets/mock/pending_api/README.md) ---
+  // Didaftarkan di sini supaya layar mana pun yang menerimanya menampilkan
+  // pesan yang benar — bukan hanya layar yang menulis pemetaan lokalnya.
+  static const invalidPin = 'INVALID_PIN';
+  static const pinNotSet = 'PIN_NOT_SET';
+  static const voucherQuotaExceeded = 'VOUCHER_QUOTA_EXCEEDED';
+  static const voucherAlreadyUsed = 'VOUCHER_ALREADY_USED';
+  static const voucherMinSpendNotMet = 'VOUCHER_MIN_SPEND_NOT_MET';
+  static const voucherAlreadyClaimed = 'VOUCHER_ALREADY_CLAIMED';
+  static const cancellationNotAllowed = 'CANCELLATION_NOT_ALLOWED';
+  static const cancellationRequestExists = 'CANCELLATION_REQUEST_EXISTS';
+  static const reviewEditWindowClosed = 'REVIEW_EDIT_WINDOW_CLOSED';
+  static const reviewNotFound = 'REVIEW_NOT_FOUND';
+  static const uploadFailed = 'UPLOAD_FAILED';
+  static const idCardAlreadyUsed = 'ID_CARD_ALREADY_USED';
+  static const identityLocked = 'IDENTITY_LOCKED';
+  static const invalidOtp = 'INVALID_OTP';
+  static const otpExpired = 'OTP_EXPIRED';
+  static const contactChangeNotFound = 'CONTACT_CHANGE_NOT_FOUND';
+  static const notParticipant = 'NOT_PARTICIPANT';
 }
 
 /// Kode yang dibuat app sendiri, untuk kegagalan yang tidak pernah datang dari
@@ -280,5 +324,11 @@ abstract final class ClientErrorCode {
   static const timeout = 'CLIENT_TIMEOUT';
   static const cancelled = 'CLIENT_CANCELLED';
   static const badResponse = 'CLIENT_BAD_RESPONSE';
+
+  /// Validasi yang dilakukan **aplikasi sendiri** sebelum menyentuh jaringan.
+  /// Berbeda dari kode server, `message`-nya ditulis aplikasi dalam bahasa
+  /// Indonesia untuk user — jadi satu-satunya kode yang pesannya boleh
+  /// ditampilkan apa adanya oleh `errorMessageFor`.
+  static const localValidation = 'CLIENT_LOCAL_VALIDATION';
   static const unknown = 'CLIENT_UNKNOWN';
 }

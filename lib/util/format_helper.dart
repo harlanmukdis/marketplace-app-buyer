@@ -93,18 +93,12 @@ bool isPast(DateTime? deadline) {
 
 /// Hitung mundur ringkas: `"2 hari 3 jam"`, `"5 jam 12 menit"`, `"8 menit"`.
 ///
-/// > ### 🔴 JANGAN dipakai untuk deadline dari server saat ini
-/// >
-/// > Backend v2.2 masih punya bug selisih jam PHP vs MySQL **5 jam**: batas
-/// > bayar 24 jam tersimpan sebagai 19 jam setelah `created_date`. Hitung
-/// > mundur apa pun yang dibangun dari field deadline server akan **salah
-/// > sekitar 5 jam**, dan menampilkannya seolah presisi justru menyesatkan —
-/// > user bisa kehilangan pesanan karena percaya masih ada waktu.
-/// >
-/// > Tim backend sudah dikabari. **Jangan ditambal dengan offset manual di
-/// > sini**: begitu backend diperbaiki, tambalan itu membuat hasilnya salah
-/// > dua kali. Sampai beres, tampilkan waktu absolut lewat
-/// > [formatServerDeadline].
+/// Aman dipakai untuk deadline dari marketplace-api. Peringatan lama di sini
+/// menyangkut bug selisih jam PHP vs MySQL di backend Markas, yang sudah
+/// tidak dipakai; drift serupa di marketplace-api diperbaiki backend pada
+/// commit `93c6a14` (lihat CLAUDE.md "Drift dua zona waktu SUDAH
+/// DIPERBAIKI"). Kalau test integrasi yang memaku selisih 15 menit / 1 jam
+/// merah lagi, driftnya kembali — dan saat itu hitung mundur ikut salah.
 ///
 /// Batas bersatuan "jam kerja" (mis. konfirmasi toko 1×24 jam kerja) juga
 /// tidak boleh dihitung sendiri karena melewatkan akhir pekan dan libur
@@ -155,10 +149,8 @@ String formatServerDate(DateTime? instant, {String fallback = '-'}) {
 /// Menampilkan batas waktu sebagai **tanggal-jam absolut**, bukan hitung
 /// mundur.
 ///
-/// Ini bentuk yang dipakai selama bug selisih 5 jam di backend belum beres:
-/// angka absolut dari server tetap bisa dibandingkan user dengan jam
-/// dindingnya sendiri, sedangkan hitung mundur menyembunyikan kesalahannya di
-/// balik tampilan yang terasa presisi.
+/// Waktu absolut tetap berguna di samping hitung mundur: user bisa
+/// mencocokkannya dengan jam dindingnya sendiri.
 ///
 /// Contoh keluaran: `"Batas bayar 6 Sep 2026, 14:00 WIB"`.
 String formatServerDeadline(DateTime? instant, {String prefix = 'Batas'}) {
@@ -195,4 +187,36 @@ final NumberFormat _plainNumber = NumberFormat.decimalPattern('id_ID');
 String formatNumber(num? value, {String fallback = '-'}) {
   if (value == null) return fallback;
   return _plainNumber.format(value);
+}
+
+/// Angka ringkas gaya Indonesia untuk jumlah terjual/pengikut/ulasan:
+/// `980`, `1,2rb`, `12,3rb`, `1,5jt`.
+///
+/// Stitch menulis "1.2k"; inventaris desainnya sendiri mencatat itu gaya
+/// Inggris, dan layar beranda/detailnya sudah memakai "1,2rb".
+String formatCompact(num? value) {
+  if (value == null) return '0';
+  final v = value.abs();
+  String trim(double x) {
+    final text = x.toStringAsFixed(1).replaceAll('.', ',');
+    return text.endsWith(',0') ? text.substring(0, text.length - 2) : text;
+  }
+
+  final sign = value < 0 ? '-' : '';
+  if (v >= 1000000) return '$sign${trim(v / 1000000)}jt';
+  if (v >= 1000) return '$sign${trim(v / 1000)}rb';
+  return '$sign${v.round()}';
+}
+
+/// Rating satu desimal dengan koma: `4,9`.
+String formatRating(num? value) =>
+    (value ?? 0).toDouble().toStringAsFixed(1).replaceAll('.', ',');
+
+/// Persen satu desimal gaya Indonesia: `98,7%`. Bilangan bulat tanpa desimal.
+String formatPercent(num? value) {
+  final v = (value ?? 0).toDouble();
+  final text = v == v.roundToDouble()
+      ? v.toStringAsFixed(0)
+      : v.toStringAsFixed(1).replaceAll('.', ',');
+  return '$text%';
 }

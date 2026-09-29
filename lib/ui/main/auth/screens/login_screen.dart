@@ -1,13 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:marketplace_app_member/core/function/components.dart';
-import 'package:marketplace_app_member/core/function/custom_app_bar.dart';
+import 'package:marketplace_app_member/core/design/xp_colors.dart';
+import 'package:marketplace_app_member/core/design/xp_text.dart';
 import 'package:marketplace_app_member/core/utils/app_routes.dart';
-import 'package:marketplace_app_member/core/utils/app_styles.dart';
-import 'package:marketplace_app_member/core/utils/constant.dart';
 import 'package:marketplace_app_member/core/utils/extensions.dart';
-import 'package:marketplace_app_member/core/widgets/custom_buttons.dart';
-import 'package:marketplace_app_member/core/widgets/custom_text_form_field.dart';
 import 'package:marketplace_app_member/generated/l10n.dart';
 import 'package:marketplace_app_member/ui/main/auth/cubit/auth_cubit.dart';
 import 'package:marketplace_app_member/ui/main/auth/widgets/auth_error_banner.dart';
@@ -17,8 +13,8 @@ import 'package:marketplace_app_member/ui/main/auth/widgets/auth_field_label.dar
 ///
 /// Menggantikan `login_view.dart` dari UI kit, yang meminta **nama + email**
 /// tanpa controller dan tombolnya langsung `router.go(homeLayout)` tanpa
-/// memanggil apa pun. API Markas login dengan **phone (atau email) +
-/// password**, jadi fieldnya memang harus berubah, bukan sekadar disambungkan.
+/// memanggil apa pun. marketplace-api masuk dengan **email + kata sandi**,
+/// jadi fieldnya memang harus berubah, bukan sekadar disambungkan.
 ///
 /// Tombol login sosial dari kit sengaja tidak dibawa: backend tidak punya
 /// endpoint OAuth, dan tombol yang tidak melakukan apa-apa lebih buruk
@@ -67,7 +63,6 @@ class _LoginBodyState extends State<_LoginBody> {
   @override
   Widget build(BuildContext context) {
     final l = S.of(context);
-    final primary = isAppDarkMode() ? kDarkPrimaryColor : kLightPrimaryColor;
 
     return BlocConsumer<AuthCubit, AuthState>(
       listener: (context, state) {
@@ -79,159 +74,140 @@ class _LoginBodyState extends State<_LoginBody> {
         final isLoading = state is AuthLoading;
         final error = state is AuthUnauthenticated ? state.error : null;
 
+        // Tombol "Butuh bantuan?" milik kit sengaja tidak dibawa: aksinya
+        // `onPressed: () {}`, dan satu-satunya kanal bantuan (Xpedia 911)
+        // menuntut user sudah masuk.
         return Scaffold(
-          appBar: customAppBar(
-            context,
-            '',
-            action: TextButton(
-              onPressed: () {},
-              child: Text(
-                l.needHelp,
-                style: AppStyles.styleRegular14(context).copyWith(
-                  color: primary,
-                  decoration: TextDecoration.underline,
-                ),
-              ),
-            ),
-          ),
-          body: SingleChildScrollView(
-            padding: 24.psh,
-            child: Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  (context.screenHeight * .08).sbh,
-                  Center(
-                    child: Text(
+          backgroundColor: XpColors.surface,
+          body: SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    SizedBox(height: context.screenHeight * .08),
+                    const Center(child: AuthBrandMark()),
+                    const SizedBox(height: 32),
+                    Text(
                       l.welcomeBack,
-                      style: AppStyles.styleSemiBold24(context)
-                          .copyWith(color: isAppDarkMode() ? null : kDarkColor),
+                      textAlign: TextAlign.center,
+                      style: XpText.headingXl(context),
                     ),
-                  ),
-                  16.sbh,
-                  Center(
-                    child: Text(
+                    const SizedBox(height: 8),
+                    Text(
                       l.loginSubtitle,
                       textAlign: TextAlign.center,
-                      style: AppStyles.styleRegular16(context).copyWith(
-                        color: isAppDarkMode()
-                            ? const Color(0xffE8E8E8)
-                            : const Color(0xff555555),
-                      ),
+                      style: XpText.bodyM(context)
+                          .copyWith(color: XpColors.textSecondary),
                     ),
-                  ),
-                  24.sbh,
+                    const SizedBox(height: 32),
 
-                  if (error != null) ...[
-                    AuthErrorBanner(error: error, onRetry: _submit),
-                    16.sbh,
-                  ],
+                    if (error != null) ...[
+                      AuthErrorBanner(error: error, onRetry: _submit),
+                      const SizedBox(height: 16),
+                    ],
 
-                  // API ini masuk lewat **email**, bukan nomor HP. Nomor HP
-                  // tetap boleh diisi saat mendaftar, tapi tidak bisa dipakai
-                  // login — jadi kolomnya diganti, bukan ditambah.
-                  AuthFieldLabel(l.email, isRequired: true),
-                  8.sbh,
-                  CustomTextFormField(
-                    filled: true,
-                    controller: _email,
-                    readOnly: isLoading,
-                    hintText: l.enterYourEmail,
-                    keyboardType: TextInputType.emailAddress,
-                    // Selalu LTR: alamat email tidak boleh terbalik urutannya
-                    // saat locale-nya Arab.
-                    textDirection: TextDirection.ltr,
-                    // Kunci l10n untuk dua pesan ini belum ada, dan
-                    // regenerasinya butuh `intl_utils` yang bukan
-                    // dev_dependency. Ditulis langsung supaya validasinya
-                    // tetap ada — bukan dibiarkan lolos.
-                    validator: (v) {
-                      final value = v?.trim() ?? '';
-                      if (value.isEmpty) return 'Email wajib diisi';
-                      if (!value.contains('@')) return 'Format email belum benar';
-                      return null;
-                    },
-                  ),
-                  16.sbh,
-
-                  AuthFieldLabel(l.password, isRequired: true),
-                  8.sbh,
-                  CustomTextFormField(
-                    filled: true,
-                    controller: _password,
-                    readOnly: isLoading,
-                    hintText: l.password,
-                    obscureText: _obscure,
-                    textDirection: TextDirection.ltr,
-                    textInputAction: TextInputAction.done,
-                    onSubmitted: (_) => isLoading ? null : _submit(),
-                    suffix: IconButton(
-                      icon: Icon(
-                        _obscure ? Icons.visibility_off : Icons.visibility,
-                        size: 20,
-                      ),
-                      onPressed: () => setState(() => _obscure = !_obscure),
+                    // API ini masuk lewat **email**, bukan nomor HP. Nomor HP
+                    // tetap wajib diisi saat mendaftar, tapi tidak bisa dipakai
+                    // login — jadi kolomnya diganti, bukan ditambah.
+                    AuthFieldLabel(l.email, isRequired: true),
+                    const SizedBox(height: 8),
+                    AuthTextField(
+                      controller: _email,
+                      readOnly: isLoading,
+                      hintText: l.enterYourEmail,
+                      keyboardType: TextInputType.emailAddress,
+                      prefixIcon: Icons.mail_outline,
+                      // Selalu LTR: alamat email tidak boleh terbalik
+                      // urutannya saat locale-nya Arab.
+                      textDirection: TextDirection.ltr,
+                      // Kunci l10n untuk dua pesan ini belum ada, dan
+                      // regenerasinya butuh `intl_utils` yang bukan
+                      // dev_dependency. Ditulis langsung supaya validasinya
+                      // tetap ada — bukan dibiarkan lolos.
+                      validator: (v) {
+                        final value = v?.trim() ?? '';
+                        if (value.isEmpty) return 'Email wajib diisi';
+                        if (!value.contains('@')) {
+                          return 'Format email belum benar';
+                        }
+                        return null;
+                      },
                     ),
-                    validator: (v) => (v == null || v.isEmpty)
-                        ? l.passwordRequired
-                        : null,
-                  ),
-                  8.sbh,
+                    const SizedBox(height: 16),
 
-                  Align(
-                    alignment: AlignmentDirectional.centerEnd,
-                    child: TextButton(
-                      onPressed: () => router.push(AppRoutes.resetPassword),
-                      child: Text(
-                        l.forgetPassword,
-                        style: AppStyles.styleRegular12(context)
-                            .copyWith(color: primary),
+                    AuthFieldLabel(l.password, isRequired: true),
+                    const SizedBox(height: 8),
+                    AuthTextField(
+                      controller: _password,
+                      readOnly: isLoading,
+                      hintText: l.password,
+                      obscureText: _obscure,
+                      prefixIcon: Icons.lock_outline,
+                      textDirection: TextDirection.ltr,
+                      textInputAction: TextInputAction.done,
+                      onSubmitted: (_) => isLoading ? null : _submit(),
+                      suffix: AuthObscureToggle(
+                        obscured: _obscure,
+                        onPressed: () => setState(() => _obscure = !_obscure),
                       ),
+                      validator: (v) => (v == null || v.isEmpty)
+                          ? l.passwordRequired
+                          : null,
                     ),
-                  ),
-                  16.sbh,
 
-                  CustomButton(
-                    onPressed: isLoading ? null : _submit,
-                    child: isLoading
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : Text(
-                            l.continuee,
-                            style: AppStyles.styleMedium16(context)
-                                .copyWith(color: Colors.white),
-                          ),
-                  ),
-                  32.sbh,
-
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        l.dontHaveAccount,
-                        style: AppStyles.styleRegular16(context),
-                      ),
-                      TextButton(
-                        onPressed: isLoading
-                            ? null
-                            : () => router.push(AppRoutes.register),
+                    Align(
+                      alignment: AlignmentDirectional.centerEnd,
+                      child: TextButton(
+                        style: TextButton.styleFrom(
+                          minimumSize: const Size(48, 48),
+                        ),
+                        onPressed: () => router.push(AppRoutes.forgotPassword),
                         child: Text(
-                          l.register,
-                          style: AppStyles.styleRegular14(context)
-                              .copyWith(color: primary),
+                          l.forgetPassword,
+                          style: XpText.labelL(context)
+                              .copyWith(color: XpColors.primary),
                         ),
                       ),
-                    ],
-                  ),
-                  16.sbh,
-                ],
+                    ),
+                    const SizedBox(height: 8),
+
+                    AuthSubmitButton(
+                      onPressed: isLoading ? null : _submit,
+                      isLoading: isLoading,
+                      label: l.continuee,
+                    ),
+                    const SizedBox(height: 24),
+
+                    Wrap(
+                      alignment: WrapAlignment.center,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        Text(
+                          l.dontHaveAccount,
+                          style: XpText.bodyM(context)
+                              .copyWith(color: XpColors.textSecondary),
+                        ),
+                        TextButton(
+                          style: TextButton.styleFrom(
+                            minimumSize: const Size(48, 48),
+                          ),
+                          onPressed: isLoading
+                              ? null
+                              : () => router.push(AppRoutes.register),
+                          child: Text(
+                            l.register,
+                            style: XpText.titleM(context)
+                                .copyWith(color: XpColors.primary),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                ),
               ),
             ),
           ),

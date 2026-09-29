@@ -1,19 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:marketplace_app_member/core/design/xp_colors.dart';
+import 'package:marketplace_app_member/core/design/xp_text.dart';
+import 'package:marketplace_app_member/core/design/xp_widgets.dart';
 import 'package:marketplace_app_member/core/domain/model/wallet/wallet_models.dart';
-import 'package:marketplace_app_member/core/function/components.dart';
-import 'package:marketplace_app_member/core/function/custom_app_bar.dart';
 import 'package:marketplace_app_member/core/utils/app_routes.dart';
-import 'package:marketplace_app_member/core/utils/app_styles.dart';
-import 'package:marketplace_app_member/core/utils/constant.dart';
-import 'package:marketplace_app_member/core/utils/extensions.dart';
+import 'package:marketplace_app_member/ui/main/profile/widgets/account_error_text.dart';
+import 'package:marketplace_app_member/ui/main/shell/xp_app_bars.dart';
 import 'package:marketplace_app_member/ui/main/wallet/cubit/wallet_cubit.dart';
 import 'package:marketplace_app_member/ui/main/wallet/screens/withdraw_sheet.dart';
-import 'package:marketplace_app_member/util/error_message.dart';
 import 'package:marketplace_app_member/util/format_helper.dart';
 
-/// Dompet: saldo, riwayat mutasi, topup, dan penarikan.
+/// Xpedia Wallet: saldo, riwayat mutasi, top up, dan penarikan.
 class WalletScreen extends StatelessWidget {
   const WalletScreen({super.key});
 
@@ -29,52 +29,63 @@ class WalletScreen extends StatelessWidget {
 class _WalletBody extends StatelessWidget {
   const _WalletBody();
 
+  void _toast(BuildContext context, String text) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(text)));
+  }
+
   @override
   Widget build(BuildContext context) {
-    final dark = isAppDarkMode();
-
     return Scaffold(
-      backgroundColor: dark ? kDarkColor : kWhiteColor,
-      appBar: customAppBar(context, 'Saldo Saya'),
+      backgroundColor: XpColors.canvas,
+      appBar: const XpStackAppBar(title: 'Xpedia Wallet'),
       body: BlocConsumer<WalletCubit, WalletState>(
         listenWhen: (previous, current) =>
             current is WalletReady &&
-            (current.actionError != null || current.pendingTopup != null),
+            (current.actionError != null ||
+                current.pendingTopup != null ||
+                current.withdrawalSubmitted),
         listener: (context, state) async {
           final ready = state as WalletReady;
+          final cubit = WalletCubit.get(context);
+
+          if (ready.withdrawalSubmitted) {
+            cubit.acknowledgeWithdrawal();
+            _toast(context, 'Penarikan diajukan. Dana dikirim setelah diproses admin.');
+            return;
+          }
 
           final error = ready.actionError;
           if (error != null) {
-            ScaffoldMessenger.of(context)
-              ..hideCurrentSnackBar()
-              ..showSnackBar(
-                SnackBar(content: Text(errorMessageFor(context, error))),
-              );
-            WalletCubit.get(context).clearActionError();
+            // Selagi lembar penarikan terbuka, lembar itu yang menampilkan
+            // pesannya — snackbar di sini akan tertutup olehnya.
+            if (ModalRoute.of(context)?.isCurrent ?? true) {
+              _toast(context, accountErrorText(context, error));
+            }
+            cubit.clearActionError();
             return;
           }
 
           final topup = ready.pendingTopup;
           if (topup != null) {
-            final cubit = WalletCubit.get(context);
             cubit.clearPendingTopup();
             // Topup memakai ulang layar pembayaran yang sama dengan checkout —
             // saldo baru bertambah setelah transaksinya dibayar.
-            await context.push(
-              AppRoutes.paymentPath(topup.paymentTransactionId),
-            );
+            await context.push(AppRoutes.paymentPath(topup.paymentTransactionId));
             if (context.mounted) cubit.load();
           }
         },
-        builder: (context, state) {
-          return switch (state) {
-            WalletLoading() => const Center(child: CircularProgressIndicator()),
-            WalletError(:final error) => _Message(
-                title: errorMessageFor(context, error),
-                onRetry: () => WalletCubit.get(context).load(),
-              ),
-            WalletReady() => _Ready(state: state),
-          };
+        builder: (context, state) => switch (state) {
+          WalletLoading() => const Center(child: CircularProgressIndicator()),
+          WalletError(:final error) => XpEmptyState(
+              icon: Icons.cloud_off_rounded,
+              title: 'Saldo belum bisa dimuat',
+              message: accountErrorText(context, error),
+              actionLabel: 'Coba lagi',
+              onAction: () => WalletCubit.get(context).load(),
+            ),
+          WalletReady() => _Ready(state: state),
         },
       ),
     );
@@ -89,88 +100,161 @@ class _Ready extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final wallet = state.wallet;
+    final cubit = WalletCubit.get(context);
 
     return RefreshIndicator(
-      onRefresh: () => WalletCubit.get(context).load(),
+      onRefresh: cubit.load,
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsetsDirectional.all(16),
+        padding: const EdgeInsets.all(16),
         children: [
           _BalanceCard(wallet: wallet, enabled: state.canAct),
-          24.sbh,
-          _HistoryHeader(count: wallet.transactions.length),
-          8.sbh,
+          const SizedBox(height: 16),
+          XpCard(
+            padding: EdgeInsets.zero,
+            child: Column(
+              children: [
+                _LinkRow(
+                  icon: Icons.account_balance_outlined,
+                  title: 'Rekening Bank',
+                  subtitle: state.bankAccountsError != null
+                      ? 'Belum bisa dimuat'
+                      : '${state.bankAccounts.length} dari '
+                          '${BankAccountModel.maxAccounts} rekening tersimpan',
+                  onTap: () async {
+                    await context.push(AppRoutes.bankAccounts);
+                    await cubit.reloadBankAccounts();
+                  },
+                ),
+                Divider(height: 1, color: XpColors.borderSubtle),
+                _LinkRow(
+                  icon: Icons.pin_outlined,
+                  title: 'PIN Xpedia Wallet',
+                  subtitle: 'PIN untuk pembayaran dan penarikan',
+                  onTap: () => context.push(AppRoutes.withdrawalPin),
+                ),
+              ],
+            ),
+          ),
+          XpSectionHeader(
+            title: 'Riwayat Transaksi',
+            // Server memotong di 50 dan tidak menyediakan paginasi, jadi
+            // dikatakan apa adanya alih-alih menawarkan "muat lebih banyak"
+            // yang tidak ada endpointnya.
+            subtitle: wallet.transactions.length >= 50
+                ? 'Menampilkan 50 mutasi terakhir'
+                : null,
+            padding: const EdgeInsets.fromLTRB(0, 24, 0, 12),
+          ),
           if (wallet.transactions.isEmpty)
-            _EmptyHistory()
+            XpCard(
+              child: Column(
+                children: [
+                  Icon(Icons.receipt_long_outlined, size: 32, color: XpColors.textTertiary),
+                  const SizedBox(height: 8),
+                  Text('Belum ada mutasi saldo', style: XpText.titleM(context)),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Top up, pembayaran, dan penarikan akan tercatat di sini.',
+                    textAlign: TextAlign.center,
+                    style: XpText.bodyS(context).copyWith(color: XpColors.textSecondary),
+                  ),
+                ],
+              ),
+            )
           else
-            for (final tx in wallet.transactions) _TransactionRow(tx: tx),
-          24.sbh,
+            XpCard(
+              padding: EdgeInsets.zero,
+              child: Column(
+                children: [
+                  for (var i = 0; i < wallet.transactions.length; i++) ...[
+                    if (i > 0) Divider(height: 1, color: XpColors.borderSubtle),
+                    _TransactionRow(tx: wallet.transactions[i]),
+                  ],
+                ],
+              ),
+            ),
+          const SizedBox(height: 24),
         ],
       ),
     );
   }
 }
 
+/// Kartu saldo navy (inventaris desain §2.4 "Wallet card, navy").
 class _BalanceCard extends StatelessWidget {
   const _BalanceCard({required this.wallet, required this.enabled});
 
   final WalletModel wallet;
   final bool enabled;
 
+  static const _onNavyMuted = Color(0xffE1E8FD);
+
   @override
   Widget build(BuildContext context) {
-    final dark = isAppDarkMode();
-    final primary = dark ? kDarkPrimaryColor : kLightPrimaryColor;
-
     return Container(
-      padding: const EdgeInsetsDirectional.all(16),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: primary.withValues(alpha: 0.10),
-        borderRadius: BorderRadius.circular(16),
+        color: XpColors.navy,
+        borderRadius: BorderRadius.circular(XpRadius.l),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Saldo tersedia',
-            style: AppStyles.styleRegular12(context).copyWith(
-              color: dark ? kDarkThirdColor : kLightThirdColor,
-            ),
+          Row(
+            children: [
+              const Icon(Icons.account_balance_wallet_outlined,
+                  size: 18, color: _onNavyMuted),
+              const SizedBox(width: 6),
+              Text('SALDO TERSEDIA',
+                  style: XpText.labelM(context)
+                      .copyWith(color: _onNavyMuted, letterSpacing: 0.8)),
+            ],
           ),
-          4.sbh,
+          const SizedBox(height: 8),
           Text(
             formatRupiah(wallet.availableBalance),
-            style: AppStyles.styleSemiBold24(context).copyWith(color: primary),
+            style: XpText.headingXl(context).copyWith(color: Colors.white),
           ),
           if (wallet.heldBalance > 0) ...[
-            4.sbh,
+            const SizedBox(height: 4),
             Text(
               // Saldo tertahan biasanya penarikan yang sedang diproses. Tanpa
               // baris ini, user melihat total berkurang tanpa penjelasan.
               '${formatRupiah(wallet.heldBalance)} sedang ditahan',
-              style: AppStyles.styleRegular12(context)
-                  .copyWith(color: kWarningColor),
+              style: XpText.bodyS(context).copyWith(color: XpColors.warning),
             ),
           ],
-          16.sbh,
+          const SizedBox(height: 16),
           Row(
             children: [
               Expanded(
-                child: FilledButton.icon(
-                  onPressed:
-                      enabled ? () => _askTopupAmount(context) : null,
-                  icon: const Icon(Icons.add),
-                  label: const Text('Isi saldo'),
+                child: SizedBox(
+                  height: 44,
+                  child: FilledButton.icon(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: XpColors.navy,
+                    ),
+                    onPressed: enabled ? () => _askTopupAmount(context) : null,
+                    icon: Icon(Icons.add_circle, size: 18, color: XpColors.primary),
+                    label: const Text('Top Up'),
+                  ),
                 ),
               ),
-              12.sbw,
+              const SizedBox(width: 12),
               Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: enabled
-                      ? () => WithdrawSheet.show(context, wallet: wallet)
-                      : null,
-                  icon: const Icon(Icons.arrow_outward),
-                  label: const Text('Tarik'),
+                child: SizedBox(
+                  height: 44,
+                  child: OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.white,
+                      side: const BorderSide(color: Colors.white54),
+                    ),
+                    onPressed: enabled ? () => WithdrawSheet.show(context) : null,
+                    icon: const Icon(Icons.arrow_outward, size: 18),
+                    label: const Text('Tarik Saldo'),
+                  ),
                 ),
               ),
             ],
@@ -187,15 +271,18 @@ class _BalanceCard extends StatelessWidget {
     final amount = await showDialog<double>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Isi saldo'),
+        title: const Text('Top Up Saldo'),
         content: TextField(
           controller: controller,
           keyboardType: TextInputType.number,
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
           autofocus: true,
-          decoration: const InputDecoration(
+          decoration: InputDecoration(
             labelText: 'Nominal',
             prefixText: 'Rp ',
-            border: OutlineInputBorder(),
+            // Minimum dari blueprint; server belum menegakkannya, jadi
+            // `WalletCubit` yang menolak di bawahnya.
+            helperText: 'Minimum ${formatRupiah(WalletCubit.minimumTopup)}',
           ),
         ),
         actions: [
@@ -205,8 +292,8 @@ class _BalanceCard extends StatelessWidget {
           ),
           FilledButton(
             onPressed: () => Navigator.of(dialogContext)
-                .pop(double.tryParse(controller.text.trim())),
-            child: const Text('Lanjut bayar'),
+                .pop(double.tryParse(controller.text.trim()) ?? 0),
+            child: const Text('Lanjut Bayar'),
           ),
         ],
       ),
@@ -218,35 +305,51 @@ class _BalanceCard extends StatelessWidget {
   }
 }
 
-class _HistoryHeader extends StatelessWidget {
-  const _HistoryHeader({required this.count});
+class _LinkRow extends StatelessWidget {
+  const _LinkRow({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
 
-  final int count;
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final dark = isAppDarkMode();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Riwayat',
-          style: AppStyles.styleSemiBold16(context).copyWith(
-            color: dark ? kDarkSecondColor : kLightSecondColor,
-          ),
-        ),
-        if (count >= 50)
-          Text(
-            // Server memotong di 50 dan tidak menyediakan paginasi, jadi
-            // dikatakan apa adanya alih-alih menawarkan "muat lebih banyak"
-            // yang tidak ada endpointnya.
-            'Menampilkan 50 mutasi terakhir.',
-            style: AppStyles.styleRegular11(context).copyWith(
-              color: dark ? kDarkThirdColor : kLightThirdColor,
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: XpColors.sunken,
+                borderRadius: BorderRadius.circular(XpRadius.m),
+              ),
+              child: Icon(icon, size: 20, color: XpColors.textSecondary),
             ),
-          ),
-      ],
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: XpText.titleM(context)),
+                  Text(subtitle,
+                      style: XpText.bodyS(context).copyWith(color: XpColors.textSecondary)),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right, size: 20, color: XpColors.textPlaceholder),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -258,105 +361,53 @@ class _TransactionRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dark = isAppDarkMode();
-    final muted = dark ? kDarkThirdColor : kLightThirdColor;
-    final color = tx.isCredit ? kSuccessColor : kErrorColor;
+    final color = tx.isCredit ? XpColors.success : XpColors.danger;
+    final tint = tx.isCredit ? XpColors.successSubtle : XpColors.dangerSubtle;
 
     return Padding(
-      padding: const EdgeInsetsDirectional.only(bottom: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            tx.isCredit ? Icons.arrow_downward : Icons.arrow_upward,
-            size: 18,
-            color: color,
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(color: tint, shape: BoxShape.circle),
+            child: Icon(
+              tx.isCredit ? Icons.south_west : Icons.north_east,
+              size: 18,
+              color: color,
+            ),
           ),
-          10.sbw,
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  tx.label,
-                  style: AppStyles.styleMedium14(context).copyWith(
-                    color: dark ? kDarkSecondColor : kLightSecondColor,
-                  ),
-                ),
+                Text(tx.label, style: XpText.titleM(context)),
                 Text(
                   formatServerDateTime(tx.createdAt),
-                  style:
-                      AppStyles.styleRegular11(context).copyWith(color: muted),
+                  style: XpText.caption(context).copyWith(color: XpColors.textTertiary),
                 ),
               ],
             ),
           ),
+          const SizedBox(width: 8),
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
                 // Arah dari `type`, bukan tanda `amount` — kolomnya selalu
                 // positif di database.
-                '${tx.isCredit ? '+' : '−'} ${formatRupiah(tx.amount)}',
-                style: AppStyles.styleMedium14(context).copyWith(color: color),
+                '${tx.isCredit ? '+' : '−'}${formatRupiah(tx.amount)}',
+                style: XpText.priceS(context).copyWith(color: color),
               ),
               Text(
                 'Saldo ${formatRupiah(tx.balanceAfter)}',
-                style: AppStyles.styleRegular11(context).copyWith(color: muted),
+                style: XpText.caption(context).copyWith(color: XpColors.textTertiary),
               ),
             ],
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _EmptyHistory extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    final dark = isAppDarkMode();
-    return Padding(
-      padding: const EdgeInsetsDirectional.symmetric(vertical: 8),
-      child: Text(
-        'Belum ada mutasi saldo.',
-        style: AppStyles.styleRegular14(context).copyWith(
-          color: dark ? kDarkThirdColor : kLightThirdColor,
-        ),
-      ),
-    );
-  }
-}
-
-class _Message extends StatelessWidget {
-  const _Message({required this.title, required this.onRetry});
-
-  final String title;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    final dark = isAppDarkMode();
-    return Center(
-      child: Padding(
-        padding: const EdgeInsetsDirectional.symmetric(horizontal: 32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.cloud_off_rounded,
-                size: 48, color: dark ? kDarkThirdColor : kLightThirdColor),
-            16.sbh,
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              style: AppStyles.styleMedium16(context).copyWith(
-                color: dark ? kDarkSecondColor : kLightSecondColor,
-              ),
-            ),
-            16.sbh,
-            FilledButton(onPressed: onRetry, child: const Text('Coba lagi')),
-          ],
-        ),
       ),
     );
   }

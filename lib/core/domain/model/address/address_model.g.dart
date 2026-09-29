@@ -32,6 +32,7 @@ _AddressModel _$AddressModelFromJson(Map<String, dynamic> json) =>
       postalCode: json['postal_code'] == null
           ? ''
           : const StringJson().fromJson(json['postal_code']),
+      cityId: const IntOrNullJson().fromJson(json['city_id']),
       latitude: const DoubleOrNullJson().fromJson(json['latitude']),
       longitude: const DoubleOrNullJson().fromJson(json['longitude']),
       isPrimary: json['is_primary'] == null
@@ -51,6 +52,7 @@ Map<String, dynamic> _$AddressModelToJson(_AddressModel instance) =>
       'city': const StringJson().toJson(instance.city),
       'province': const StringJson().toJson(instance.province),
       'postal_code': const StringJson().toJson(instance.postalCode),
+      'city_id': const IntOrNullJson().toJson(instance.cityId),
       'latitude': const DoubleOrNullJson().toJson(instance.latitude),
       'longitude': const DoubleOrNullJson().toJson(instance.longitude),
       'is_primary': const BoolJson().toJson(instance.isPrimary),

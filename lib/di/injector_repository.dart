@@ -1,3 +1,27 @@
+import 'package:marketplace_app_member/core/data/datasources/remote/service/media_service.dart';
+import 'package:marketplace_app_member/core/data/repositories/media_repository_impl.dart';
+import 'package:marketplace_app_member/core/domain/repositories/media_repository.dart';
+import 'package:marketplace_app_member/core/data/datasources/remote/service/home_service.dart';
+import 'package:marketplace_app_member/core/data/datasources/remote/service/live_service.dart';
+import 'package:marketplace_app_member/core/data/datasources/remote/service/location_service.dart';
+import 'package:marketplace_app_member/core/data/repositories/home_repository_impl.dart';
+import 'package:marketplace_app_member/core/data/repositories/live_repository_impl.dart';
+import 'package:marketplace_app_member/core/data/repositories/location_repository_impl.dart';
+import 'package:marketplace_app_member/core/domain/repositories/home_repository.dart';
+import 'package:marketplace_app_member/core/domain/repositories/live_repository.dart';
+import 'package:marketplace_app_member/core/domain/repositories/location_repository.dart';
+import 'package:marketplace_app_member/core/data/datasources/remote/service/voucher_service.dart';
+import 'package:marketplace_app_member/core/data/repositories/voucher_repository_impl.dart';
+import 'package:marketplace_app_member/core/domain/repositories/voucher_repository.dart';
+import 'package:marketplace_app_member/core/data/datasources/remote/service/account_service.dart';
+import 'package:marketplace_app_member/core/data/repositories/account_repository_impl.dart';
+import 'package:marketplace_app_member/core/domain/repositories/account_repository.dart';
+import 'package:marketplace_app_member/core/data/datasources/remote/service/store_service.dart';
+import 'package:marketplace_app_member/core/data/datasources/remote/service/support_service.dart';
+import 'package:marketplace_app_member/core/data/repositories/store_repository_impl.dart';
+import 'package:marketplace_app_member/core/data/repositories/support_repository_impl.dart';
+import 'package:marketplace_app_member/core/domain/repositories/store_repository.dart';
+import 'package:marketplace_app_member/core/domain/repositories/support_repository.dart';
 import 'package:marketplace_app_member/core/data/datasources/remote/service/auth_service.dart';
 import 'package:marketplace_app_member/core/data/datasources/remote/service/address_service.dart';
 import 'package:marketplace_app_member/core/data/datasources/remote/service/cart_service.dart';
@@ -122,5 +146,37 @@ void initializeRepository() {
 
   injector.registerLazySingleton<NotificationRepository>(
     () => NotificationRepositoryImpl(injector<NotificationService>()),
+  );
+
+  injector.registerLazySingleton<StoreRepository>(
+    () => StoreRepositoryImpl(injector<StoreService>()),
+  );
+
+  injector.registerLazySingleton<SupportRepository>(
+    () => SupportRepositoryImpl(injector<SupportService>()),
+  );
+
+  injector.registerLazySingleton<AccountRepository>(
+    () => AccountRepositoryImpl(injector<AccountService>(), injector<AuthService>()),
+  );
+
+  injector.registerLazySingleton<VoucherRepository>(
+    () => VoucherRepositoryImpl(injector<VoucherService>()),
+  );
+
+  injector.registerLazySingleton<HomeRepository>(
+    () => HomeRepositoryImpl(injector<HomeService>()),
+  );
+
+  injector.registerLazySingleton<LocationRepository>(
+    () => LocationRepositoryImpl(injector<LocationService>()),
+  );
+
+  injector.registerLazySingleton<LiveRepository>(
+    () => LiveRepositoryImpl(injector<LiveService>()),
+  );
+
+  injector.registerLazySingleton<MediaRepository>(
+    () => MediaRepositoryImpl(injector<MediaService>()),
   );
 }

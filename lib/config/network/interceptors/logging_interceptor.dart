@@ -20,6 +20,13 @@ class LoggingInterceptor extends Interceptor {
     'refresh_token',
     'token',
     'npwp',
+    // PIN Xpedia Wallet (tarik saldo, bayar, ganti PIN) dan kode sekali
+    // pakai. Log debug bisa ikut tersalin ke laporan bug.
+    'pin',
+    'current_pin',
+    'otp',
+    'seal_code',
+    'id_card_number',
   };
 
   @override

@@ -3,13 +3,14 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
+import 'package:marketplace_app_member/core/design/xp_colors.dart';
+import 'package:marketplace_app_member/core/design/xp_text.dart';
+import 'package:marketplace_app_member/core/design/xp_widgets.dart';
 import 'package:marketplace_app_member/core/domain/model/payment/payment_models.dart';
-import 'package:marketplace_app_member/core/function/components.dart';
-import 'package:marketplace_app_member/core/function/custom_app_bar.dart';
-import 'package:marketplace_app_member/core/utils/app_styles.dart';
-import 'package:marketplace_app_member/core/utils/constant.dart';
-import 'package:marketplace_app_member/core/utils/extensions.dart';
+import 'package:marketplace_app_member/core/utils/app_routes.dart';
 import 'package:marketplace_app_member/ui/main/payment/cubit/payment_cubit.dart';
+import 'package:marketplace_app_member/ui/main/shell/xp_app_bars.dart';
 import 'package:marketplace_app_member/util/error_message.dart';
 import 'package:marketplace_app_member/util/format_helper.dart';
 
@@ -17,6 +18,11 @@ import 'package:marketplace_app_member/util/format_helper.dart';
 ///
 /// Satu transaksi menutup **semua** order dari satu sesi checkout, jadi layar
 /// ini tidak terikat ke satu pesanan.
+///
+/// Belum ada desain Stitch khusus untuk layar ini (desainnya menganggap
+/// pembayaran lewat Xpedia Wallet + PIN, yang belum ada di backend), jadi
+/// ia disusun dari komponen Xpedia: banner hitung mundur, kartu total, dan
+/// blok salin.
 class PaymentScreen extends StatelessWidget {
   const PaymentScreen({super.key, required this.transactionId});
 
@@ -36,11 +42,12 @@ class _PaymentBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dark = isAppDarkMode();
-
     return Scaffold(
-      backgroundColor: dark ? kDarkColor : kWhiteColor,
-      appBar: customAppBar(context, 'Pembayaran'),
+      backgroundColor: XpColors.canvas,
+      appBar: const XpStackAppBar(
+        title: 'Pembayaran',
+        actions: [SupportActionButton()],
+      ),
       body: BlocConsumer<PaymentCubit, PaymentState>(
         listenWhen: (previous, current) =>
             current is PaymentReady && current.actionError != null,
@@ -57,9 +64,10 @@ class _PaymentBody extends StatelessWidget {
           return switch (state) {
             PaymentLoading() =>
               const Center(child: CircularProgressIndicator()),
-            PaymentError(:final error) => _Message(
+            PaymentError(:final error) => XpEmptyState(
                 icon: Icons.cloud_off_rounded,
-                title: errorMessageFor(context, error),
+                title: 'Pembayaran belum bisa dimuat',
+                message: errorMessageFor(context, error),
                 actionLabel: 'Coba lagi',
                 onAction: () => PaymentCubit.get(context).load(),
               ),
@@ -78,49 +86,76 @@ class _Ready extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dark = isAppDarkMode();
     final payment = state.snapshot.payment;
 
     if (payment.isPaid) {
-      return const _Message(
-        icon: Icons.check_circle_outline,
-        iconColor: kSuccessColor,
-        title: 'Pembayaran diterima.',
-        subtitle: 'Pesanan kamu akan segera diproses penjual.',
+      return XpEmptyState(
+        icon: Icons.check_circle,
+        iconColor: XpColors.success,
+        title: 'Pembayaran diterima',
+        message: 'Pesanan kamu akan segera diproses penjual.',
+        actionLabel: 'Lihat pesanan saya',
+        onAction: () => context.go(AppRoutes.orders),
       );
     }
 
     if (payment.isExpired) {
-      return const _Message(
+      return XpEmptyState(
         icon: Icons.timer_off_outlined,
-        iconColor: kErrorColor,
-        title: 'Batas waktu pembayaran sudah lewat.',
-        subtitle: 'Pesanan dibatalkan otomatis. Silakan pesan ulang.',
+        iconColor: XpColors.danger,
+        title: 'Batas waktu pembayaran sudah lewat',
+        message: 'Pesanan dibatalkan otomatis. Silakan pesan ulang.',
+        actionLabel: 'Kembali ke Beranda',
+        onAction: () => context.go(AppRoutes.homeLayout),
       );
     }
 
     return ListView(
-      padding: const EdgeInsetsDirectional.all(16),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
       children: [
         _PaymentCountdown(expiredAt: payment.expiredAt),
-        16.sbh,
-        Text(
-          'Total tagihan',
-          style: AppStyles.styleRegular12(context).copyWith(
-            color: dark ? kDarkThirdColor : kLightThirdColor,
+        const SizedBox(height: 12),
+        XpCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Total Tagihan',
+                  style: XpText.bodyS(context)
+                      .copyWith(color: XpColors.textSecondary)),
+              const SizedBox(height: 2),
+              Text(
+                formatRupiah(payment.amount),
+                style: XpText.stat(context).copyWith(color: XpColors.primary),
+              ),
+              if (payment.expiredAt != null) ...[
+                const SizedBox(height: 8),
+                Divider(height: 1, color: XpColors.borderSubtle),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Text('Bayar sebelum',
+                        style: XpText.bodyS(context)
+                            .copyWith(color: XpColors.textSecondary)),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        formatServerDateTime(payment.expiredAt),
+                        textAlign: TextAlign.end,
+                        style: XpText.labelL(context),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ],
           ),
         ),
-        Text(
-          formatRupiah(payment.amount),
-          style: AppStyles.styleSemiBold24(context).copyWith(
-            color: dark ? kDarkPrimaryColor : kLightPrimaryColor,
-          ),
-        ),
-        24.sbh,
+        const SizedBox(height: 12),
         _Instruction(instruction: state.snapshot.instruction),
-        24.sbh,
+        const SizedBox(height: 24),
         SizedBox(
           width: double.infinity,
+          height: 52,
           child: FilledButton.icon(
             // Tidak ada polling: status baru datang lewat webhook penyedia,
             // yang bisa telat. Menembak terus hanya membebani server.
@@ -133,15 +168,19 @@ class _Ready extends StatelessWidget {
             ),
           ),
         ),
+        const SizedBox(height: 8),
+        Center(
+          child: TextButton(
+            onPressed: () => context.go(AppRoutes.orders),
+            child: const Text('Lihat pesanan saya'),
+          ),
+        ),
       ],
     );
   }
 }
 
 /// Hitung mundur tenggat bayar.
-///
-/// Memakai `expired_at` yang dikirim server dalam **UTC**, berbeda dari
-/// `created_at` di respons yang sama yang memakai WIB.
 class _PaymentCountdown extends StatefulWidget {
   const _PaymentCountdown({required this.expiredAt});
 
@@ -170,35 +209,20 @@ class _PaymentCountdownState extends State<_PaymentCountdown> {
 
   @override
   Widget build(BuildContext context) {
-    final deadline = widget.expiredAt;
-    if (deadline == null) return const SizedBox.shrink();
-
-    final left = deadline.difference(DateTime.now().toUtc());
+    final left = remainingUntil(widget.expiredAt);
+    if (left == null) return const SizedBox.shrink();
     final expired = left.isNegative;
 
-    return Container(
-      padding: const EdgeInsetsDirectional.all(12),
-      decoration: BoxDecoration(
-        color: (expired ? kErrorColor : kWarningColor).withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.timer_outlined,
-              size: 18, color: expired ? kErrorColor : kWarningColor),
-          8.sbw,
-          Expanded(
-            child: Text(
-              expired
-                  ? 'Batas waktu pembayaran sudah lewat'
-                  : 'Bayar dalam ${formatCountdown(left)}',
-              style: AppStyles.styleMedium14(context).copyWith(
-                color: expired ? kErrorColor : kWarningColor,
-              ),
-            ),
-          ),
-        ],
-      ),
+    return XpBanner(
+      icon: expired ? Icons.timer_off_outlined : Icons.timer_outlined,
+      tone: expired ? XpBannerTone.danger : XpBannerTone.warning,
+      title: expired
+          ? 'Batas waktu pembayaran sudah lewat'
+          : 'Bayar dalam ${formatCountdown(left)}',
+      message: expired
+          ? null
+          : 'Pesanan dibatalkan otomatis kalau belum dibayar sampai batas '
+              'waktu.',
     );
   }
 }
@@ -210,19 +234,20 @@ class _Instruction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dark = isAppDarkMode();
     final data = instruction;
 
     if (data == null) {
-      return Text(
-        'Instruksi pembayaran belum bisa dimuat. Coba muat ulang halaman ini.',
-        style:
-            AppStyles.styleRegular14(context).copyWith(color: kWarningColor),
+      return const XpBanner(
+        icon: Icons.warning_amber_rounded,
+        tone: XpBannerTone.warning,
+        title: 'Instruksi pembayaran belum bisa dimuat',
+        message: 'Coba muat ulang halaman ini.',
       );
     }
 
     return switch (data.kind) {
       PaymentInstructionKind.qris => _CopyBlock(
+          icon: Icons.qr_code_2,
           title: 'Kode QRIS',
           // QR-nya tidak dirender jadi gambar: aplikasi belum punya
           // pustaka QR, dan menampilkan string mentah lebih jujur daripada
@@ -230,29 +255,18 @@ class _Instruction extends StatelessWidget {
           value: data.qrString ?? '',
           hint: 'Salin lalu tempel di aplikasi pembayaran kamu.',
         ),
-      PaymentInstructionKind.virtualAccount => Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if ((data.bank ?? '').isNotEmpty)
-              Text(
-                'Bank ${data.bank}',
-                style: AppStyles.styleMedium14(context).copyWith(
-                  color: dark ? kDarkSecondColor : kLightSecondColor,
-                ),
-              ),
-            8.sbh,
-            _CopyBlock(
-              title: 'Nomor Virtual Account',
-              value: data.vaNumber ?? '',
-              hint: 'Transfer tepat sejumlah tagihan ke nomor ini.',
-            ),
-          ],
+      PaymentInstructionKind.virtualAccount => _CopyBlock(
+          icon: Icons.account_balance_outlined,
+          title: (data.bank ?? '').isNotEmpty
+              ? 'Virtual Account ${data.bank}'
+              : 'Nomor Virtual Account',
+          value: data.vaNumber ?? '',
+          hint: 'Transfer tepat sejumlah tagihan ke nomor ini.',
+          large: true,
         ),
-      PaymentInstructionKind.unknown => Text(
-          'Ikuti instruksi pembayaran dari penyedia.',
-          style: AppStyles.styleRegular14(context).copyWith(
-            color: dark ? kDarkThirdColor : kLightThirdColor,
-          ),
+      PaymentInstructionKind.unknown => const XpBanner(
+          icon: Icons.info_outline,
+          title: 'Ikuti instruksi pembayaran dari penyedia.',
         ),
     };
   }
@@ -260,49 +274,54 @@ class _Instruction extends StatelessWidget {
 
 class _CopyBlock extends StatelessWidget {
   const _CopyBlock({
+    required this.icon,
     required this.title,
     required this.value,
     required this.hint,
+    this.large = false,
   });
 
+  final IconData icon;
   final String title;
   final String value;
   final String hint;
 
+  /// Nomor VA pendek dan dibaca/diketik ulang — ditampilkan besar. String
+  /// QRIS panjang, jadi tetap ukuran badan.
+  final bool large;
+
   @override
   Widget build(BuildContext context) {
-    final dark = isAppDarkMode();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: AppStyles.styleSemiBold16(context).copyWith(
-            color: dark ? kDarkSecondColor : kLightSecondColor,
-          ),
-        ),
-        8.sbh,
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsetsDirectional.all(12),
-          decoration: BoxDecoration(
-            color: dark ? kLightSecondColor : kBorderColor,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    return XpCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              SelectableText(
-                value,
-                style: AppStyles.styleMedium14(context).copyWith(
-                  color: dark ? kDarkSecondColor : kLightSecondColor,
+              Icon(icon, size: 20, color: XpColors.primary),
+              const SizedBox(width: 8),
+              Expanded(child: Text(title, style: XpText.titleM(context))),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.fromLTRB(12, 8, 4, 8),
+            decoration: BoxDecoration(
+              color: XpColors.sunken,
+              borderRadius: BorderRadius.circular(XpRadius.m),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: SelectableText(
+                    value,
+                    style: large
+                        ? XpText.headingM(context).copyWith(letterSpacing: 1)
+                        : XpText.bodyM(context),
+                  ),
                 ),
-              ),
-              8.sbh,
-              Align(
-                alignment: AlignmentDirectional.centerEnd,
-                child: TextButton.icon(
+                TextButton.icon(
                   onPressed: () async {
                     await Clipboard.setData(ClipboardData(text: value));
                     if (!context.mounted) return;
@@ -315,76 +334,16 @@ class _CopyBlock extends StatelessWidget {
                   icon: const Icon(Icons.copy, size: 16),
                   label: const Text('Salin'),
                 ),
-              ),
-            ],
-          ),
-        ),
-        6.sbh,
-        Text(
-          hint,
-          style: AppStyles.styleRegular12(context).copyWith(
-            color: dark ? kDarkThirdColor : kLightThirdColor,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _Message extends StatelessWidget {
-  const _Message({
-    required this.icon,
-    required this.title,
-    this.subtitle,
-    this.iconColor,
-    this.actionLabel,
-    this.onAction,
-  });
-
-  final IconData icon;
-  final String title;
-  final String? subtitle;
-  final Color? iconColor;
-  final String? actionLabel;
-  final VoidCallback? onAction;
-
-  @override
-  Widget build(BuildContext context) {
-    final dark = isAppDarkMode();
-    return Center(
-      child: Padding(
-        padding: const EdgeInsetsDirectional.symmetric(horizontal: 32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon,
-                size: 56,
-                color: iconColor ??
-                    (dark ? kDarkThirdColor : kLightThirdColor)),
-            16.sbh,
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              style: AppStyles.styleMedium16(context).copyWith(
-                color: dark ? kDarkSecondColor : kLightSecondColor,
-              ),
+              ],
             ),
-            if (subtitle != null) ...[
-              8.sbh,
-              Text(
-                subtitle!,
-                textAlign: TextAlign.center,
-                style: AppStyles.styleRegular12(context).copyWith(
-                  color: dark ? kDarkThirdColor : kLightThirdColor,
-                ),
-              ),
-            ],
-            if (actionLabel != null) ...[
-              16.sbh,
-              FilledButton(onPressed: onAction, child: Text(actionLabel!)),
-            ],
-          ],
-        ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            hint,
+            style:
+                XpText.bodyS(context).copyWith(color: XpColors.textSecondary),
+          ),
+        ],
       ),
     );
   }

@@ -1,31 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:marketplace_app_member/core/function/components.dart';
-import 'package:marketplace_app_member/core/function/custom_app_bar.dart';
+import 'package:marketplace_app_member/core/design/xp_colors.dart';
+import 'package:marketplace_app_member/core/design/xp_text.dart';
 import 'package:marketplace_app_member/core/utils/app_routes.dart';
-import 'package:marketplace_app_member/core/utils/app_styles.dart';
 import 'package:marketplace_app_member/core/utils/constant.dart';
-import 'package:marketplace_app_member/core/utils/extensions.dart';
-import 'package:marketplace_app_member/core/widgets/custom_buttons.dart';
-import 'package:marketplace_app_member/core/widgets/custom_text_form_field.dart';
 import 'package:marketplace_app_member/generated/l10n.dart';
 import 'package:marketplace_app_member/ui/main/auth/cubit/auth_cubit.dart';
 import 'package:marketplace_app_member/ui/main/auth/widgets/auth_error_banner.dart';
 import 'package:marketplace_app_member/ui/main/auth/widgets/auth_field_label.dart';
+import 'package:marketplace_app_member/ui/main/shell/xp_app_bars.dart';
 
 /// Layar pendaftaran.
 ///
-/// Berbeda cukup jauh dari `register_view.dart` milik UI kit, karena API
-/// mewajibkan hal yang tidak ada di form aslinya:
+/// Empat field, semuanya wajib: nama, **nomor HP** (tanpa itu server membalas
+/// `422 VALIDATION_ERROR` dengan `details: null` — tidak menyebut field mana),
+/// email (identitas login), dan kata sandi. `POST /auth/register` tidak
+/// mengembalikan token, jadi `AuthCubit.register` merangkainya dengan login.
 ///
-/// * `phone` (bukan email) adalah identitas utama — satu HP satu akun aktif.
-/// * `role` **wajib** dipilih: `BUY_R` (retail) atau `BUY_B` (B2B/kontraktor).
-/// * `BUY_B` **wajib** mengisi `npwp` dan `nib_siup_no`, kalau tidak server
-///   membalas `422 VALIDATION_ERROR`.
-///
-/// Pilihan tipe akun ditampilkan sebagai pilihan sadar, bukan checkbox kecil,
-/// karena konsekuensinya besar: hanya `BUY_B` yang melihat harga tier
-/// `PROJECT` dan bisa mengajukan RFQ.
+/// Urutan field dipatok test integrasi (`find.byType(TextFormField)` indeks
+/// 0–3: nama, telepon, email, kata sandi) — jangan menyisipkan field di
+/// antaranya.
 class RegisterScreen extends StatelessWidget {
   const RegisterScreen({super.key});
 
@@ -52,10 +46,7 @@ class _RegisterBodyState extends State<_RegisterBody> {
   final _email = TextEditingController();
   final _password = TextEditingController();
 
-
   bool _obscure = true;
-
-
 
   @override
   void dispose() {
@@ -63,7 +54,6 @@ class _RegisterBodyState extends State<_RegisterBody> {
     _phone.dispose();
     _email.dispose();
     _password.dispose();
-
     super.dispose();
   }
 
@@ -82,7 +72,6 @@ class _RegisterBodyState extends State<_RegisterBody> {
   @override
   Widget build(BuildContext context) {
     final l = S.of(context);
-    final primary = isAppDarkMode() ? kDarkPrimaryColor : kLightPrimaryColor;
 
     return BlocConsumer<AuthCubit, AuthState>(
       listener: (context, state) {
@@ -108,135 +97,145 @@ class _RegisterBodyState extends State<_RegisterBody> {
         final error = state is AuthUnauthenticated ? state.error : null;
 
         return Scaffold(
-          appBar: customAppBar(context, l.register),
-          body: SingleChildScrollView(
-            padding: 24.psh,
-            child: Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  16.sbh,
-                  Text(
-                    l.registerTitle,
-                    style: AppStyles.styleSemiBold24(context)
-                        .copyWith(color: isAppDarkMode() ? null : kDarkColor),
-                  ),
-                  8.sbh,
-                  Text(
-                    l.registerSubtitle,
-                    style: AppStyles.styleRegular14(context)
-                        .copyWith(color: kLightThirdColor),
-                  ),
-                  24.sbh,
+          backgroundColor: XpColors.surface,
+          appBar: XpStackAppBar(
+            title: l.register,
+            // Bawaan XpStackAppBar jatuh ke Beranda saat tidak bisa pop —
+            // tujuan yang salah bagi user yang belum masuk.
+            onBack: () => router.canPop()
+                ? router.pop()
+                : router.go(AppRoutes.login),
+          ),
+          body: SafeArea(
+            top: false,
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const SizedBox(height: 24),
+                    const Align(
+                      alignment: AlignmentDirectional.centerStart,
+                      child: AuthBrandMark(),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(l.registerTitle, style: XpText.headingXl(context)),
+                    const SizedBox(height: 4),
+                    Text(
+                      l.registerSubtitle,
+                      style: XpText.bodyM(context)
+                          .copyWith(color: XpColors.textSecondary),
+                    ),
+                    const SizedBox(height: 24),
 
-                  if (error != null) ...[
-                    AuthErrorBanner(error: error, onRetry: _submit),
-                    16.sbh,
+                    if (error != null) ...[
+                      AuthErrorBanner(error: error, onRetry: _submit),
+                      const SizedBox(height: 16),
+                    ],
+
+                    AuthFieldLabel(l.name, isRequired: true),
+                    const SizedBox(height: 8),
+                    AuthTextField(
+                      controller: _fullName,
+                      readOnly: isLoading,
+                      hintText: l.enterYourName,
+                      keyboardType: TextInputType.name,
+                      prefixIcon: Icons.person_outline,
+                      textInputAction: TextInputAction.next,
+                      validator: (v) => (v == null || v.trim().isEmpty)
+                          ? l.nameRequired
+                          : null,
+                    ),
+                    const SizedBox(height: 16),
+
+                    AuthFieldLabel(l.phoneNumber, isRequired: true),
+                    const SizedBox(height: 8),
+                    AuthTextField(
+                      controller: _phone,
+                      readOnly: isLoading,
+                      hintText: l.enterYourPhoneNumber,
+                      keyboardType: TextInputType.phone,
+                      prefixIcon: Icons.phone_outlined,
+                      textDirection: TextDirection.ltr,
+                      textInputAction: TextInputAction.next,
+                      validator: (v) => (v == null || v.trim().isEmpty)
+                          ? l.phoneRequired
+                          : null,
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Email kini **identitas login**, bukan pelengkap: API ini
+                    // masuk lewat email, bukan nomor HP.
+                    AuthFieldLabel(l.email, isRequired: true),
+                    const SizedBox(height: 8),
+                    AuthTextField(
+                      controller: _email,
+                      readOnly: isLoading,
+                      hintText: l.enterYourEmail,
+                      keyboardType: TextInputType.emailAddress,
+                      prefixIcon: Icons.mail_outline,
+                      textDirection: TextDirection.ltr,
+                      textInputAction: TextInputAction.next,
+                      validator: (v) {
+                        final value = v?.trim() ?? '';
+                        if (value.isEmpty) return 'Email wajib diisi';
+                        if (!value.contains('@')) {
+                          return 'Format email belum benar';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+
+                    AuthFieldLabel(l.password, isRequired: true),
+                    const SizedBox(height: 8),
+                    AuthTextField(
+                      controller: _password,
+                      readOnly: isLoading,
+                      hintText: l.password,
+                      obscureText: _obscure,
+                      prefixIcon: Icons.lock_outline,
+                      textDirection: TextDirection.ltr,
+                      textInputAction: TextInputAction.done,
+                      onSubmitted: (_) => isLoading ? null : _submit(),
+                      suffix: AuthObscureToggle(
+                        obscured: _obscure,
+                        onPressed: () => setState(() => _obscure = !_obscure),
+                      ),
+                      validator: (v) {
+                        if (v == null || v.isEmpty) return l.passwordRequired;
+                        if (v.length < 6) return l.passwordTooShort;
+                        return null;
+                      },
+                    ),
+
+                    const SizedBox(height: 24),
+                    AuthSubmitButton(
+                      onPressed: isLoading ? null : _submit,
+                      isLoading: isLoading,
+                      label: l.createAccount,
+                    ),
+                    const SizedBox(height: 8),
+                    Center(
+                      child: TextButton(
+                        style: TextButton.styleFrom(
+                          minimumSize: const Size(48, 48),
+                        ),
+                        onPressed: isLoading
+                            ? null
+                            : () => router.go(AppRoutes.login),
+                        child: Text(
+                          l.alreadyHaveAccount,
+                          style: XpText.labelL(context)
+                              .copyWith(color: XpColors.primary),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
                   ],
-
-                  AuthFieldLabel(l.name, isRequired: true),
-                  8.sbh,
-                  CustomTextFormField(
-                    filled: true,
-                    controller: _fullName,
-                    readOnly: isLoading,
-                    hintText: l.enterYourName,
-                    keyboardType: TextInputType.name,
-                    validator: (v) =>
-                        (v == null || v.trim().isEmpty) ? l.nameRequired : null,
-                  ),
-                  16.sbh,
-
-                  AuthFieldLabel(l.phoneNumber, isRequired: true),
-                  8.sbh,
-                  CustomTextFormField(
-                    filled: true,
-                    controller: _phone,
-                    readOnly: isLoading,
-                    hintText: l.enterYourPhoneNumber,
-                    keyboardType: TextInputType.phone,
-                    textDirection: TextDirection.ltr,
-                    validator: (v) =>
-                        (v == null || v.trim().isEmpty) ? l.phoneRequired : null,
-                  ),
-                  16.sbh,
-
-                  // Email kini **identitas login**, bukan pelengkap: API ini
-                  // masuk lewat email, bukan nomor HP.
-                  AuthFieldLabel(l.email, isRequired: true),
-                  8.sbh,
-                  CustomTextFormField(
-                    filled: true,
-                    controller: _email,
-                    readOnly: isLoading,
-                    hintText: l.enterYourEmail,
-                    keyboardType: TextInputType.emailAddress,
-                    textDirection: TextDirection.ltr,
-                    validator: (v) {
-                      final value = v?.trim() ?? '';
-                      if (value.isEmpty) return 'Email wajib diisi';
-                      if (!value.contains('@')) return 'Format email belum benar';
-                      return null;
-                    },
-                  ),
-                  16.sbh,
-
-                  AuthFieldLabel(l.password, isRequired: true),
-                  8.sbh,
-                  CustomTextFormField(
-                    filled: true,
-                    controller: _password,
-                    readOnly: isLoading,
-                    hintText: l.password,
-                    obscureText: _obscure,
-                    textDirection: TextDirection.ltr,
-                    suffix: IconButton(
-                      icon: Icon(
-                        _obscure ? Icons.visibility_off : Icons.visibility,
-                        size: 20,
-                      ),
-                      onPressed: () => setState(() => _obscure = !_obscure),
-                    ),
-                    validator: (v) {
-                      if (v == null || v.isEmpty) return l.passwordRequired;
-                      if (v.length < 6) return l.passwordTooShort;
-                      return null;
-                    },
-                  ),
-
-                  24.sbh,
-                  CustomButton(
-                    onPressed: isLoading ? null : _submit,
-                    child: isLoading
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : Text(
-                            l.createAccount,
-                            style: AppStyles.styleMedium16(context)
-                                .copyWith(color: Colors.white),
-                          ),
-                  ),
-                  16.sbh,
-                  Center(
-                    child: TextButton(
-                      onPressed:
-                          isLoading ? null : () => router.go(AppRoutes.login),
-                      child: Text(
-                        l.alreadyHaveAccount,
-                        style: AppStyles.styleRegular14(context)
-                            .copyWith(color: primary),
-                      ),
-                    ),
-                  ),
-                  16.sbh,
-                ],
+                ),
               ),
             ),
           ),
@@ -245,5 +244,3 @@ class _RegisterBodyState extends State<_RegisterBody> {
     );
   }
 }
-
-/// Pemilih `BUY_R` / `BUY_B`.

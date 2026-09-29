@@ -25,6 +25,7 @@ class AddressRepositoryImpl implements AddressRepository {
             isPrimary: draft.isPrimary,
             latitude: draft.latitude,
             longitude: draft.longitude,
+            cityId: draft.cityId,
           ));
 
   @override
@@ -41,6 +42,8 @@ class AddressRepositoryImpl implements AddressRepository {
             isPrimary: draft.isPrimary,
             latitude: draft.latitude,
             longitude: draft.longitude,
+            cityId: draft.cityId,
+            includeCityId: true,
           ));
 
   @override

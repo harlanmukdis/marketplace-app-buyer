@@ -51,6 +51,12 @@ _ProductModel _$ProductModelFromJson(Map<String, dynamic> json) =>
               ?.map((e) => e as String)
               .toList() ??
           const <String>[],
+      fulfillmentMode: json['fulfillment_mode'] == null
+          ? 'ready_stock'
+          : const StringJson().fromJson(json['fulfillment_mode']),
+      fulfillmentLeadTimeDays:
+          const IntOrNullJson().fromJson(json['fulfillment_lead_time_days']),
+      availability: const StringOrNullJson().fromJson(json['availability']),
       variants: (json['variants'] as List<dynamic>?)
               ?.map((e) =>
                   ProductVariantModel.fromJson(e as Map<String, dynamic>))
@@ -89,6 +95,10 @@ Map<String, dynamic> _$ProductModelToJson(_ProductModel instance) =>
       'flash_sale': instance.flashSale,
       'image_url': const StringOrNullJson().toJson(instance.listingImageUrl),
       'badges': instance.badges,
+      'fulfillment_mode': const StringJson().toJson(instance.fulfillmentMode),
+      'fulfillment_lead_time_days':
+          const IntOrNullJson().toJson(instance.fulfillmentLeadTimeDays),
+      'availability': const StringOrNullJson().toJson(instance.availability),
       'variants': instance.variants,
       'images': instance.images,
       'couriers': instance.couriers,

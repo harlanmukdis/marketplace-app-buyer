@@ -7,6 +7,9 @@
 /// disalin ulang dari respons yang sekarang.
 library;
 
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:marketplace_app_member/core/domain/model/address/address_model.dart';
 import 'package:marketplace_app_member/core/domain/model/checkout/checkout_models.dart';
@@ -54,7 +57,8 @@ void main() {
           'Jl. Probe No. 1, Jakarta Selatan, DKI Jakarta, 12810');
     });
 
-    test('alamat yang diterima server dengan field kosong ditandai tidak lengkap',
+    test(
+        'alamat yang diterima server dengan field kosong ditandai tidak lengkap',
         () {
       // Server membalas 201 untuk ini. Aplikasi yang harus menolaknya.
       final address = AddressModel.fromJson(const {
@@ -244,10 +248,13 @@ void main() {
   });
 
   group('CheckoutConfirmResult', () {
-    test('order_ids berupa array — keranjang multi-toko pecah jadi banyak order',
+    test(
+        'order_ids berupa array — keranjang multi-toko pecah jadi banyak order',
         () {
-      final result = CheckoutConfirmResult.fromJson(
-          const {'order_ids': [1, 2], 'payment_transaction_id': 1});
+      final result = CheckoutConfirmResult.fromJson(const {
+        'order_ids': [1, 2],
+        'payment_transaction_id': 1
+      });
 
       expect(result.orderIds, [1, 2]);
       expect(result.isMultiStore, isTrue);
@@ -255,8 +262,10 @@ void main() {
     });
 
     test('satu toko tetap berupa array berisi satu', () {
-      final result = CheckoutConfirmResult.fromJson(
-          const {'order_ids': [7], 'payment_transaction_id': 3});
+      final result = CheckoutConfirmResult.fromJson(const {
+        'order_ids': [7],
+        'payment_transaction_id': 3
+      });
       expect(result.isMultiStore, isFalse);
     });
   });
@@ -275,6 +284,56 @@ void main() {
       expect(created.id, '7bb7199a-02a2-43aa-9b0c-2204f375abf8');
       expect(created.grandTotal, 3049000);
       expect(created.timeLeft!.inDays, greaterThan(0));
+    });
+  });
+
+  // Kontrak yang DIUSULKAN (belum dikirim server) — fixture-nya adalah spec
+  // untuk backend, jadi model harus bisa membacanya apa adanya.
+  group('kontrak Wallet (fixture pending_api/checkout)', () {
+    Map<String, dynamic> fixture(String name) => Map<String, dynamic>.from(
+        jsonDecode(File('assets/mock/pending_api/checkout/$name')
+            .readAsStringSync()) as Map);
+
+    test('wallet_summary.json', () {
+      final model = WalletSummaryModel.fromJson(fixture('wallet_summary.json'));
+      expect(model.walletBalance, 2500000);
+      expect(model.grandTotal, 2543000);
+      expect(model.shortfall, 43000);
+      expect(model.canPay, isFalse);
+      expect(model.minTopup, 10000);
+      expect(model.pinSet, isTrue);
+      expect(model.isInsufficient, isTrue);
+      expect(model.suggestedTopup, 43000);
+    });
+
+    test('wallet_confirm.json', () {
+      final result =
+          CheckoutConfirmResult.fromJson(fixture('wallet_confirm.json'));
+      expect(result.orderIds, [101, 102]);
+      expect(result.paymentTransactionId, 55);
+      expect(result.paid, isTrue);
+      expect(result.walletTransactionId, 9001);
+      expect(result.balanceAfter, 1457000);
+    });
+
+    test('confirm alur lama (tanpa field Wallet) berarti BELUM dibayar', () {
+      final result = CheckoutConfirmResult.fromJson(const {
+        'order_ids': [1],
+        'payment_transaction_id': 1,
+      });
+      expect(result.paid, isFalse);
+      expect(result.balanceAfter, isNull);
+    });
+
+    test('tinyint & string ikut terbaca', () {
+      final model = WalletSummaryModel.fromJson(const {
+        'wallet_balance': '750000.00',
+        'can_pay': '0',
+        'pin_set': '1',
+      });
+      expect(model.walletBalance, 750000);
+      expect(model.canPay, isFalse);
+      expect(model.pinSet, isTrue);
     });
   });
 }

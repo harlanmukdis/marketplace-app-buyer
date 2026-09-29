@@ -81,6 +81,16 @@ class _FakeChatRepository implements ChatRepository {
   }
 
   @override
+  Future<DataState<List<ChatMessageModel>>> share(
+    int conversationId, {
+    int? productId,
+    int? orderId,
+  }) async {
+    calls.add('share:${productId ?? '-'}:${orderId ?? '-'}');
+    return sendResult ?? messages;
+  }
+
+  @override
   Future<DataState<void>> markRead(int conversationId) async {
     calls.add('read:$conversationId');
     return const DataSuccess(null);
@@ -271,6 +281,88 @@ void main() {
 
       expect(repository.calls.where((c) => c.startsWith('send:')),
           ['send:Satu']);
+      await cubit.close();
+    });
+
+    test('gelembung "menunggu" tampil selama kirim, lalu hilang', () async {
+      repository.sendResult = DataSuccess([_msg(1), _msg(2)]);
+
+      final cubit = ChatRoomCubit(7);
+      await cubit.load();
+      final seen = <String?>[];
+      final sub = cubit.stream.listen((s) {
+        if (s is ChatRoomReady) seen.add(s.pendingText);
+      });
+
+      final sent = await cubit.send('  Halo  ');
+      await Future<void>.delayed(Duration.zero);
+
+      expect(sent, isTrue);
+      // Isi yang dikirim sudah dipangkas — sama dengan yang sampai ke server.
+      expect(seen.first, 'Halo');
+      expect((cubit.state as ChatRoomReady).pendingText, isNull);
+      await sub.cancel();
+      await cubit.close();
+    });
+
+    test('🔴 CHAT_CONTENT_BLOCKED: send() melapor gagal supaya teks '
+        'dikembalikan ke kolom ketik', () async {
+      // Filter konten server menolak nomor HP/email/tautan dengan 422 dan
+      // TIDAK menyimpan pesannya — layar mengandalkan nilai kembalian ini
+      // untuk mengembalikan ketikan user.
+      repository.sendResult = DataFailed(_error('CHAT_CONTENT_BLOCKED'));
+
+      final cubit = ChatRoomCubit(7);
+      await cubit.load();
+      final sent = await cubit.send('Hubungi 08123456789');
+
+      final state = cubit.state as ChatRoomReady;
+      expect(sent, isFalse);
+      expect(state.actionError?.code, 'CHAT_CONTENT_BLOCKED');
+      expect(state.pendingText, isNull);
+      expect(state.messages.map((m) => m.id), [1]);
+      await cubit.close();
+    });
+
+    test('teks kosong melapor tidak terkirim', () async {
+      final cubit = ChatRoomCubit(7);
+      await cubit.load();
+      expect(await cubit.send('   '), isFalse);
+      await cubit.close();
+    });
+  });
+
+  group('ChatRoomCubit.share', () {
+    test('membagikan produk lalu memakai hasil baca ulang', () async {
+      final cubit = ChatRoomCubit(5);
+      await cubit.load();
+      repository.sendResult = DataSuccess([
+        _msg(1),
+        const ChatMessageModel(id: 2, senderUserId: _me, typeCode: 'product_share', sharedProductId: 9),
+      ]);
+
+      final sent = await cubit.share(productId: 9);
+
+      expect(sent, isTrue);
+      expect(repository.calls, contains('share:9:-'));
+      final state = cubit.state as ChatRoomReady;
+      expect(state.messages.last.type, ChatMessageType.productShare);
+      expect(state.pendingText, isNull);
+      await cubit.close();
+    });
+
+    test('gagal membagikan pesanan melapor error tanpa menghapus percakapan', () async {
+      final cubit = ChatRoomCubit(5);
+      await cubit.load();
+      repository.sendResult = DataFailed(_error('VALIDATION_ERROR'));
+
+      final sent = await cubit.share(orderId: 44);
+
+      expect(sent, isFalse);
+      expect(repository.calls, contains('share:-:44'));
+      final state = cubit.state as ChatRoomReady;
+      expect(state.messages, hasLength(1));
+      expect(state.actionError?.code, 'VALIDATION_ERROR');
       await cubit.close();
     });
   });

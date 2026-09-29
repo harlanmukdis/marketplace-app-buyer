@@ -51,6 +51,8 @@ _ChatMessageModel _$ChatMessageModelFromJson(Map<String, dynamic> json) =>
       sharedOrderId: const IntOrNullJson().fromJson(json['shared_order_id']),
       createdAt: const ServerDateTimeJson().fromJson(json['created_at']),
       readAt: const ServerDateTimeJson().fromJson(json['read_at']),
+      deliveredAt: const ServerDateTimeJson().fromJson(json['delivered_at']),
+      deliveryStatus: const StringOrNullJson().fromJson(json['status']),
     );
 
 Map<String, dynamic> _$ChatMessageModelToJson(_ChatMessageModel instance) =>
@@ -64,4 +66,6 @@ Map<String, dynamic> _$ChatMessageModelToJson(_ChatMessageModel instance) =>
       'shared_order_id': const IntOrNullJson().toJson(instance.sharedOrderId),
       'created_at': const ServerDateTimeJson().toJson(instance.createdAt),
       'read_at': const ServerDateTimeJson().toJson(instance.readAt),
+      'delivered_at': const ServerDateTimeJson().toJson(instance.deliveredAt),
+      'status': const StringOrNullJson().toJson(instance.deliveryStatus),
     };

@@ -36,6 +36,44 @@ void main() {
 
   tearDown(() => dio.close(force: true));
 
+  group('GET /products — backend v1.6+ (blueprint Xpedia)', () {
+    test('setiap item membawa fulfillment_mode yang dikenal', () async {
+      final result = await catalog.fetchProducts(perPage: 50);
+      for (final product in result.data) {
+        expect(StockMode.parse(product.fulfillmentMode), isNotNull,
+            reason: 'mode baru dari server: ${product.fulfillmentMode}');
+      }
+    });
+
+    test('🔴 listing MENYEMBUNYIKAN discontinued dan ready-stock yang habis',
+        () async {
+      // `_apply_listing_lifecycle_exclusion()`: berlaku di semua sort_by,
+      // termasuk pencarian. Detail tetap mengembalikannya — produk dari
+      // tautan langsung atau wishlist masih bisa dibuka.
+      final result = await catalog.fetchProducts(perPage: 100);
+      expect(result.data.where((p) => p.fulfillmentMode == 'discontinued'), isEmpty);
+
+      for (final product in result.data.take(5)) {
+        final detail = (await catalog.fetchProduct(product.id, forceRefresh: true)).data;
+        if (detail.fulfillmentMode == 'ready_stock') {
+          expect(detail.stock, greaterThan(0),
+              reason: 'produk ready-stock di listing wajib masih berstok');
+        }
+      }
+    });
+
+    test('detail membawa availability hasil hitungan server', () async {
+      final listing = await catalog.fetchProducts(perPage: 1);
+      final detail = (await catalog.fetchProduct(listing.data.first.id)).data;
+      expect(StockMode.parse(detail.availability), isNotNull);
+    });
+
+    test('sort_by=recommended diterima', () async {
+      final result = await catalog.fetchProducts(sort: ProductSort.recommended, perPage: 5);
+      expect(result.data, isNotEmpty);
+    });
+  });
+
   group('GET /products', () {
     test('mengembalikan produk beserta meta paginasi', () async {
       final result = await catalog.fetchProducts(perPage: 5);

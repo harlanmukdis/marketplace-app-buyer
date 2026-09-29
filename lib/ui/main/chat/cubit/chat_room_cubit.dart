@@ -103,37 +103,98 @@ class ChatRoomCubit extends Cubit<ChatRoomState> {
     }
   }
 
-  /// Mengirim pesan.
+  /// Mengirim pesan. Mengembalikan `true` kalau pesannya benar-benar
+  /// tersimpan di server.
   ///
   /// Teks kosong ditolak tanpa menyentuh jaringan: server menerimanya dan
   /// membalas `201` dengan `content: null`, menyisakan gelembung hampa yang
   /// tidak bisa dihapus.
-  Future<void> send(String text) async {
+  ///
+  /// Nilai kembaliannya dipakai layar untuk **mengembalikan teks ke kolom
+  /// ketik** saat gagal — terutama `422 CHAT_CONTENT_BLOCKED` (pesan memuat
+  /// nomor HP/email/tautan), yang tidak menyimpan apa pun di server. Tanpa
+  /// itu user harus mengetik ulang seluruh pesannya hanya untuk menghapus
+  /// satu nomor.
+  Future<bool> send(String text) async {
     final content = text.trim();
-    if (content.isEmpty) return;
+    if (content.isEmpty) return false;
 
     final current = state;
-    if (current is! ChatRoomReady || current.isSending) return;
+    if (current is! ChatRoomReady || current.isSending) return false;
 
-    emit(current.copyWith(isSending: true, actionError: null));
+    emit(current.copyWith(
+      isSending: true,
+      pendingText: content,
+      actionError: null,
+    ));
     final result =
         await _repository.sendMessage(conversationId, content: content);
-    if (isClosed) return;
+    if (isClosed) return false;
 
     final latest = state;
-    if (latest is! ChatRoomReady) return;
+    if (latest is! ChatRoomReady) return false;
 
     switch (result) {
       case DataSuccess(:final data):
         emit(latest.copyWith(
           messages: _merge(latest.messages, data),
           isSending: false,
+          pendingText: null,
         ));
+        return true;
       case DataFailed(:final error):
-        emit(latest.copyWith(isSending: false, actionError: error));
+        emit(latest.copyWith(
+          isSending: false,
+          pendingText: null,
+          actionError: error,
+        ));
+        return false;
       case DataEmpty():
       case DataLoading():
-        emit(latest.copyWith(isSending: false));
+        emit(latest.copyWith(isSending: false, pendingText: null));
+        return false;
+    }
+  }
+
+  /// Membagikan produk (`product_share`) atau pesanan (`order_share`).
+  ///
+  /// Dikirim **tanpa `content`**: kartunya dirakit dari id yang dibagikan,
+  /// dan tanpa teks tidak ada yang bisa tersangkut moderasi. Selama
+  /// mengirim, gelembung "menunggu" menampilkan [pendingLabel].
+  Future<bool> share({int? productId, int? orderId}) async {
+    assert((productId == null) != (orderId == null));
+    final current = state;
+    if (current is! ChatRoomReady || current.isSending) return false;
+
+    emit(current.copyWith(
+      isSending: true,
+      pendingText: productId != null ? 'Membagikan produk…' : 'Membagikan pesanan…',
+      actionError: null,
+    ));
+    final result = await _repository.share(
+      conversationId,
+      productId: productId,
+      orderId: orderId,
+    );
+    if (isClosed) return false;
+    final latest = state;
+    if (latest is! ChatRoomReady) return false;
+
+    switch (result) {
+      case DataSuccess(:final data):
+        emit(latest.copyWith(
+          messages: _merge(latest.messages, data),
+          isSending: false,
+          pendingText: null,
+        ));
+        return true;
+      case DataFailed(:final error):
+        emit(latest.copyWith(isSending: false, pendingText: null, actionError: error));
+        return false;
+      case DataEmpty():
+      case DataLoading():
+        emit(latest.copyWith(isSending: false, pendingText: null));
+        return false;
     }
   }
 

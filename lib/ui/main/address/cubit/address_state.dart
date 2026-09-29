@@ -32,6 +32,16 @@ sealed class AddressState with _$AddressState {
         _ => null,
       };
 
+  /// Sisa slot alamat sebelum batas [AddressCubit.maxAddresses].
+  int get remainingSlots => switch (this) {
+        AddressReady(:final addresses) =>
+          (AddressCubit.maxAddresses - addresses.length)
+              .clamp(0, AddressCubit.maxAddresses),
+        _ => 0,
+      };
+
+  bool get canAddMore => this is AddressReady && remainingSlots > 0;
+
   /// Alamat yang benar-benar bisa dipakai mengirim barang.
   ///
   /// Server menerima alamat berisi field kosong, jadi daftar ini bisa lebih

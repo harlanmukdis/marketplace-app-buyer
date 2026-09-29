@@ -15,4 +15,9 @@ abstract class WishlistRepository {
 
   /// Menghapus produk. Parameternya **id produk**, bukan `wishlist_item_id`.
   Future<DataState<List<WishlistItemModel>>> remove(int productId);
+
+  /// Menyalakan/mematikan pantau harga & stok satu produk, lalu membaca ulang
+  /// (kontrak usulan — lihat `WishlistService.setAlert`).
+  Future<DataState<List<WishlistItemModel>>> setAlert(int productId,
+      {required bool enabled});
 }

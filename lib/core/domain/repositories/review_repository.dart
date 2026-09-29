@@ -39,4 +39,11 @@ abstract class ReviewRepository {
   Future<DataState<int>> create(int orderItemId, ReviewDraft draft);
 
   Future<DataState<void>> report(int reviewId, {String? reason});
+
+  /// Ulasan milik user login. **Diusulkan** (docs/22 #8).
+  Future<DataState<List<MyReviewModel>>> fetchMine({int page});
+
+  /// Memperbarui ulasan sendiri dalam 30 hari. **Diusulkan** (docs/22 #8).
+  Future<DataState<MyReviewModel>> update(
+      int reviewId, ReviewUpdateDraft draft);
 }

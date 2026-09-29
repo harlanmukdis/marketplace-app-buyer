@@ -57,6 +57,32 @@ class ProductDetailCubit extends Cubit<ProductDetailState> {
     }
   }
 
+  /// Memuat ulang **tanpa** mengosongkan layar — untuk pull-to-refresh dan
+  /// sesudah barang masuk keranjang (stok berubah).
+  ///
+  /// [load] memancarkan `loading` lebih dulu, yang membuang posisi gulir dan
+  /// membuat ulang seluruh isi halaman. Di sini keadaan lama dipertahankan
+  /// sampai balasan datang, varian terpilih dipertahankan menurut id-nya, dan
+  /// kegagalan cukup diabaikan: angka yang sedikit basi lebih baik daripada
+  /// halaman yang tiba-tiba jadi layar error.
+  Future<void> refresh() async {
+    final current = state;
+    if (current is! ProductDetailLoaded) return load(forceRefresh: true);
+
+    final result = await _repository.fetchProduct(productId, forceRefresh: true);
+    if (isClosed) return;
+    if (result case DataSuccess(:final data)) {
+      final selectedId = (state is ProductDetailLoaded)
+          ? (state as ProductDetailLoaded).selectedVariant?.id
+          : current.selectedVariant?.id;
+      final kept = data.variants.where((v) => v.id == selectedId);
+      emit(ProductDetailState.loaded(
+        product: data,
+        selectedVariant: kept.isNotEmpty ? kept.first : _pickInitialVariant(data),
+      ));
+    }
+  }
+
   /// Mengganti varian terpilih.
   void selectVariant(ProductVariantModel variant) {
     final current = state;

@@ -1,11 +1,12 @@
 import 'package:marketplace_app_member/config/network/api_exception.dart';
 import 'package:marketplace_app_member/core/data/datasources/remote/service/review_service.dart';
+import 'package:marketplace_app_member/core/data/repositories/repository_guard.dart';
 import 'package:marketplace_app_member/core/data_state.dart';
 import 'package:marketplace_app_member/core/domain/model/review/review_model.dart';
 import 'package:marketplace_app_member/core/domain/repositories/review_repository.dart';
 import 'package:marketplace_app_member/util/json_converters.dart';
 
-class ReviewRepositoryImpl implements ReviewRepository {
+class ReviewRepositoryImpl with RepositoryGuard implements ReviewRepository {
   ReviewRepositoryImpl(this._service);
 
   final ReviewService _service;
@@ -58,4 +59,13 @@ class ReviewRepositoryImpl implements ReviewRepository {
       return DataFailed(e.error);
     }
   }
+
+  @override
+  Future<DataState<List<MyReviewModel>>> fetchMine({int page = 1}) =>
+      guardList(() => _service.fetchMine(page: page));
+
+  @override
+  Future<DataState<MyReviewModel>> update(
+          int reviewId, ReviewUpdateDraft draft) =>
+      guard(() => _service.update(reviewId, draft));
 }

@@ -2,14 +2,11 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:marketplace_app_member/ui/main/auth/cubit/auth_cubit.dart';
-import 'package:marketplace_app_member/core/utils/extensions.dart';
+import 'package:marketplace_app_member/core/design/xp_colors.dart';
+import 'package:marketplace_app_member/core/design/xp_text.dart';
 
-import '../../core/function/components.dart';
-import '../../core/utils/app_images.dart';
 import '../../core/utils/app_routes.dart';
-import '../../core/utils/constant.dart';
 
 class SplashView extends StatelessWidget {
   const SplashView({super.key});
@@ -34,62 +31,28 @@ class _SplashBody extends StatefulWidget {
 }
 
 class _SplashBodyState extends State<_SplashBody>
-    with TickerProviderStateMixin {
+    with SingleTickerProviderStateMixin {
   Timer? _minimumDisplay;
   bool _minimumDisplayElapsed = false;
   bool _navigated = false;
 
-  late final AnimationController _colorController;
-  late final AnimationController _slideController;
-  late final AnimationController _roundController;
-
-  late final Animation<Color?> _colorAnimation;
-  late final Animation<Offset> _slideAnimationUp;
-  late final Animation<Offset> _slideAnimationBot;
-  late final Animation<double> _roundAnimation;
+  late final AnimationController _intro;
+  late final Animation<double> _fade;
+  late final Animation<double> _scale;
 
   @override
   void initState() {
     super.initState();
 
-    // Initialize AnimationControllers
-    _colorController =
-        AnimationController(vsync: this, duration: const Duration(seconds: 1));
-    _slideController =
-        AnimationController(vsync: this, duration: const Duration(seconds: 1));
-    _roundController =
-        AnimationController(vsync: this, duration: const Duration(seconds: 1));
-
-    // Define color transition animation
-    final targetColor = isAppDarkMode() ? kDarkColor : kWhiteColor;
-    _colorAnimation = ColorTween(
-            begin: isAppDarkMode() ? kDarkPrimaryColor : kLightPrimaryColor,
-            end: targetColor)
-        .animate(
-      CurvedAnimation(parent: _colorController, curve: Curves.linear),
+    // Satu controller cukup: wordmark muncul memudar sambil sedikit
+    // membesar, lalu diam. Versi UI kit memakai tiga controller dan dua SVG
+    // placeholder (logo kit "Shopapay"), yang bukan merek Xpedia.
+    _intro = AnimationController(vsync: this, duration: const Duration(milliseconds: 700))
+      ..forward();
+    _fade = CurvedAnimation(parent: _intro, curve: Curves.easeOut);
+    _scale = Tween<double>(begin: 0.92, end: 1).animate(
+      CurvedAnimation(parent: _intro, curve: Curves.easeOutBack),
     );
-
-    // Define slide animations
-    _slideAnimationUp =
-        Tween<Offset>(begin: const Offset(0, 4), end: Offset.zero).animate(
-      CurvedAnimation(parent: _slideController, curve: Curves.linear),
-    );
-    _slideAnimationBot =
-        Tween<Offset>(begin: const Offset(0, -4), end: Offset.zero).animate(
-      CurvedAnimation(parent: _slideController, curve: Curves.linear),
-    );
-
-    // Define round animation
-    _roundAnimation =
-        Tween<double>(begin: 0.0, end: 1.0).animate(CurvedAnimation(
-      parent: _roundController,
-      curve: Curves.easeInOut,
-    ));
-
-    // Start animations
-    _colorController.forward();
-    _slideController.forward();
-    _roundController.repeat(reverse: true); // Continuous rounding effect
 
     // Navigate to onboarding screen after a delay
     _minimumDisplay = Timer(const Duration(seconds: 2), () {
@@ -137,9 +100,7 @@ class _SplashBodyState extends State<_SplashBody>
   @override
   void dispose() {
     _minimumDisplay?.cancel();
-    _colorController.dispose();
-    _slideController.dispose();
-    _roundController.dispose();
+    _intro.dispose();
     super.dispose();
   }
 
@@ -154,60 +115,50 @@ class _SplashBodyState extends State<_SplashBody>
   }
 
   Widget _buildSplash(BuildContext context) {
+    // Latar biru merek dengan wordmark putih — sama di mode gelap, karena
+    // splash adalah momen merek, bukan permukaan konten.
     return Scaffold(
-      body: AnimatedBuilder(
-        animation: _colorAnimation,
-        builder: (context, child) {
-          return Container(
-            color: _colorAnimation.value,
-            child: Center(
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  Opacity(
-                    opacity: isAppDarkMode() ? 0.3 : 1.0,
-                    child: AnimatedBuilder(
-                      animation: _roundAnimation,
-                      builder: (context, child) {
-                        return ClipOval(
-                          child: Transform.scale(
-                            scale: 0.8 + (_roundAnimation.value * 0.2),
-                            child: SvgPicture.asset(
-                              AppImages.splash,
-                              fit: BoxFit.cover,
-                            ),
-                          ),
-                        );
-                      },
+      backgroundColor: XpColors.primary,
+      body: SafeArea(
+        child: Column(
+          children: [
+            const Spacer(),
+            FadeTransition(
+              opacity: _fade,
+              child: ScaleTransition(
+                scale: _scale,
+                child: Column(
+                  children: [
+                    Text(
+                      'Xpedia',
+                      style: XpText.headingXl(context).copyWith(
+                        fontSize: 44,
+                        height: 1.1,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -1.5,
+                        color: Colors.white,
+                      ),
                     ),
-                  ),
-                  Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      SlideTransition(
-                        position: _slideAnimationBot,
-                        child: SvgPicture.asset(
-                          AppImages.logo,
-                          height: 150,
-                          width: 150,
-                        ),
-                      ),
-                      24.sbh,
-                      SlideTransition(
-                        position: _slideAnimationUp,
-                        child: SvgPicture.asset(
-                          AppImages.Shopapay,
-                          fit: BoxFit.scaleDown,
-                          width: 200,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+                    const SizedBox(height: 8),
+                    Text(
+                      'Belanja aman, cepat, dan terpercaya',
+                      style: XpText.bodyM(context).copyWith(color: const Color(0xffE1E8FD)),
+                    ),
+                  ],
+                ),
               ),
             ),
-          );
-        },
+            const Spacer(),
+            const Padding(
+              padding: EdgeInsets.only(bottom: 32),
+              child: SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

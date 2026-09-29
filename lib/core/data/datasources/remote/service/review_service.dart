@@ -91,4 +91,46 @@ class ReviewService {
       throw ApiException.fromDio(e, context: context);
     }
   }
+
+  /// `GET /me/reviews?page=` — ulasan milik user login, terbaru dulu.
+  ///
+  /// ⚠️ **Diusulkan, belum ada di backend** (docs/22 #8) — dijawab mock di
+  /// build debug. `meta` membawa `page`/`per_page`/`total`, seperti ulasan
+  /// produk.
+  Future<ApiEnvelope<List<MyReviewModel>>> fetchMine({int page = 1}) async {
+    const context = 'GET /me/reviews';
+    try {
+      final response = await _dio.get<dynamic>(
+        '/me/reviews',
+        queryParameters: <String, dynamic>{'page': page},
+      );
+      return parseEnvelopeList(response, MyReviewModel.fromJson,
+          context: context);
+    } on DioException catch (e) {
+      throw ApiException.fromDio(e, context: context);
+    }
+  }
+
+  /// `PATCH /reviews/{id}` — memperbarui ulasan sendiri dalam 30 hari.
+  ///
+  /// ⚠️ **Diusulkan, belum ada di backend** (docs/22 #8). Lewat tenggat →
+  /// `422 REVIEW_EDIT_WINDOW_CLOSED`; ulasan orang lain / tidak ada →
+  /// `404 REVIEW_NOT_FOUND`. Balasan berisi ulasan hasil perubahan — berbeda
+  /// dari kebanyakan mutasi di API ini yang membalas `data: null`, karena
+  /// kontrak ini masih bisa ditentukan dari sisi klien.
+  Future<ApiEnvelope<MyReviewModel>> update(
+      int reviewId, ReviewUpdateDraft draft) async {
+    final context = 'PATCH /reviews/$reviewId';
+    try {
+      final response =
+          await _dio.patch<dynamic>('/reviews/$reviewId', data: draft.toJson());
+      return parseEnvelope(
+        response,
+        (raw) => MyReviewModel.fromJson(Map<String, dynamic>.from(raw as Map)),
+        context: context,
+      );
+    } on DioException catch (e) {
+      throw ApiException.fromDio(e, context: context);
+    }
+  }
 }

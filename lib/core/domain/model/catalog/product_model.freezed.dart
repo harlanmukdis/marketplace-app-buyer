@@ -105,6 +105,26 @@ mixin _$ProductModel {
   /// dan ambangnya akan pindah ke `admin_settings`, jadi nilai baru bisa
   /// muncul kapan saja. [badgeLabels] membuang yang tidak dikenal.
   List<String> get badges;
+
+  /// Mode pemenuhan yang dipilih penjual (backend v1.6+, blueprint Seller
+  /// Ch.1): `ready_stock`, `infinite`, `pre_order`, `custom_order`,
+  /// `discontinued`. Ada di **listing maupun detail**. Pakai [stockMode],
+  /// jangan string ini langsung.
+  @StringJson()
+  @JsonKey(name: 'fulfillment_mode')
+  String get fulfillmentMode;
+
+  /// Lama pengerjaan dalam hari — wajib untuk `pre_order`/`custom_order`,
+  /// `null` untuk mode lain.
+  @IntOrNullJson()
+  @JsonKey(name: 'fulfillment_lead_time_days')
+  int? get fulfillmentLeadTimeDays;
+
+  /// Ketersediaan hasil hitungan server, **hanya di detail**:
+  /// [fulfillmentMode] ditambah `low_stock`/`out_of_stock` yang diturunkan
+  /// dari stok live (`<= 10` dianggap menipis). `null` di listing.
+  @StringOrNullJson()
+  String? get availability;
   List<ProductVariantModel> get variants;
   List<ProductImageModel> get images;
   List<CourierModel> get couriers;
@@ -156,6 +176,13 @@ mixin _$ProductModel {
             (identical(other.listingImageUrl, listingImageUrl) ||
                 other.listingImageUrl == listingImageUrl) &&
             const DeepCollectionEquality().equals(other.badges, badges) &&
+            (identical(other.fulfillmentMode, fulfillmentMode) ||
+                other.fulfillmentMode == fulfillmentMode) &&
+            (identical(
+                    other.fulfillmentLeadTimeDays, fulfillmentLeadTimeDays) ||
+                other.fulfillmentLeadTimeDays == fulfillmentLeadTimeDays) &&
+            (identical(other.availability, availability) ||
+                other.availability == availability) &&
             const DeepCollectionEquality().equals(other.variants, variants) &&
             const DeepCollectionEquality().equals(other.images, images) &&
             const DeepCollectionEquality().equals(other.couriers, couriers));
@@ -184,6 +211,9 @@ mixin _$ProductModel {
         flashSale,
         listingImageUrl,
         const DeepCollectionEquality().hash(badges),
+        fulfillmentMode,
+        fulfillmentLeadTimeDays,
+        availability,
         const DeepCollectionEquality().hash(variants),
         const DeepCollectionEquality().hash(images),
         const DeepCollectionEquality().hash(couriers)
@@ -191,7 +221,7 @@ mixin _$ProductModel {
 
   @override
   String toString() {
-    return 'ProductModel(id: $id, storeId: $storeId, name: $name, slug: $slug, description: $description, productType: $productType, basePrice: $basePrice, compareAtPrice: $compareAtPrice, weightGrams: $weightGrams, status: $status, soldCount: $soldCount, viewCount: $viewCount, ratingAvg: $ratingAvg, ratingCount: $ratingCount, createdAt: $createdAt, stock: $stock, flashSale: $flashSale, listingImageUrl: $listingImageUrl, badges: $badges, variants: $variants, images: $images, couriers: $couriers)';
+    return 'ProductModel(id: $id, storeId: $storeId, name: $name, slug: $slug, description: $description, productType: $productType, basePrice: $basePrice, compareAtPrice: $compareAtPrice, weightGrams: $weightGrams, status: $status, soldCount: $soldCount, viewCount: $viewCount, ratingAvg: $ratingAvg, ratingCount: $ratingCount, createdAt: $createdAt, stock: $stock, flashSale: $flashSale, listingImageUrl: $listingImageUrl, badges: $badges, fulfillmentMode: $fulfillmentMode, fulfillmentLeadTimeDays: $fulfillmentLeadTimeDays, availability: $availability, variants: $variants, images: $images, couriers: $couriers)';
   }
 }
 
@@ -223,6 +253,11 @@ abstract mixin class $ProductModelCopyWith<$Res> {
       @JsonKey(name: 'flash_sale') FlashSaleModel? flashSale,
       @StringOrNullJson() @JsonKey(name: 'image_url') String? listingImageUrl,
       List<String> badges,
+      @StringJson() @JsonKey(name: 'fulfillment_mode') String fulfillmentMode,
+      @IntOrNullJson()
+      @JsonKey(name: 'fulfillment_lead_time_days')
+      int? fulfillmentLeadTimeDays,
+      @StringOrNullJson() String? availability,
       List<ProductVariantModel> variants,
       List<ProductImageModel> images,
       List<CourierModel> couriers});
@@ -261,6 +296,9 @@ class _$ProductModelCopyWithImpl<$Res> implements $ProductModelCopyWith<$Res> {
     Object? flashSale = freezed,
     Object? listingImageUrl = freezed,
     Object? badges = null,
+    Object? fulfillmentMode = null,
+    Object? fulfillmentLeadTimeDays = freezed,
+    Object? availability = freezed,
     Object? variants = null,
     Object? images = null,
     Object? couriers = null,
@@ -342,6 +380,18 @@ class _$ProductModelCopyWithImpl<$Res> implements $ProductModelCopyWith<$Res> {
           ? _self.badges
           : badges // ignore: cast_nullable_to_non_nullable
               as List<String>,
+      fulfillmentMode: null == fulfillmentMode
+          ? _self.fulfillmentMode
+          : fulfillmentMode // ignore: cast_nullable_to_non_nullable
+              as String,
+      fulfillmentLeadTimeDays: freezed == fulfillmentLeadTimeDays
+          ? _self.fulfillmentLeadTimeDays
+          : fulfillmentLeadTimeDays // ignore: cast_nullable_to_non_nullable
+              as int?,
+      availability: freezed == availability
+          ? _self.availability
+          : availability // ignore: cast_nullable_to_non_nullable
+              as String?,
       variants: null == variants
           ? _self.variants
           : variants // ignore: cast_nullable_to_non_nullable
@@ -491,6 +541,13 @@ extension ProductModelPatterns on ProductModel {
             @JsonKey(name: 'image_url')
             String? listingImageUrl,
             List<String> badges,
+            @StringJson()
+            @JsonKey(name: 'fulfillment_mode')
+            String fulfillmentMode,
+            @IntOrNullJson()
+            @JsonKey(name: 'fulfillment_lead_time_days')
+            int? fulfillmentLeadTimeDays,
+            @StringOrNullJson() String? availability,
             List<ProductVariantModel> variants,
             List<ProductImageModel> images,
             List<CourierModel> couriers)?
@@ -520,6 +577,9 @@ extension ProductModelPatterns on ProductModel {
             _that.flashSale,
             _that.listingImageUrl,
             _that.badges,
+            _that.fulfillmentMode,
+            _that.fulfillmentLeadTimeDays,
+            _that.availability,
             _that.variants,
             _that.images,
             _that.couriers);
@@ -569,6 +629,13 @@ extension ProductModelPatterns on ProductModel {
             @JsonKey(name: 'image_url')
             String? listingImageUrl,
             List<String> badges,
+            @StringJson()
+            @JsonKey(name: 'fulfillment_mode')
+            String fulfillmentMode,
+            @IntOrNullJson()
+            @JsonKey(name: 'fulfillment_lead_time_days')
+            int? fulfillmentLeadTimeDays,
+            @StringOrNullJson() String? availability,
             List<ProductVariantModel> variants,
             List<ProductImageModel> images,
             List<CourierModel> couriers)
@@ -597,6 +664,9 @@ extension ProductModelPatterns on ProductModel {
             _that.flashSale,
             _that.listingImageUrl,
             _that.badges,
+            _that.fulfillmentMode,
+            _that.fulfillmentLeadTimeDays,
+            _that.availability,
             _that.variants,
             _that.images,
             _that.couriers);
@@ -645,6 +715,13 @@ extension ProductModelPatterns on ProductModel {
             @JsonKey(name: 'image_url')
             String? listingImageUrl,
             List<String> badges,
+            @StringJson()
+            @JsonKey(name: 'fulfillment_mode')
+            String fulfillmentMode,
+            @IntOrNullJson()
+            @JsonKey(name: 'fulfillment_lead_time_days')
+            int? fulfillmentLeadTimeDays,
+            @StringOrNullJson() String? availability,
             List<ProductVariantModel> variants,
             List<ProductImageModel> images,
             List<CourierModel> couriers)?
@@ -673,6 +750,9 @@ extension ProductModelPatterns on ProductModel {
             _that.flashSale,
             _that.listingImageUrl,
             _that.badges,
+            _that.fulfillmentMode,
+            _that.fulfillmentLeadTimeDays,
+            _that.availability,
             _that.variants,
             _that.images,
             _that.couriers);
@@ -709,6 +789,13 @@ class _ProductModel extends ProductModel {
       @JsonKey(name: 'flash_sale') this.flashSale,
       @StringOrNullJson() @JsonKey(name: 'image_url') this.listingImageUrl,
       final List<String> badges = const <String>[],
+      @StringJson()
+      @JsonKey(name: 'fulfillment_mode')
+      this.fulfillmentMode = 'ready_stock',
+      @IntOrNullJson()
+      @JsonKey(name: 'fulfillment_lead_time_days')
+      this.fulfillmentLeadTimeDays,
+      @StringOrNullJson() this.availability,
       final List<ProductVariantModel> variants = const <ProductVariantModel>[],
       final List<ProductImageModel> images = const <ProductImageModel>[],
       final List<CourierModel> couriers = const <CourierModel>[]})
@@ -856,6 +943,28 @@ class _ProductModel extends ProductModel {
     return EqualUnmodifiableListView(_badges);
   }
 
+  /// Mode pemenuhan yang dipilih penjual (backend v1.6+, blueprint Seller
+  /// Ch.1): `ready_stock`, `infinite`, `pre_order`, `custom_order`,
+  /// `discontinued`. Ada di **listing maupun detail**. Pakai [stockMode],
+  /// jangan string ini langsung.
+  @override
+  @StringJson()
+  @JsonKey(name: 'fulfillment_mode')
+  final String fulfillmentMode;
+
+  /// Lama pengerjaan dalam hari — wajib untuk `pre_order`/`custom_order`,
+  /// `null` untuk mode lain.
+  @override
+  @IntOrNullJson()
+  @JsonKey(name: 'fulfillment_lead_time_days')
+  final int? fulfillmentLeadTimeDays;
+
+  /// Ketersediaan hasil hitungan server, **hanya di detail**:
+  /// [fulfillmentMode] ditambah `low_stock`/`out_of_stock` yang diturunkan
+  /// dari stok live (`<= 10` dianggap menipis). `null` di listing.
+  @override
+  @StringOrNullJson()
+  final String? availability;
   final List<ProductVariantModel> _variants;
   @override
   @JsonKey()
@@ -934,6 +1043,13 @@ class _ProductModel extends ProductModel {
             (identical(other.listingImageUrl, listingImageUrl) ||
                 other.listingImageUrl == listingImageUrl) &&
             const DeepCollectionEquality().equals(other._badges, _badges) &&
+            (identical(other.fulfillmentMode, fulfillmentMode) ||
+                other.fulfillmentMode == fulfillmentMode) &&
+            (identical(
+                    other.fulfillmentLeadTimeDays, fulfillmentLeadTimeDays) ||
+                other.fulfillmentLeadTimeDays == fulfillmentLeadTimeDays) &&
+            (identical(other.availability, availability) ||
+                other.availability == availability) &&
             const DeepCollectionEquality().equals(other._variants, _variants) &&
             const DeepCollectionEquality().equals(other._images, _images) &&
             const DeepCollectionEquality().equals(other._couriers, _couriers));
@@ -962,6 +1078,9 @@ class _ProductModel extends ProductModel {
         flashSale,
         listingImageUrl,
         const DeepCollectionEquality().hash(_badges),
+        fulfillmentMode,
+        fulfillmentLeadTimeDays,
+        availability,
         const DeepCollectionEquality().hash(_variants),
         const DeepCollectionEquality().hash(_images),
         const DeepCollectionEquality().hash(_couriers)
@@ -969,7 +1088,7 @@ class _ProductModel extends ProductModel {
 
   @override
   String toString() {
-    return 'ProductModel(id: $id, storeId: $storeId, name: $name, slug: $slug, description: $description, productType: $productType, basePrice: $basePrice, compareAtPrice: $compareAtPrice, weightGrams: $weightGrams, status: $status, soldCount: $soldCount, viewCount: $viewCount, ratingAvg: $ratingAvg, ratingCount: $ratingCount, createdAt: $createdAt, stock: $stock, flashSale: $flashSale, listingImageUrl: $listingImageUrl, badges: $badges, variants: $variants, images: $images, couriers: $couriers)';
+    return 'ProductModel(id: $id, storeId: $storeId, name: $name, slug: $slug, description: $description, productType: $productType, basePrice: $basePrice, compareAtPrice: $compareAtPrice, weightGrams: $weightGrams, status: $status, soldCount: $soldCount, viewCount: $viewCount, ratingAvg: $ratingAvg, ratingCount: $ratingCount, createdAt: $createdAt, stock: $stock, flashSale: $flashSale, listingImageUrl: $listingImageUrl, badges: $badges, fulfillmentMode: $fulfillmentMode, fulfillmentLeadTimeDays: $fulfillmentLeadTimeDays, availability: $availability, variants: $variants, images: $images, couriers: $couriers)';
   }
 }
 
@@ -1003,6 +1122,11 @@ abstract mixin class _$ProductModelCopyWith<$Res>
       @JsonKey(name: 'flash_sale') FlashSaleModel? flashSale,
       @StringOrNullJson() @JsonKey(name: 'image_url') String? listingImageUrl,
       List<String> badges,
+      @StringJson() @JsonKey(name: 'fulfillment_mode') String fulfillmentMode,
+      @IntOrNullJson()
+      @JsonKey(name: 'fulfillment_lead_time_days')
+      int? fulfillmentLeadTimeDays,
+      @StringOrNullJson() String? availability,
       List<ProductVariantModel> variants,
       List<ProductImageModel> images,
       List<CourierModel> couriers});
@@ -1043,6 +1167,9 @@ class __$ProductModelCopyWithImpl<$Res>
     Object? flashSale = freezed,
     Object? listingImageUrl = freezed,
     Object? badges = null,
+    Object? fulfillmentMode = null,
+    Object? fulfillmentLeadTimeDays = freezed,
+    Object? availability = freezed,
     Object? variants = null,
     Object? images = null,
     Object? couriers = null,
@@ -1124,6 +1251,18 @@ class __$ProductModelCopyWithImpl<$Res>
           ? _self._badges
           : badges // ignore: cast_nullable_to_non_nullable
               as List<String>,
+      fulfillmentMode: null == fulfillmentMode
+          ? _self.fulfillmentMode
+          : fulfillmentMode // ignore: cast_nullable_to_non_nullable
+              as String,
+      fulfillmentLeadTimeDays: freezed == fulfillmentLeadTimeDays
+          ? _self.fulfillmentLeadTimeDays
+          : fulfillmentLeadTimeDays // ignore: cast_nullable_to_non_nullable
+              as int?,
+      availability: freezed == availability
+          ? _self.availability
+          : availability // ignore: cast_nullable_to_non_nullable
+              as String?,
       variants: null == variants
           ? _self._variants
           : variants // ignore: cast_nullable_to_non_nullable

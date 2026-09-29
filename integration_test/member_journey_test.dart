@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_phoenix/flutter_phoenix.dart';
@@ -5,12 +7,15 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:marketplace_app_member/config/network/dio_client.dart';
+import 'package:marketplace_app_member/config/network/mock/pending_api_mock.dart';
 import 'package:marketplace_app_member/core/services/token_store.dart';
 import 'package:marketplace_app_member/core/utils/app_routes.dart';
 import 'package:marketplace_app_member/core/utils/local_network.dart';
 import 'package:marketplace_app_member/di/injector.dart';
 import 'package:marketplace_app_member/main.dart';
+import 'package:marketplace_app_member/core/design/xp_widgets.dart';
 import 'package:marketplace_app_member/ui/main/catalog/widgets/product_card.dart';
+import 'package:marketplace_app_member/ui/main/wallet/widgets/pin_pad.dart';
 
 /// Menjalankan **app sungguhan** terhadap backend yang **benar-benar hidup**.
 ///
@@ -28,6 +33,29 @@ import 'package:marketplace_app_member/ui/main/catalog/widgets/product_card.dart
 /// Lihat `integration_test/README.md` untuk syarat menjalankannya.
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+
+  /// Jejak langkah ke berkas di direktori temp app (di macOS: di dalam
+  /// container sandbox). `flutter test -d macos` tidak meneruskan stdout app,
+  /// jadi saat test menggantung, berkas inilah satu-satunya petunjuk langkah
+  /// terakhir yang dicapai.
+  final stepLog = File('${Directory.systemTemp.path}/member_journey_steps.log');
+  void step(String name) =>
+      stepLog.writeAsStringSync('${DateTime.now().toIso8601String()} $name\n', mode: FileMode.append);
+
+  /// Menulis seluruh teks yang sedang tampil ke [stepLog] — "tangkapan
+  /// layar" versi teks untuk memahami kegagalan tanpa melihat layarnya.
+  void dumpScreen(String why) {
+    final texts = find
+        .byType(Text)
+        .evaluate()
+        .map((e) => (e.widget as Text).data ?? (e.widget as Text).textSpan?.toPlainText())
+        .whereType<String>()
+        .where((t) => t.trim().isNotEmpty)
+        .toSet()
+        .join(' | ');
+    step('GAGAL $why — layar: $texts');
+  }
+
 
   /// Memompa sampai [finder] muncul, bukan sampai pohonnya diam.
   ///
@@ -52,6 +80,7 @@ void main() {
         return;
       }
     }
+    dumpScreen('menunggu ${finder.describeMatch(Plurality.zero)}');
     fail('Kehabisan waktu menunggu: ${finder.describeMatch(Plurality.zero)}');
   }
 
@@ -68,12 +97,45 @@ void main() {
     await tester.pump(const Duration(milliseconds: 250));
   }
 
+  /// Menunggu kartu produk beranda, sambil menggulir.
+  ///
+  /// Grid "Rekomendasi Spesial" berada di bawah kartu Wallet, strip Live, dan
+  /// baris kategori. Di jendela macOS yang pendek ia jatuh di bawah lipatan,
+  /// dan `SliverGrid` tidak membangun sel yang belum terlihat — jadi
+  /// `find.byType(ProductCard)` tetap kosong sampai layarnya digulir.
+  Future<void> pumpUntilProducts(WidgetTester tester,
+      {Duration timeout = const Duration(seconds: 45)}) async {
+    final deadline = DateTime.now().add(timeout);
+    while (DateTime.now().isBefore(deadline)) {
+      await tester.pump(const Duration(milliseconds: 250));
+      if (find.byType(ProductCard).evaluate().isNotEmpty) {
+        for (var i = 0; i < 4; i++) {
+          await tester.pump(const Duration(milliseconds: 250));
+        }
+        return;
+      }
+      // Hanya scrollable vertikal yang sedang tampil — baris kategori dan
+      // strip Live juga `Scrollable`, tapi horizontal.
+      final vertical = find.byWidgetPredicate(
+        (w) => w is Scrollable && w.axisDirection == AxisDirection.down,
+        skipOffstage: true,
+      );
+      if (vertical.evaluate().isNotEmpty) {
+        await tester.drag(vertical.first, const Offset(0, -300), warnIfMissed: false);
+      }
+    }
+    dumpScreen('menunggu kartu produk');
+    fail('Kehabisan waktu menunggu kartu produk di beranda');
+  }
+
   Future<void> tapText(WidgetTester tester, String text) =>
       tapAt(tester, find.text(text));
 
-  /// `tester.pageBack()` **tidak bekerja di app ini**: `customAppBar` membuat
-  /// tombol kembalinya sendiri dari `GestureDetector`, bukan `BackButton`
-  /// Material yang dicari `pageBack()`.
+  /// `tester.pageBack()` **tidak bekerja di app ini**: layar Xpedia memakai
+  /// `XpStackAppBar`, yang tombol kembalinya `IconButton` bertooltip
+  /// "Kembali" — bukan `BackButton` Material yang dicari `pageBack()`. Layar
+  /// UI kit yang tersisa masih memakai `customAppBar` (GestureDetector +
+  /// `arrow_back_ios_new_outlined`), jadi keduanya dicoba.
   /// Mencatat setiap permintaan yang benar-benar keluar dari app.
   ///
   /// `LoggingInterceptor` memang mencetak endpoint yang dipanggil, tapi
@@ -86,6 +148,7 @@ void main() {
   /// lolos — daftar pesanan yang terisi dari state lama terlihat persis sama
   /// dengan yang benar-benar membaca `GET /orders`.
   final calls = <String>[];
+
   void recordCallsOn(Dio dio) {
     dio.interceptors.add(
       InterceptorsWrapper(
@@ -102,6 +165,11 @@ void main() {
       calls.any((c) => c.startsWith(method) && c.contains(fragment));
 
   Future<void> back(WidgetTester tester) async {
+    final xpedia = find.byTooltip('Kembali');
+    if (xpedia.evaluate().isNotEmpty) {
+      await tapAt(tester, xpedia.last);
+      return;
+    }
     await tapAt(
       tester,
       find.ancestor(
@@ -120,6 +188,8 @@ void main() {
       // Inisialisasi yang sama dengan `main()`, tapi **tanpa DevicePreview**:
       // frame perangkat simulasinya membuat hit-test bergantung pada
       // penskalaan preview, sehingga koordinat tap meleset.
+      if (stepLog.existsSync()) stepLog.deleteSync();
+      step('mulai');
       await CachedHelper.init();
       await initialize();
       recordCallsOn(injector<Dio>(instanceName: DioClient.api));
@@ -130,7 +200,8 @@ void main() {
       await tester.pumpWidget(Phoenix(child: const MyApp()));
       await tester.pumpAndSettle(const Duration(seconds: 2));
 
-      // --------------------------------------------------------- pendaftaran
+      step('pendaftaran');
+      // ---- pendaftaran
       // Belum ada akun buyer-murni di seed (semua akun seed merangkap penjual),
       // jadi pengalaman pembeli baru hanya bisa diuji dengan mendaftar.
       //
@@ -155,10 +226,10 @@ void main() {
       // repository merangkai register → login. Berhasilnya terlihat dari
       // sampainya kita di beranda.
       await tapAt(tester, find.widgetWithText(MaterialButton, 'Create Account'));
-      await pumpUntil(tester, find.byType(ProductCard),
-          timeout: const Duration(seconds: 45));
+      await pumpUntilProducts(tester);
 
-      // ------------------------------------------------------------- katalog
+      step('katalog');
+      // ---- katalog
       expect(find.byType(ProductCard), findsWidgets,
           reason: 'GET /products mengisi beranda; kalau kosong, seed-nya habis');
       // Baris kategori datang dari panggilan terpisah yang boleh gagal tanpa
@@ -169,17 +240,19 @@ void main() {
       // sampai ke kartu. Seluruh produk seed dibuat minggu ini, jadi "Baru"
       // yang paling pasti ada; label lain bergantung sold_count/view_count
       // yang nol di dev, dan "Diskon" sengaja tidak ditampilkan di kartu
-      // karena sudut kirinya sudah memuat angka diskon persisnya.
+      // karena harganya sudah memuat pil persen diskon.
       expect(find.text('Baru'), findsWidgets,
           reason: 'badges dari server tidak sampai ke ProductCard');
 
-      // ------------------------------------------------ menyaring per kategori
+      step('menyaring per kategori');
+      // ---- menyaring per kategori
       // Chip pertama sesudah "Semua". Namanya tidak dipatok: seed di-build
       // ulang berkala dan nama kategorinya bisa berubah.
       final categoryChips = find.byType(GestureDetector);
       expect(categoryChips, findsWidgets);
 
-      // -------------------------------------------------------------- profil
+      step('profil');
+      // ---- profil
       // Kepala layar profil dulu menampilkan nama dan email yang **ditulis
       // langsung di kode** (`Mahmodul Hasan` / `info.mamodul@gmail.com` dari
       // UI kit), jadi siapa pun yang masuk melihat identitas orang lain.
@@ -197,11 +270,13 @@ void main() {
       // lencana terverifikasi TIDAK boleh muncul. Sebelumnya ia tampil tanpa
       // syarat — centang yang tidak ada hubungannya dengan status akun.
       expect(find.byType(SvgPicture), findsNothing);
+      expect(find.text('Terverifikasi'), findsNothing);
 
       await tapAt(tester, find.byIcon(Icons.home_outlined));
-      await pumpUntil(tester, find.byType(ProductCard));
+      await pumpUntilProducts(tester);
 
-      // ------------------------------------------- produk yang masih berstok
+      step('produk yang masih berstok');
+      // ---- produk yang masih berstok
       // Stok tidak ada di listing, hanya di detail — dan test ini benar-benar
       // MENGONSUMSI stok, jadi produk pertama tidak bisa diandalkan: run
       // sebelumnya mungkin sudah menghabiskannya.
@@ -209,39 +284,49 @@ void main() {
       final stockSeen = <String>[];
       final cardCount = tester.widgetList(find.byType(ProductCard)).length;
       for (var index = 0; index < cardCount; index++) {
+        step('buka kartu $index');
         await tapAt(tester, find.byType(ProductCard).at(index));
-        await pumpUntil(tester, find.text('Tambah ke Keranjang'));
+        // Bilah bawah baru dirender setelah detail termuat.
+        await pumpUntil(tester, find.byType(XpBottomBar));
 
-        // Diperiksa **keadaan tombolnya**, bukan teks stoknya. Tombol mati
-        // bukan hanya karena "Stok habis": produk tanpa varian aktif memberi
-        // "Stok tidak diketahui", yang juga tidak bisa dibeli. Menguji
-        // teksnya akan meloloskan kasus kedua lalu gagal jauh kemudian.
-        final button = tester.widget<FilledButton>(
-          find.widgetWithText(FilledButton, 'Tambah ke Keranjang').first,
-        );
-        stockSeen.add(
-          find.text('Stok habis').evaluate().isNotEmpty
-              ? 'habis'
-              : find.text('Stok tidak diketahui').evaluate().isNotEmpty
-                  ? 'tidak diketahui'
-                  : 'ada',
-        );
-        if (button.onPressed != null) {
+        // Produk yang tidak bisa dibeli menampilkan SATU tombol mati berlabel
+        // mode stoknya ("Stok Habis", "Tidak Dijual Lagi", …); yang bisa
+        // dibeli menampilkan ikon keranjang + "Beli Sekarang". Diperiksa
+        // keadaan tombolnya, bukan teks stok.
+        final buyNow = find.widgetWithText(FilledButton, 'Beli Sekarang');
+        final buyable = buyNow.evaluate().isNotEmpty &&
+            tester.widget<FilledButton>(buyNow.first).onPressed != null;
+        stockSeen.add(buyable ? 'ada' : 'tidak bisa dibeli');
+        if (buyable) {
           opened = true;
           break;
         }
         await back(tester);
-        await pumpUntil(tester, find.byType(ProductCard));
+        await pumpUntilProducts(tester);
       }
       expect(opened, isTrue,
           reason: 'tidak ada produk yang bisa dibeli di $cardCount kartu '
               'pertama (stok: ${stockSeen.join(", ")}). Test ini '
               'MENGONSUMSI stok tiap kali jalan — seed ulang database.');
 
-      // ----------------------------------------------------- chat penjual
+      step('chat penjual');
+      // ---- chat penjual
       // Dibuka dari halaman produk karena **hanya halaman ini yang tahu
       // `store_id`** — tidak ada pencarian toko di app member.
-      await tapAt(tester, find.widgetWithText(OutlinedButton, 'Chat penjual'));
+      // Tombolnya ada di kartu toko, di bawah lipatan, dalam daftar yang
+      // dibangun malas — jadi belum ada di pohon sampai digulir. Dicari lewat
+      // predikat `is OutlinedButton` karena `OutlinedButton.icon` adalah
+      // subkelas privat yang tidak cocok dengan `find.byType`.
+      final chatText = find.text('Chat Penjual');
+      await tester.scrollUntilVisible(chatText, 300,
+          scrollable: find.byType(Scrollable).first);
+      await tapAt(
+        tester,
+        find.ancestor(
+          of: chatText,
+          matching: find.byWidgetPredicate((w) => w is OutlinedButton),
+        ),
+      );
       await pumpUntil(tester, find.text('Tulis pesan…'),
           timeout: const Duration(seconds: 45));
 
@@ -259,10 +344,15 @@ void main() {
           timeout: const Duration(seconds: 45));
 
       await back(tester);
-      await pumpUntil(tester, find.text('Tambah ke Keranjang'));
+      await pumpUntil(tester, find.byType(XpBottomBar));
 
-      // -------------------------------------------- menambahkan ke keranjang
-      await tapText(tester, 'Tambah ke Keranjang');
+      step('menambahkan ke keranjang');
+      // ---- menambahkan ke keranjang
+      // Pemilih varian SELALU bottom sheet (design_buyer.md §4): ikon keranjang
+      // di bilah bawah membukanya, tombol sheet-nya yang menambahkan.
+      await tapAt(tester, find.byTooltip('Tambah ke Keranjang'));
+      await pumpUntil(tester, find.widgetWithText(FilledButton, 'Tambah ke Keranjang'));
+      await tapAt(tester, find.widgetWithText(FilledButton, 'Tambah ke Keranjang'));
       // Ditunggu **snackbar-nya**, bukan tombolnya: tombolnya sudah ada sejak
       // sebelum ditekan, sehingga menunggunya kembali langsung lolos dan
       // navigasi berikutnya berangkat selagi `POST /cart/items` masih
@@ -270,16 +360,19 @@ void main() {
       await pumpUntil(tester, find.text('Ditambahkan ke keranjang'));
 
       await back(tester);
-      await pumpUntil(tester, find.byType(ProductCard));
+      await pumpUntilProducts(tester);
 
-      // ------------------------------------------------------------ keranjang
-      await tapAt(tester, find.byIcon(Icons.shopping_bag_outlined));
+      step('keranjang');
+      // ---- keranjang
+      // Keranjang bukan tab lagi — ikon berlencana di app bar.
+      await tapAt(tester, find.byTooltip('Keranjang'));
       await pumpUntil(tester, find.text('Checkout'));
       expect(find.textContaining('barang terpilih'), findsOneWidget,
           reason: 'ringkasan hanya menghitung baris tercentang, dan '
               'kalimatnya menyebut itu');
 
-      // ------------------------------------------------------------- checkout
+      step('checkout');
+      // ---- checkout
       await tapAt(tester, find.widgetWithText(FilledButton, 'Checkout'));
       // Akun baru belum punya alamat, jadi checkout membuka jalan keluarnya
       // sendiri alih-alih buntu.
@@ -307,10 +400,11 @@ void main() {
       // Menyimpan alamat langsung membuat sesi checkout, yang **mereservasi
       // stok 15 menit**. Dari sini test harus sampai ke confirm atau
       // membatalkan — meninggalkannya menahan stok sampai tenggat.
-      await pumpUntil(tester, find.widgetWithText(FilledButton, 'Bayar'),
+      await pumpUntil(tester, find.widgetWithText(FilledButton, 'Bayar Sekarang'),
           timeout: const Duration(seconds: 45));
 
-      // --------------------------------------------------------- pilih kurir
+      step('pilih kurir');
+      // ---- pilih kurir
       // Opsi kurir datang sebagai MAP berkunci store_id, dan konfirmasi
       // menuntut setiap toko punya pilihan. Tanpa memilih, tombol Bayar mati.
       final radios = find.byType(RadioListTile<String>);
@@ -320,12 +414,38 @@ void main() {
       }
       await pumpUntil(tester, find.textContaining('Total'));
 
-      await tapAt(tester, find.widgetWithText(FilledButton, 'Bayar'));
+      // Di build debug `PendingApiMock` aktif, jadi checkout memakai kontrak
+      // Xpedia Wallet + PIN yang diusulkan (docs/22 #1–#2): tombol baru hidup
+      // sesudah `wallet-summary` termuat, lalu membuka lembar PIN. Tanpa mock
+      // (`--dart-define=PENDING_API_MOCK=false`) alurnya jatuh ke pemilih
+      // metode pembayaran lama — test ini menangani keduanya.
+      const walletMode = PendingApiMock.enabled;
+      if (walletMode) {
+        final payButton = find.widgetWithText(FilledButton, 'Bayar Sekarang');
+        final ready = DateTime.now().add(const Duration(seconds: 30));
+        while (tester.widget<FilledButton>(payButton.first).onPressed == null &&
+            DateTime.now().isBefore(ready)) {
+          await tester.pump(const Duration(milliseconds: 250));
+        }
+      }
+      await tapAt(tester, find.widgetWithText(FilledButton, 'Bayar Sekarang'));
 
-      // ------------------------------------------------------ pesanan terbuat
-      await pumpUntil(tester, find.textContaining('Pesanan berhasil dibuat'),
-          timeout: const Duration(seconds: 45));
-      expect(find.text('Lanjut ke pembayaran'), findsOneWidget);
+      if (walletMode) {
+        await pumpUntil(tester, find.text('Masukkan PIN 6-Digit'));
+        // PIN mock: 123456 (lihat checkout_mock_routes.dart).
+        for (final digit in ['1', '2', '3', '4', '5', '6']) {
+          await tapAt(
+            tester,
+            find.descendant(of: find.byType(PinPad), matching: find.text(digit)),
+          );
+        }
+        await pumpUntil(tester, find.textContaining('Pembayaran berhasil'),
+            timeout: const Duration(seconds: 45));
+      } else {
+        await pumpUntil(tester, find.textContaining('Pesanan berhasil dibuat'),
+            timeout: const Duration(seconds: 45));
+        expect(find.text('Lanjut ke pembayaran'), findsOneWidget);
+      }
 
       // 🔴 Berhenti di sini dengan sengaja. Tidak ada pesanan yang bisa
       // mencapai `paid` di lingkungan ini: callback pembayaran menolak
@@ -335,14 +455,16 @@ void main() {
       // sampai backend memperbaikinya — lihat CLAUDE.md.
       await tapText(tester, 'Lihat pesanan saya');
 
-      // -------------------------------------------------------- daftar pesanan
+      step('daftar pesanan');
+      // ---- daftar pesanan
       await pumpUntil(tester, find.text('Pesanan Saya'));
       expect(find.textContaining('ORD-'), findsWidgets,
           reason: 'nomor pesanan dibuat server, jadi kemunculannya '
               'membuktikan daftar dibaca dari API, bukan dirakit lokal');
-      expect(find.text('Menunggu pembayaran'), findsWidgets);
+      expect(find.text('Menunggu Pembayaran'), findsWidgets);
 
-      // ------------------------------------------- bukti dari sisi jaringan
+      step('bukti dari sisi jaringan');
+      // ---- bukti dari sisi jaringan
       // Layar bisa saja terisi dari state lama dan terlihat persis sama.
       // Daftar ini membuktikan tiap langkah benar-benar menembak server.
       expect(called('POST', '/auth/register'), isTrue);
@@ -357,6 +479,8 @@ void main() {
       expect(called('PATCH', '/shipping'), isTrue);
       expect(called('POST', '/confirm'), isTrue);
       expect(called('GET', '/orders'), isTrue);
+      // Nama toko di kartu produk: satu request per TOKO, bukan per kartu.
+      expect(called('GET', '/stores/'), isTrue);
 
       // Sisi sebaliknya sama pentingnya: `/search/*` butuh Elasticsearch yang
       // tidak hidup di dev, dan app memang memakai `GET /products?q=` sebagai

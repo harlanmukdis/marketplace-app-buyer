@@ -43,6 +43,8 @@ class FakeCatalogRepository implements CatalogRepository {
     String? city,
     String? province,
     String? courier,
+    String? destCity,
+    String? destProvince,
     ProductSort sort = ProductSort.latest,
     int page = 1,
     int perPage = 20,

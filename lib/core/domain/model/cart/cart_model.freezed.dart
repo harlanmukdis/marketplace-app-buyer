@@ -1148,6 +1148,17 @@ mixin _$AppliedVoucherModel {
   @JsonKey(name: 'discount_amount')
   double? get discountAmount;
 
+  /// Hanya di `GET /cart/recommended-vouchers`: id voucher dan **perkiraan**
+  /// nilai rupiahnya (`estimate_voucher_value`). Untuk voucher ongkir
+  /// nilainya `discount_value` — potensi, bukan potongan pasti — jadi
+  /// jangan ditulis sebagai "hemat" di kartu rekomendasi ongkir.
+  @IntOrNullJson()
+  @JsonKey(name: 'voucher_id')
+  int? get voucherId;
+  @DoubleOrNullJson()
+  @JsonKey(name: 'value')
+  double? get estimatedValue;
+
   /// Create a copy of AppliedVoucherModel
   /// with the given fields replaced by the non-null parameter values.
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -1175,17 +1186,30 @@ mixin _$AppliedVoucherModel {
             (identical(other.maxDiscount, maxDiscount) ||
                 other.maxDiscount == maxDiscount) &&
             (identical(other.discountAmount, discountAmount) ||
-                other.discountAmount == discountAmount));
+                other.discountAmount == discountAmount) &&
+            (identical(other.voucherId, voucherId) ||
+                other.voucherId == voucherId) &&
+            (identical(other.estimatedValue, estimatedValue) ||
+                other.estimatedValue == estimatedValue));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode => Object.hash(runtimeType, code, category, storeId,
-      discountType, discountValue, maxDiscount, discountAmount);
+  int get hashCode => Object.hash(
+      runtimeType,
+      code,
+      category,
+      storeId,
+      discountType,
+      discountValue,
+      maxDiscount,
+      discountAmount,
+      voucherId,
+      estimatedValue);
 
   @override
   String toString() {
-    return 'AppliedVoucherModel(code: $code, category: $category, storeId: $storeId, discountType: $discountType, discountValue: $discountValue, maxDiscount: $maxDiscount, discountAmount: $discountAmount)';
+    return 'AppliedVoucherModel(code: $code, category: $category, storeId: $storeId, discountType: $discountType, discountValue: $discountValue, maxDiscount: $maxDiscount, discountAmount: $discountAmount, voucherId: $voucherId, estimatedValue: $estimatedValue)';
   }
 }
 
@@ -1204,7 +1228,9 @@ abstract mixin class $AppliedVoucherModelCopyWith<$Res> {
       @DoubleOrNullJson() @JsonKey(name: 'max_discount') double? maxDiscount,
       @DoubleOrNullJson()
       @JsonKey(name: 'discount_amount')
-      double? discountAmount});
+      double? discountAmount,
+      @IntOrNullJson() @JsonKey(name: 'voucher_id') int? voucherId,
+      @DoubleOrNullJson() @JsonKey(name: 'value') double? estimatedValue});
 }
 
 /// @nodoc
@@ -1227,6 +1253,8 @@ class _$AppliedVoucherModelCopyWithImpl<$Res>
     Object? discountValue = null,
     Object? maxDiscount = freezed,
     Object? discountAmount = freezed,
+    Object? voucherId = freezed,
+    Object? estimatedValue = freezed,
   }) {
     return _then(_self.copyWith(
       code: null == code
@@ -1256,6 +1284,14 @@ class _$AppliedVoucherModelCopyWithImpl<$Res>
       discountAmount: freezed == discountAmount
           ? _self.discountAmount
           : discountAmount // ignore: cast_nullable_to_non_nullable
+              as double?,
+      voucherId: freezed == voucherId
+          ? _self.voucherId
+          : voucherId // ignore: cast_nullable_to_non_nullable
+              as int?,
+      estimatedValue: freezed == estimatedValue
+          ? _self.estimatedValue
+          : estimatedValue // ignore: cast_nullable_to_non_nullable
               as double?,
     ));
   }
@@ -1365,7 +1401,9 @@ extension AppliedVoucherModelPatterns on AppliedVoucherModel {
             double? maxDiscount,
             @DoubleOrNullJson()
             @JsonKey(name: 'discount_amount')
-            double? discountAmount)?
+            double? discountAmount,
+            @IntOrNullJson() @JsonKey(name: 'voucher_id') int? voucherId,
+            @DoubleOrNullJson() @JsonKey(name: 'value') double? estimatedValue)?
         $default, {
     required TResult orElse(),
   }) {
@@ -1379,7 +1417,9 @@ extension AppliedVoucherModelPatterns on AppliedVoucherModel {
             _that.discountType,
             _that.discountValue,
             _that.maxDiscount,
-            _that.discountAmount);
+            _that.discountAmount,
+            _that.voucherId,
+            _that.estimatedValue);
       case _:
         return orElse();
     }
@@ -1411,7 +1451,9 @@ extension AppliedVoucherModelPatterns on AppliedVoucherModel {
             double? maxDiscount,
             @DoubleOrNullJson()
             @JsonKey(name: 'discount_amount')
-            double? discountAmount)
+            double? discountAmount,
+            @IntOrNullJson() @JsonKey(name: 'voucher_id') int? voucherId,
+            @DoubleOrNullJson() @JsonKey(name: 'value') double? estimatedValue)
         $default,
   ) {
     final _that = this;
@@ -1424,7 +1466,9 @@ extension AppliedVoucherModelPatterns on AppliedVoucherModel {
             _that.discountType,
             _that.discountValue,
             _that.maxDiscount,
-            _that.discountAmount);
+            _that.discountAmount,
+            _that.voucherId,
+            _that.estimatedValue);
       case _:
         throw StateError('Unexpected subclass');
     }
@@ -1455,7 +1499,9 @@ extension AppliedVoucherModelPatterns on AppliedVoucherModel {
             double? maxDiscount,
             @DoubleOrNullJson()
             @JsonKey(name: 'discount_amount')
-            double? discountAmount)?
+            double? discountAmount,
+            @IntOrNullJson() @JsonKey(name: 'voucher_id') int? voucherId,
+            @DoubleOrNullJson() @JsonKey(name: 'value') double? estimatedValue)?
         $default,
   ) {
     final _that = this;
@@ -1468,7 +1514,9 @@ extension AppliedVoucherModelPatterns on AppliedVoucherModel {
             _that.discountType,
             _that.discountValue,
             _that.maxDiscount,
-            _that.discountAmount);
+            _that.discountAmount,
+            _that.voucherId,
+            _that.estimatedValue);
       case _:
         return null;
     }
@@ -1485,9 +1533,9 @@ class _AppliedVoucherModel extends AppliedVoucherModel {
       @StringJson() @JsonKey(name: 'discount_type') this.discountType = '',
       @DoubleJson() @JsonKey(name: 'discount_value') this.discountValue = 0,
       @DoubleOrNullJson() @JsonKey(name: 'max_discount') this.maxDiscount,
-      @DoubleOrNullJson()
-      @JsonKey(name: 'discount_amount')
-      this.discountAmount})
+      @DoubleOrNullJson() @JsonKey(name: 'discount_amount') this.discountAmount,
+      @IntOrNullJson() @JsonKey(name: 'voucher_id') this.voucherId,
+      @DoubleOrNullJson() @JsonKey(name: 'value') this.estimatedValue})
       : super._();
   factory _AppliedVoucherModel.fromJson(Map<String, dynamic> json) =>
       _$AppliedVoucherModelFromJson(json);
@@ -1531,6 +1579,19 @@ class _AppliedVoucherModel extends AppliedVoucherModel {
   @JsonKey(name: 'discount_amount')
   final double? discountAmount;
 
+  /// Hanya di `GET /cart/recommended-vouchers`: id voucher dan **perkiraan**
+  /// nilai rupiahnya (`estimate_voucher_value`). Untuk voucher ongkir
+  /// nilainya `discount_value` — potensi, bukan potongan pasti — jadi
+  /// jangan ditulis sebagai "hemat" di kartu rekomendasi ongkir.
+  @override
+  @IntOrNullJson()
+  @JsonKey(name: 'voucher_id')
+  final int? voucherId;
+  @override
+  @DoubleOrNullJson()
+  @JsonKey(name: 'value')
+  final double? estimatedValue;
+
   /// Create a copy of AppliedVoucherModel
   /// with the given fields replaced by the non-null parameter values.
   @override
@@ -1563,17 +1624,30 @@ class _AppliedVoucherModel extends AppliedVoucherModel {
             (identical(other.maxDiscount, maxDiscount) ||
                 other.maxDiscount == maxDiscount) &&
             (identical(other.discountAmount, discountAmount) ||
-                other.discountAmount == discountAmount));
+                other.discountAmount == discountAmount) &&
+            (identical(other.voucherId, voucherId) ||
+                other.voucherId == voucherId) &&
+            (identical(other.estimatedValue, estimatedValue) ||
+                other.estimatedValue == estimatedValue));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode => Object.hash(runtimeType, code, category, storeId,
-      discountType, discountValue, maxDiscount, discountAmount);
+  int get hashCode => Object.hash(
+      runtimeType,
+      code,
+      category,
+      storeId,
+      discountType,
+      discountValue,
+      maxDiscount,
+      discountAmount,
+      voucherId,
+      estimatedValue);
 
   @override
   String toString() {
-    return 'AppliedVoucherModel(code: $code, category: $category, storeId: $storeId, discountType: $discountType, discountValue: $discountValue, maxDiscount: $maxDiscount, discountAmount: $discountAmount)';
+    return 'AppliedVoucherModel(code: $code, category: $category, storeId: $storeId, discountType: $discountType, discountValue: $discountValue, maxDiscount: $maxDiscount, discountAmount: $discountAmount, voucherId: $voucherId, estimatedValue: $estimatedValue)';
   }
 }
 
@@ -1594,7 +1668,9 @@ abstract mixin class _$AppliedVoucherModelCopyWith<$Res>
       @DoubleOrNullJson() @JsonKey(name: 'max_discount') double? maxDiscount,
       @DoubleOrNullJson()
       @JsonKey(name: 'discount_amount')
-      double? discountAmount});
+      double? discountAmount,
+      @IntOrNullJson() @JsonKey(name: 'voucher_id') int? voucherId,
+      @DoubleOrNullJson() @JsonKey(name: 'value') double? estimatedValue});
 }
 
 /// @nodoc
@@ -1617,6 +1693,8 @@ class __$AppliedVoucherModelCopyWithImpl<$Res>
     Object? discountValue = null,
     Object? maxDiscount = freezed,
     Object? discountAmount = freezed,
+    Object? voucherId = freezed,
+    Object? estimatedValue = freezed,
   }) {
     return _then(_AppliedVoucherModel(
       code: null == code
@@ -1646,6 +1724,14 @@ class __$AppliedVoucherModelCopyWithImpl<$Res>
       discountAmount: freezed == discountAmount
           ? _self.discountAmount
           : discountAmount // ignore: cast_nullable_to_non_nullable
+              as double?,
+      voucherId: freezed == voucherId
+          ? _self.voucherId
+          : voucherId // ignore: cast_nullable_to_non_nullable
+              as int?,
+      estimatedValue: freezed == estimatedValue
+          ? _self.estimatedValue
+          : estimatedValue // ignore: cast_nullable_to_non_nullable
               as double?,
     ));
   }

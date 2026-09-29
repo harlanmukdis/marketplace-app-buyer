@@ -23,9 +23,10 @@ abstract class CartItemModel with _$CartItemModel {
     @IntJson() @JsonKey(name: 'store_id') @Default(0) int storeId,
 
     /// Baris keranjang selalu merujuk **varian**, bukan produk.
-    @IntJson() @JsonKey(name: 'product_variant_id') @Default(0)
+    @IntJson()
+    @JsonKey(name: 'product_variant_id')
+    @Default(0)
     int productVariantId,
-
     @IntOrNullJson() @JsonKey(name: 'warehouse_id') int? warehouseId,
 
     /// ⚠️ **Server tidak memvalidasi nilai ini sama sekali.** Sudah diuji:
@@ -38,17 +39,19 @@ abstract class CartItemModel with _$CartItemModel {
     /// Hanya baris ber-`is_selected` yang dihitung `GET /cart/summary` dan
     /// yang ikut ke checkout.
     @BoolJson() @JsonKey(name: 'is_selected') @Default(true) bool isSelected,
-
     @StringOrNullJson() String? sku,
 
     /// Harga satuan saat baris dibuat, string berdesimal (`"75000.00"`).
     @DoubleJson() @Default(0) double price,
 
     /// Dikirim sebagai string berisi JSON, sama seperti di varian produk.
-    @JsonMapJson() @JsonKey(name: 'variant_options')
+    @JsonMapJson()
+    @JsonKey(name: 'variant_options')
     Map<String, dynamic>? variantOptions,
-
-    @StringJson() @JsonKey(name: 'product_name') @Default('') String productName,
+    @StringJson()
+    @JsonKey(name: 'product_name')
+    @Default('')
+    String productName,
     @StringJson() @JsonKey(name: 'store_name') @Default('') String storeName,
     @ServerDateTimeJson() @JsonKey(name: 'created_at') DateTime? createdAt,
   }) = _CartItemModel;
@@ -95,9 +98,8 @@ abstract class CartStoreGroup with _$CartStoreGroup {
 
   /// Subtotal baris **terpilih** di toko ini — sejalan dengan cara
   /// `GET /cart/summary` menghitung.
-  double get selectedSubtotal => items
-      .where((i) => i.isSelected)
-      .fold(0, (sum, i) => sum + i.lineTotal);
+  double get selectedSubtotal =>
+      items.where((i) => i.isSelected).fold(0, (sum, i) => sum + i.lineTotal);
 
   int get selectedCount => items.where((i) => i.isSelected).length;
 
@@ -140,17 +142,28 @@ abstract class AppliedVoucherModel with _$AppliedVoucherModel {
     @IntOrNullJson() @JsonKey(name: 'store_id') int? storeId,
 
     /// `percentage` / `fixed` / `free_shipping` / `cashback`.
-    @StringJson() @JsonKey(name: 'discount_type') @Default('')
+    @StringJson()
+    @JsonKey(name: 'discount_type')
+    @Default('')
     String discountType,
-
-    @DoubleJson() @JsonKey(name: 'discount_value') @Default(0)
+    @DoubleJson()
+    @JsonKey(name: 'discount_value')
+    @Default(0)
     double discountValue,
     @DoubleOrNullJson() @JsonKey(name: 'max_discount') double? maxDiscount,
 
     /// Potongan rupiah yang benar-benar berlaku. `null` untuk ongkir, `0`
     /// untuk cashback — lihat catatan kelas.
-    @DoubleOrNullJson() @JsonKey(name: 'discount_amount')
+    @DoubleOrNullJson()
+    @JsonKey(name: 'discount_amount')
     double? discountAmount,
+
+    /// Hanya di `GET /cart/recommended-vouchers`: id voucher dan **perkiraan**
+    /// nilai rupiahnya (`estimate_voucher_value`). Untuk voucher ongkir
+    /// nilainya `discount_value` — potensi, bukan potongan pasti — jadi
+    /// jangan ditulis sebagai "hemat" di kartu rekomendasi ongkir.
+    @IntOrNullJson() @JsonKey(name: 'voucher_id') int? voucherId,
+    @DoubleOrNullJson() @JsonKey(name: 'value') double? estimatedValue,
   }) = _AppliedVoucherModel;
 
   factory AppliedVoucherModel.fromJson(Map<String, dynamic> json) =>
@@ -200,7 +213,9 @@ abstract class CartSummaryModel with _$CartSummaryModel {
     /// ⚠️ **Voucher ongkir dan cashback tidak ikut dijumlah** — keduanya
     /// menyumbang nol di sini. Jadi `discount_amount` nol tidak berarti tidak
     /// ada voucher terpasang.
-    @DoubleJson() @JsonKey(name: 'discount_amount') @Default(0)
+    @DoubleJson()
+    @JsonKey(name: 'discount_amount')
+    @Default(0)
     double discountAmount,
   }) = _CartSummaryModel;
 

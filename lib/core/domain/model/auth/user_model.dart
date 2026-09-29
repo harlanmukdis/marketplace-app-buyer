@@ -39,16 +39,19 @@ abstract class UserModel with _$UserModel {
     /// membiarkan kolom ini `"0"` selamanya. Aplikasi yang menunggu nilai ini
     /// berubah akan menahan user di layar "verifikasi dulu" tanpa jalan
     /// keluar. Pakai [isVerified].
-    @BoolJson() @JsonKey(name: 'email_verified') @Default(false)
+    @BoolJson()
+    @JsonKey(name: 'email_verified')
+    @Default(false)
     bool emailVerified,
-    @BoolJson() @JsonKey(name: 'phone_verified') @Default(false)
+    @BoolJson()
+    @JsonKey(name: 'phone_verified')
+    @Default(false)
     bool phoneVerified,
 
     /// API ini memakai `created_at` secara konsisten di seluruh endpoint —
     /// tidak ada lagi campuran `created_date`/`created_at` seperti backend
     /// sebelumnya.
     @ServerDateTimeJson() @JsonKey(name: 'created_at') DateTime? createdAt,
-
     @Default(<UserRoleModel>[]) List<UserRoleModel> roles,
     @Default(<UserStoreModel>[]) List<UserStoreModel> stores,
   }) = _UserModel;

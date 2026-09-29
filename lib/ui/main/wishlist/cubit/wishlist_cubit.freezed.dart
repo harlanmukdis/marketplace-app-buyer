@@ -144,7 +144,11 @@ extension WishlistStatePatterns on WishlistState {
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>({
     TResult Function()? loading,
-    TResult Function(List<WishlistItemModel> items, Set<int> mutatingProductIds,
+    TResult Function(
+            List<WishlistItemModel> items,
+            Set<int> mutatingProductIds,
+            Set<int> alertMutatingIds,
+            Map<String, dynamic> meta,
             DataError? actionError)?
         ready,
     TResult Function(DataError error)? error,
@@ -155,7 +159,8 @@ extension WishlistStatePatterns on WishlistState {
       case WishlistLoading() when loading != null:
         return loading();
       case WishlistReady() when ready != null:
-        return ready(_that.items, _that.mutatingProductIds, _that.actionError);
+        return ready(_that.items, _that.mutatingProductIds,
+            _that.alertMutatingIds, _that.meta, _that.actionError);
       case WishlistError() when error != null:
         return error(_that.error);
       case _:
@@ -179,8 +184,12 @@ extension WishlistStatePatterns on WishlistState {
   @optionalTypeArgs
   TResult when<TResult extends Object?>({
     required TResult Function() loading,
-    required TResult Function(List<WishlistItemModel> items,
-            Set<int> mutatingProductIds, DataError? actionError)
+    required TResult Function(
+            List<WishlistItemModel> items,
+            Set<int> mutatingProductIds,
+            Set<int> alertMutatingIds,
+            Map<String, dynamic> meta,
+            DataError? actionError)
         ready,
     required TResult Function(DataError error) error,
   }) {
@@ -189,7 +198,8 @@ extension WishlistStatePatterns on WishlistState {
       case WishlistLoading():
         return loading();
       case WishlistReady():
-        return ready(_that.items, _that.mutatingProductIds, _that.actionError);
+        return ready(_that.items, _that.mutatingProductIds,
+            _that.alertMutatingIds, _that.meta, _that.actionError);
       case WishlistError():
         return error(_that.error);
     }
@@ -210,8 +220,12 @@ extension WishlistStatePatterns on WishlistState {
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>({
     TResult? Function()? loading,
-    TResult? Function(List<WishlistItemModel> items,
-            Set<int> mutatingProductIds, DataError? actionError)?
+    TResult? Function(
+            List<WishlistItemModel> items,
+            Set<int> mutatingProductIds,
+            Set<int> alertMutatingIds,
+            Map<String, dynamic> meta,
+            DataError? actionError)?
         ready,
     TResult? Function(DataError error)? error,
   }) {
@@ -220,7 +234,8 @@ extension WishlistStatePatterns on WishlistState {
       case WishlistLoading() when loading != null:
         return loading();
       case WishlistReady() when ready != null:
-        return ready(_that.items, _that.mutatingProductIds, _that.actionError);
+        return ready(_that.items, _that.mutatingProductIds,
+            _that.alertMutatingIds, _that.meta, _that.actionError);
       case WishlistError() when error != null:
         return error(_that.error);
       case _:
@@ -255,9 +270,13 @@ class WishlistReady extends WishlistState {
   const WishlistReady(
       {final List<WishlistItemModel> items = const <WishlistItemModel>[],
       final Set<int> mutatingProductIds = const <int>{},
+      final Set<int> alertMutatingIds = const <int>{},
+      final Map<String, dynamic> meta = const <String, dynamic>{},
       this.actionError})
       : _items = items,
         _mutatingProductIds = mutatingProductIds,
+        _alertMutatingIds = alertMutatingIds,
+        _meta = meta,
         super._();
 
   final List<WishlistItemModel> _items;
@@ -282,6 +301,30 @@ class WishlistReady extends WishlistState {
     return EqualUnmodifiableSetView(_mutatingProductIds);
   }
 
+  /// Id produk yang sakelar pantau harganya sedang dikirim.
+  final Set<int> _alertMutatingIds;
+
+  /// Id produk yang sakelar pantau harganya sedang dikirim.
+  @JsonKey()
+  Set<int> get alertMutatingIds {
+    if (_alertMutatingIds is EqualUnmodifiableSetView) return _alertMutatingIds;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableSetView(_alertMutatingIds);
+  }
+
+  /// `meta` baca terakhir. `meta.mock_fields` berisi `alert_enabled`
+  /// selama pantau harga masih disimulasikan (docs/22 #13).
+  final Map<String, dynamic> _meta;
+
+  /// `meta` baca terakhir. `meta.mock_fields` berisi `alert_enabled`
+  /// selama pantau harga masih disimulasikan (docs/22 #13).
+  @JsonKey()
+  Map<String, dynamic> get meta {
+    if (_meta is EqualUnmodifiableMapView) return _meta;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableMapView(_meta);
+  }
+
   final DataError? actionError;
 
   /// Create a copy of WishlistState
@@ -299,6 +342,9 @@ class WishlistReady extends WishlistState {
             const DeepCollectionEquality().equals(other._items, _items) &&
             const DeepCollectionEquality()
                 .equals(other._mutatingProductIds, _mutatingProductIds) &&
+            const DeepCollectionEquality()
+                .equals(other._alertMutatingIds, _alertMutatingIds) &&
+            const DeepCollectionEquality().equals(other._meta, _meta) &&
             (identical(other.actionError, actionError) ||
                 other.actionError == actionError));
   }
@@ -308,11 +354,13 @@ class WishlistReady extends WishlistState {
       runtimeType,
       const DeepCollectionEquality().hash(_items),
       const DeepCollectionEquality().hash(_mutatingProductIds),
+      const DeepCollectionEquality().hash(_alertMutatingIds),
+      const DeepCollectionEquality().hash(_meta),
       actionError);
 
   @override
   String toString() {
-    return 'WishlistState.ready(items: $items, mutatingProductIds: $mutatingProductIds, actionError: $actionError)';
+    return 'WishlistState.ready(items: $items, mutatingProductIds: $mutatingProductIds, alertMutatingIds: $alertMutatingIds, meta: $meta, actionError: $actionError)';
   }
 }
 
@@ -326,6 +374,8 @@ abstract mixin class $WishlistReadyCopyWith<$Res>
   $Res call(
       {List<WishlistItemModel> items,
       Set<int> mutatingProductIds,
+      Set<int> alertMutatingIds,
+      Map<String, dynamic> meta,
       DataError? actionError});
 }
 
@@ -343,6 +393,8 @@ class _$WishlistReadyCopyWithImpl<$Res>
   $Res call({
     Object? items = null,
     Object? mutatingProductIds = null,
+    Object? alertMutatingIds = null,
+    Object? meta = null,
     Object? actionError = freezed,
   }) {
     return _then(WishlistReady(
@@ -354,6 +406,14 @@ class _$WishlistReadyCopyWithImpl<$Res>
           ? _self._mutatingProductIds
           : mutatingProductIds // ignore: cast_nullable_to_non_nullable
               as Set<int>,
+      alertMutatingIds: null == alertMutatingIds
+          ? _self._alertMutatingIds
+          : alertMutatingIds // ignore: cast_nullable_to_non_nullable
+              as Set<int>,
+      meta: null == meta
+          ? _self._meta
+          : meta // ignore: cast_nullable_to_non_nullable
+              as Map<String, dynamic>,
       actionError: freezed == actionError
           ? _self.actionError
           : actionError // ignore: cast_nullable_to_non_nullable

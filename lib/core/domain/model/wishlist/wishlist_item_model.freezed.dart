@@ -44,6 +44,17 @@ mixin _$WishlistItemModel {
   @JsonKey(name: 'added_at')
   DateTime? get addedAt;
 
+  /// 🔶 Pantau harga & stok (docs/22 #13) — **kontrak usulan**, belum
+  /// dikirim server. Di debug disisipkan mock ke `GET /wishlist`.
+  ///
+  /// Sengaja nullable: `null` berarti **server tidak mendukung fitur ini**
+  /// (key-nya tidak ada sama sekali), sehingga lonceng disembunyikan alih-alih
+  /// tampil sebagai sakelar yang tidak menyimpan apa-apa. Begitu backend
+  /// mengirim `alert_enabled`, loncengnya muncul sendiri.
+  @_BoolOrNullJson()
+  @JsonKey(name: 'alert_enabled')
+  bool? get alertEnabled;
+
   /// Create a copy of WishlistItemModel
   /// with the given fields replaced by the non-null parameter values.
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -72,17 +83,19 @@ mixin _$WishlistItemModel {
                 other.imageUrl == imageUrl) &&
             (identical(other.productStatus, productStatus) ||
                 other.productStatus == productStatus) &&
-            (identical(other.addedAt, addedAt) || other.addedAt == addedAt));
+            (identical(other.addedAt, addedAt) || other.addedAt == addedAt) &&
+            (identical(other.alertEnabled, alertEnabled) ||
+                other.alertEnabled == alertEnabled));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
   int get hashCode => Object.hash(runtimeType, wishlistItemId, productId, name,
-      slug, minPrice, imageUrl, productStatus, addedAt);
+      slug, minPrice, imageUrl, productStatus, addedAt, alertEnabled);
 
   @override
   String toString() {
-    return 'WishlistItemModel(wishlistItemId: $wishlistItemId, productId: $productId, name: $name, slug: $slug, minPrice: $minPrice, imageUrl: $imageUrl, productStatus: $productStatus, addedAt: $addedAt)';
+    return 'WishlistItemModel(wishlistItemId: $wishlistItemId, productId: $productId, name: $name, slug: $slug, minPrice: $minPrice, imageUrl: $imageUrl, productStatus: $productStatus, addedAt: $addedAt, alertEnabled: $alertEnabled)';
   }
 }
 
@@ -100,7 +113,8 @@ abstract mixin class $WishlistItemModelCopyWith<$Res> {
       @DoubleJson() @JsonKey(name: 'min_price') double minPrice,
       @StringOrNullJson() @JsonKey(name: 'image_url') String? imageUrl,
       @StringJson() @JsonKey(name: 'product_status') String productStatus,
-      @ServerDateTimeJson() @JsonKey(name: 'added_at') DateTime? addedAt});
+      @ServerDateTimeJson() @JsonKey(name: 'added_at') DateTime? addedAt,
+      @_BoolOrNullJson() @JsonKey(name: 'alert_enabled') bool? alertEnabled});
 }
 
 /// @nodoc
@@ -124,6 +138,7 @@ class _$WishlistItemModelCopyWithImpl<$Res>
     Object? imageUrl = freezed,
     Object? productStatus = null,
     Object? addedAt = freezed,
+    Object? alertEnabled = freezed,
   }) {
     return _then(_self.copyWith(
       wishlistItemId: null == wishlistItemId
@@ -158,6 +173,10 @@ class _$WishlistItemModelCopyWithImpl<$Res>
           ? _self.addedAt
           : addedAt // ignore: cast_nullable_to_non_nullable
               as DateTime?,
+      alertEnabled: freezed == alertEnabled
+          ? _self.alertEnabled
+          : alertEnabled // ignore: cast_nullable_to_non_nullable
+              as bool?,
     ));
   }
 }
@@ -263,7 +282,10 @@ extension WishlistItemModelPatterns on WishlistItemModel {
             @DoubleJson() @JsonKey(name: 'min_price') double minPrice,
             @StringOrNullJson() @JsonKey(name: 'image_url') String? imageUrl,
             @StringJson() @JsonKey(name: 'product_status') String productStatus,
-            @ServerDateTimeJson() @JsonKey(name: 'added_at') DateTime? addedAt)?
+            @ServerDateTimeJson() @JsonKey(name: 'added_at') DateTime? addedAt,
+            @_BoolOrNullJson()
+            @JsonKey(name: 'alert_enabled')
+            bool? alertEnabled)?
         $default, {
     required TResult orElse(),
   }) {
@@ -278,7 +300,8 @@ extension WishlistItemModelPatterns on WishlistItemModel {
             _that.minPrice,
             _that.imageUrl,
             _that.productStatus,
-            _that.addedAt);
+            _that.addedAt,
+            _that.alertEnabled);
       case _:
         return orElse();
     }
@@ -307,7 +330,10 @@ extension WishlistItemModelPatterns on WishlistItemModel {
             @DoubleJson() @JsonKey(name: 'min_price') double minPrice,
             @StringOrNullJson() @JsonKey(name: 'image_url') String? imageUrl,
             @StringJson() @JsonKey(name: 'product_status') String productStatus,
-            @ServerDateTimeJson() @JsonKey(name: 'added_at') DateTime? addedAt)
+            @ServerDateTimeJson() @JsonKey(name: 'added_at') DateTime? addedAt,
+            @_BoolOrNullJson()
+            @JsonKey(name: 'alert_enabled')
+            bool? alertEnabled)
         $default,
   ) {
     final _that = this;
@@ -321,7 +347,8 @@ extension WishlistItemModelPatterns on WishlistItemModel {
             _that.minPrice,
             _that.imageUrl,
             _that.productStatus,
-            _that.addedAt);
+            _that.addedAt,
+            _that.alertEnabled);
       case _:
         throw StateError('Unexpected subclass');
     }
@@ -349,7 +376,10 @@ extension WishlistItemModelPatterns on WishlistItemModel {
             @DoubleJson() @JsonKey(name: 'min_price') double minPrice,
             @StringOrNullJson() @JsonKey(name: 'image_url') String? imageUrl,
             @StringJson() @JsonKey(name: 'product_status') String productStatus,
-            @ServerDateTimeJson() @JsonKey(name: 'added_at') DateTime? addedAt)?
+            @ServerDateTimeJson() @JsonKey(name: 'added_at') DateTime? addedAt,
+            @_BoolOrNullJson()
+            @JsonKey(name: 'alert_enabled')
+            bool? alertEnabled)?
         $default,
   ) {
     final _that = this;
@@ -363,7 +393,8 @@ extension WishlistItemModelPatterns on WishlistItemModel {
             _that.minPrice,
             _that.imageUrl,
             _that.productStatus,
-            _that.addedAt);
+            _that.addedAt,
+            _that.alertEnabled);
       case _:
         return null;
     }
@@ -383,7 +414,8 @@ class _WishlistItemModel extends WishlistItemModel {
       @StringJson()
       @JsonKey(name: 'product_status')
       this.productStatus = 'active',
-      @ServerDateTimeJson() @JsonKey(name: 'added_at') this.addedAt})
+      @ServerDateTimeJson() @JsonKey(name: 'added_at') this.addedAt,
+      @_BoolOrNullJson() @JsonKey(name: 'alert_enabled') this.alertEnabled})
       : super._();
   factory _WishlistItemModel.fromJson(Map<String, dynamic> json) =>
       _$WishlistItemModelFromJson(json);
@@ -428,6 +460,18 @@ class _WishlistItemModel extends WishlistItemModel {
   @JsonKey(name: 'added_at')
   final DateTime? addedAt;
 
+  /// 🔶 Pantau harga & stok (docs/22 #13) — **kontrak usulan**, belum
+  /// dikirim server. Di debug disisipkan mock ke `GET /wishlist`.
+  ///
+  /// Sengaja nullable: `null` berarti **server tidak mendukung fitur ini**
+  /// (key-nya tidak ada sama sekali), sehingga lonceng disembunyikan alih-alih
+  /// tampil sebagai sakelar yang tidak menyimpan apa-apa. Begitu backend
+  /// mengirim `alert_enabled`, loncengnya muncul sendiri.
+  @override
+  @_BoolOrNullJson()
+  @JsonKey(name: 'alert_enabled')
+  final bool? alertEnabled;
+
   /// Create a copy of WishlistItemModel
   /// with the given fields replaced by the non-null parameter values.
   @override
@@ -460,17 +504,19 @@ class _WishlistItemModel extends WishlistItemModel {
                 other.imageUrl == imageUrl) &&
             (identical(other.productStatus, productStatus) ||
                 other.productStatus == productStatus) &&
-            (identical(other.addedAt, addedAt) || other.addedAt == addedAt));
+            (identical(other.addedAt, addedAt) || other.addedAt == addedAt) &&
+            (identical(other.alertEnabled, alertEnabled) ||
+                other.alertEnabled == alertEnabled));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
   int get hashCode => Object.hash(runtimeType, wishlistItemId, productId, name,
-      slug, minPrice, imageUrl, productStatus, addedAt);
+      slug, minPrice, imageUrl, productStatus, addedAt, alertEnabled);
 
   @override
   String toString() {
-    return 'WishlistItemModel(wishlistItemId: $wishlistItemId, productId: $productId, name: $name, slug: $slug, minPrice: $minPrice, imageUrl: $imageUrl, productStatus: $productStatus, addedAt: $addedAt)';
+    return 'WishlistItemModel(wishlistItemId: $wishlistItemId, productId: $productId, name: $name, slug: $slug, minPrice: $minPrice, imageUrl: $imageUrl, productStatus: $productStatus, addedAt: $addedAt, alertEnabled: $alertEnabled)';
   }
 }
 
@@ -490,7 +536,8 @@ abstract mixin class _$WishlistItemModelCopyWith<$Res>
       @DoubleJson() @JsonKey(name: 'min_price') double minPrice,
       @StringOrNullJson() @JsonKey(name: 'image_url') String? imageUrl,
       @StringJson() @JsonKey(name: 'product_status') String productStatus,
-      @ServerDateTimeJson() @JsonKey(name: 'added_at') DateTime? addedAt});
+      @ServerDateTimeJson() @JsonKey(name: 'added_at') DateTime? addedAt,
+      @_BoolOrNullJson() @JsonKey(name: 'alert_enabled') bool? alertEnabled});
 }
 
 /// @nodoc
@@ -514,6 +561,7 @@ class __$WishlistItemModelCopyWithImpl<$Res>
     Object? imageUrl = freezed,
     Object? productStatus = null,
     Object? addedAt = freezed,
+    Object? alertEnabled = freezed,
   }) {
     return _then(_WishlistItemModel(
       wishlistItemId: null == wishlistItemId
@@ -548,6 +596,10 @@ class __$WishlistItemModelCopyWithImpl<$Res>
           ? _self.addedAt
           : addedAt // ignore: cast_nullable_to_non_nullable
               as DateTime?,
+      alertEnabled: freezed == alertEnabled
+          ? _self.alertEnabled
+          : alertEnabled // ignore: cast_nullable_to_non_nullable
+              as bool?,
     ));
   }
 }

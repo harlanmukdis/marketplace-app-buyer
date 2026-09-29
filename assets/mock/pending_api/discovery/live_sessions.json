@@ -1,0 +1,54 @@
+[
+  {
+    "id": "9001",
+    "store_id": "1",
+    "store_name": "Toko Simulasi Satu",
+    "title": "Simulasi Live: Konsultasi Warna & Promo",
+    "thumbnail_url": null,
+    "status": "live",
+    "viewer_count": "1240",
+    "started_at": "2026-09-29 09:00:00",
+    "scheduled_at": null,
+    "promo_label": "Diskon 35%",
+    "sold_count": "86"
+  },
+  {
+    "id": "9002",
+    "store_id": "2",
+    "store_name": "Toko Simulasi Dua",
+    "title": "Simulasi Live: Unboxing Produk Baru",
+    "thumbnail_url": null,
+    "status": "live",
+    "viewer_count": "890",
+    "started_at": "2026-09-29 10:15:00",
+    "scheduled_at": null,
+    "promo_label": "Flash Deal",
+    "sold_count": "32"
+  },
+  {
+    "id": "9003",
+    "store_id": "3",
+    "store_name": "Toko Simulasi Tiga",
+    "title": "Simulasi Live: Tanya Jawab Stok",
+    "thumbnail_url": null,
+    "status": "live",
+    "viewer_count": "610",
+    "started_at": "2026-09-29 11:30:00",
+    "scheduled_at": null,
+    "promo_label": "Voucher 20rb",
+    "sold_count": "27"
+  },
+  {
+    "id": "9004",
+    "store_id": "1",
+    "store_name": "Toko Simulasi Satu",
+    "title": "Simulasi Live: Demo Aplikasi Produk",
+    "thumbnail_url": null,
+    "status": "scheduled",
+    "viewer_count": "0",
+    "started_at": null,
+    "scheduled_at": "2026-10-01 19:00:00",
+    "promo_label": null,
+    "sold_count": "0"
+  }
+]

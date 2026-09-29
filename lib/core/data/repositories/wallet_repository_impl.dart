@@ -11,8 +11,7 @@ class WalletRepositoryImpl with RepositoryGuard implements WalletRepository {
   final WalletService _service;
 
   @override
-  Future<DataState<WalletModel>> fetchWallet() =>
-      guard(_service.fetchWallet);
+  Future<DataState<WalletModel>> fetchWallet() => guard(_service.fetchWallet);
 
   @override
   Future<DataState<WalletTopupResult>> topup({
@@ -35,5 +34,43 @@ class WalletRepositoryImpl with RepositoryGuard implements WalletRepository {
     // Saldo didebit saat pengajuan dibuat, jadi dompet lama sudah basi begitu
     // panggilan ini sukses.
     return guard(_service.fetchWallet);
+  }
+
+  @override
+  Future<DataState<void>> setWithdrawalPin(
+          {required String pin, String? currentPin}) =>
+      guardVoid(
+          () => _service.setWithdrawalPin(pin: pin, currentPin: currentPin));
+
+  @override
+  Future<DataState<List<BankAccountModel>>> fetchBankAccounts() =>
+      guardList(_service.fetchBankAccounts);
+
+  @override
+  Future<DataState<List<BankAccountModel>>> addBankAccount({
+    required String bankName,
+    required String accountNumber,
+    required String accountHolderName,
+  }) async {
+    try {
+      await _service.addBankAccount(
+        bankName: bankName,
+        accountNumber: accountNumber,
+        accountHolderName: accountHolderName,
+      );
+    } on ApiException catch (e) {
+      return DataFailed(e.error);
+    }
+    return guardList(_service.fetchBankAccounts);
+  }
+
+  @override
+  Future<DataState<List<BankAccountModel>>> deleteBankAccount(int id) async {
+    try {
+      await _service.deleteBankAccount(id);
+    } on ApiException catch (e) {
+      return DataFailed(e.error);
+    }
+    return guardList(_service.fetchBankAccounts);
   }
 }

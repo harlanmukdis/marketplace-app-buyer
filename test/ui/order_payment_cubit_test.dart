@@ -9,6 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:marketplace_app_member/core/data/datasources/remote/service/order_service.dart';
 import 'package:marketplace_app_member/core/data_state.dart';
 import 'package:marketplace_app_member/core/domain/model/order/order_models.dart';
+import 'package:marketplace_app_member/core/domain/model/order/order_post_purchase_models.dart';
 import 'package:marketplace_app_member/core/domain/model/payment/payment_models.dart';
 import 'package:marketplace_app_member/core/domain/repositories/order_repository.dart';
 import 'package:marketplace_app_member/core/domain/repositories/payment_repository.dart';
@@ -30,10 +31,13 @@ class _FakeOrderRepository implements OrderRepository {
   final List<String> calls = [];
   final List<int> requestedPages = [];
 
+  /// Kalau diisi, halaman ke-n diambil dari sini alih-alih [listResult].
+  Map<int, DataState<List<OrderModel>>> pages = {};
+
   @override
   Future<DataState<List<OrderModel>>> fetchOrders({int page = 1}) async {
     requestedPages.add(page);
-    return listResult;
+    return pages[page] ?? listResult;
   }
 
   @override
@@ -49,9 +53,86 @@ class _FakeOrderRepository implements OrderRepository {
   }
 
   @override
-  Future<DataState<OrderModel>> confirmDelivery(int id) async {
-    calls.add('confirmDelivery:$id');
+  Future<DataState<OrderModel>> confirmDelivery(int id, {String? sealCode}) async {
+    calls.add(sealCode == null ? 'confirmDelivery:$id' : 'confirmDelivery:$id:$sealCode');
     return detailResult;
+  }
+
+  DataState<OrderTrackingModel?> trackingResult = const DataSuccess(null);
+
+  @override
+  Future<DataState<OrderTrackingModel?>> fetchTracking(int id) async {
+    calls.add('tracking:$id');
+    return trackingResult;
+  }
+
+  @override
+  Future<DataState<List<ShipmentEvidenceModel>>> fetchShipmentEvidence(int id) async =>
+      const DataEmpty();
+
+  @override
+  Future<DataState<OrderInvoiceModel>> fetchInvoice(int id) async =>
+      const DataSuccess(OrderInvoiceModel(invoiceNumber: 'INV-1'));
+
+  @override
+  Future<DataState<OrderModel>> respondPartialFulfillment(
+      int id, PartialFulfillmentDecision decision) async {
+    calls.add('partial:$id:${decision.code}');
+    return detailResult;
+  }
+
+  final List<List<String>> refundEvidence = [];
+
+  @override
+  Future<DataState<OrderModel>> requestRefund(
+    int id, {
+    required String reason,
+    List<String> evidenceUrls = const [],
+  }) async {
+    calls.add('refund:$id:$reason');
+    refundEvidence.add(evidenceUrls);
+    return detailResult;
+  }
+
+  // Pelengkap detail pesanan dari kontrak yang diusulkan. Dicatat terpisah
+  // dari [calls] supaya urutan aksi status yang dipatok test lain tidak
+  // ikut berubah.
+  DataState<CancellationRequestModel?> cancellationResult = const DataSuccess(null);
+  DataState<CancellationRequestModel> requestCancellationResult = const DataSuccess(
+    CancellationRequestModel(id: 501, reason: 'wrong_address'),
+    meta: {'mock': true},
+  );
+  DataState<InsurancePolicyModel?> insuranceResult = const DataSuccess(null);
+  DataState<InsurancePolicyModel> optInResult =
+      const DataSuccess(InsurancePolicyModel(id: 77, tier: 'secure_plus', premiumAmount: 460));
+  final List<String> extraCalls = [];
+
+  @override
+  Future<DataState<CancellationRequestModel?>> fetchCancellationRequest(int id) async {
+    extraCalls.add('cancellation:$id');
+    return cancellationResult;
+  }
+
+  @override
+  Future<DataState<CancellationRequestModel>> requestCancellation(
+    int id, {
+    required CancellationReason reason,
+    String? note,
+  }) async {
+    extraCalls.add('requestCancellation:$id:${reason.code}:${note ?? ''}');
+    return requestCancellationResult;
+  }
+
+  @override
+  Future<DataState<InsurancePolicyModel?>> fetchInsurance(int id) async {
+    extraCalls.add('insurance:$id');
+    return insuranceResult;
+  }
+
+  @override
+  Future<DataState<InsurancePolicyModel>> optInSecurePlus(int id) async {
+    extraCalls.add('optIn:$id');
+    return optInResult;
   }
 
   @override
@@ -167,6 +248,118 @@ void main() {
     });
   });
 
+  group('OrderListCubit — tab status disaring di aplikasi', () {
+    List<OrderModel> page(int start, String Function(int i) status) => List.generate(
+          OrderService.serverPageSize,
+          (i) => _order(id: start + i, status: status(i)),
+        );
+
+    test('tab menyaring halaman yang sudah dimuat', () async {
+      orders.listResult = DataSuccess([
+        _order(id: 1, status: 'pending'),
+        _order(id: 2, status: 'shipped'),
+        _order(id: 3, status: 'packed'),
+        _order(id: 4, status: 'paid'),
+      ]);
+      final cubit = OrderListCubit();
+      await cubit.load();
+
+      await cubit.setFilter(OrderListFilter.processing);
+      final state = cubit.state as OrderListLoaded;
+      expect(state.visibleOrders.map((o) => o.id), [3, 4]);
+      expect(state.orders.length, 4, reason: 'daftar mentah tidak ikut terpotong');
+      await cubit.close();
+    });
+
+    test('tab yang tipis memuat halaman berikutnya sampai target', () async {
+      // Halaman 1 penuh tanpa satu pun pesanan batal; halaman 2 berisi 12.
+      orders.pages = {
+        1: DataSuccess(page(1, (_) => 'completed')),
+        2: DataSuccess(page(100, (i) => i < 12 ? 'cancelled' : 'completed')),
+      };
+      final cubit = OrderListCubit();
+      await cubit.load();
+      orders.requestedPages.clear();
+
+      await cubit.setFilter(OrderListFilter.cancelled);
+
+      final state = cubit.state as OrderListLoaded;
+      expect(orders.requestedPages, [2]);
+      expect(state.visibleOrders.length, 12);
+      await cubit.close();
+    });
+
+    test('pemuatan otomatis berhenti di batas halaman', () async {
+      // Server tak pernah kehabisan halaman dan tak pernah ada yang cocok.
+      orders.listResult = DataSuccess(page(1, (_) => 'completed'));
+      final cubit = OrderListCubit();
+      await cubit.load();
+      orders.requestedPages.clear();
+
+      await cubit.setFilter(OrderListFilter.cancelled);
+
+      expect(orders.requestedPages.length, OrderListCubit.maxAutoPages);
+      final state = cubit.state as OrderListLoaded;
+      expect(state.hasMore, isTrue, reason: 'tombol "Muat lebih banyak" tetap ada');
+      expect(state.visibleOrders, isEmpty);
+      await cubit.close();
+    });
+
+    test('pemuatan otomatis berhenti begitu halaman habis', () async {
+      orders.pages = {
+        1: DataSuccess(page(1, (_) => 'completed')),
+        2: DataSuccess([_order(id: 500, status: 'cancelled')]),
+      };
+      final cubit = OrderListCubit();
+      await cubit.load();
+      orders.requestedPages.clear();
+
+      await cubit.setFilter(OrderListFilter.cancelled);
+
+      expect(orders.requestedPages, [2]);
+      expect((cubit.state as OrderListLoaded).hasMore, isFalse);
+      await cubit.close();
+    });
+
+    test('tab Semua tidak memicu pemuatan otomatis', () async {
+      orders.listResult = DataSuccess(page(1, (_) => 'completed'));
+      final cubit = OrderListCubit();
+      await cubit.load();
+      orders.requestedPages.clear();
+
+      await cubit.setFilter(OrderListFilter.completed);
+      await cubit.setFilter(OrderListFilter.all);
+
+      expect(orders.requestedPages, isEmpty,
+          reason: 'halaman 1 sudah berisi ≥ target untuk tab Selesai');
+      await cubit.close();
+    });
+
+    test('tab bertahan melewati refresh', () async {
+      orders.listResult = DataSuccess([
+        _order(id: 1, status: 'pending'),
+        _order(id: 2, status: 'completed'),
+      ]);
+      final cubit = OrderListCubit();
+      await cubit.load();
+      await cubit.setFilter(OrderListFilter.completed);
+
+      await cubit.refresh();
+
+      final state = cubit.state as OrderListLoaded;
+      expect(state.filter, OrderListFilter.completed);
+      expect(state.visibleOrders.map((o) => o.id), [2]);
+      await cubit.close();
+    });
+
+    test('status refund hanya muncul di Semua', () {
+      final refund = _order(status: 'refund_requested');
+      for (final filter in OrderListFilter.values) {
+        expect(filter.matches(refund), filter == OrderListFilter.all, reason: filter.name);
+      }
+    });
+  });
+
   group('OrderDetailCubit — aksi disaring status', () {
     test('complete pada pesanan pending TIDAK menyentuh jaringan', () async {
       // Penjaga terpenting: endpoint /complete membalas HTML 200 untuk
@@ -213,7 +406,109 @@ void main() {
       await cubit.close();
     });
 
-    test('cancel hanya sah selagi pending', () async {
+    test('cancel juga sah untuk pesanan paid', () async {
+      orders.detailResult = DataSuccess(_order(status: 'paid'));
+      final cubit = OrderDetailCubit(1);
+      await cubit.load();
+      orders.calls.clear();
+
+      await cubit.cancel(reason: 'Alamat salah');
+
+      expect(orders.calls, contains('cancel:1'));
+      await cubit.close();
+    });
+
+    test('confirmDelivery meneruskan kode segel Secure+', () async {
+      orders.detailResult = DataSuccess(_order(status: 'shipped'));
+      final cubit = OrderDetailCubit(1);
+      await cubit.load();
+      orders.calls.clear();
+
+      await cubit.confirmDelivery(sealCode: 'AB12CD');
+
+      expect(orders.calls, contains('confirmDelivery:1:AB12CD'));
+      await cubit.close();
+    });
+
+    test('resi hanya diminta untuk pesanan yang sudah dikirim', () async {
+      orders.detailResult = DataSuccess(_order(status: 'paid'));
+      final cubit = OrderDetailCubit(1);
+      await cubit.load();
+      expect(orders.calls.where((c) => c.startsWith('tracking')), isEmpty);
+
+      orders.detailResult = DataSuccess(_order(status: 'shipped'));
+      orders.trackingResult = const DataSuccess(
+        OrderTrackingModel(courierCode: 'jne', awbNumber: 'JN123', status: 'in_transit'),
+      );
+      await cubit.load();
+
+      final state = cubit.state as OrderDetailLoaded;
+      expect(orders.calls, contains('tracking:1'));
+      expect(state.tracking?.awbNumber, 'JN123');
+      await cubit.close();
+    });
+
+    test('aksi sukses mempertahankan resi yang sudah termuat', () async {
+      orders.detailResult = DataSuccess(_order(status: 'shipped'));
+      orders.trackingResult = const DataSuccess(OrderTrackingModel(awbNumber: 'JN123'));
+      final cubit = OrderDetailCubit(1);
+      await cubit.load();
+
+      orders.detailResult = DataSuccess(_order(status: 'delivered'));
+      await cubit.confirmDelivery();
+
+      final state = cubit.state as OrderDetailLoaded;
+      expect(state.order.status, OrderStatus.delivered);
+      expect(state.tracking?.awbNumber, 'JN123');
+      await cubit.close();
+    });
+
+    test('kegagalan resi tidak menggagalkan halaman', () async {
+      orders.detailResult = DataSuccess(_order(status: 'shipped'));
+      orders.trackingResult = DataFailed(_error('CLIENT_NETWORK'));
+      final cubit = OrderDetailCubit(1);
+      await cubit.load();
+
+      final state = cubit.state as OrderDetailLoaded;
+      expect(state.tracking, isNull);
+      await cubit.close();
+    });
+
+    test('komplain hanya sah sesudah barang diterima', () async {
+      orders.detailResult = DataSuccess(_order(status: 'shipped'));
+      final cubit = OrderDetailCubit(1);
+      await cubit.load();
+      orders.calls.clear();
+      await cubit.requestRefund('Barang rusak: pecah');
+      expect(orders.calls, isEmpty);
+
+      orders.detailResult = DataSuccess(_order(status: 'delivered'));
+      await cubit.load();
+      orders.calls.clear();
+      await cubit.requestRefund('Barang rusak: pecah');
+      expect(orders.calls, contains('refund:1:Barang rusak: pecah'));
+      await cubit.close();
+    });
+
+    test('jawaban kirim sebagian hanya sah selama usulannya menunggu', () async {
+      orders.detailResult = DataSuccess(_order(status: 'paid'));
+      final cubit = OrderDetailCubit(1);
+      await cubit.load();
+      orders.calls.clear();
+      await cubit.respondPartialFulfillment(PartialFulfillmentDecision.cancelWhole);
+      expect(orders.calls, isEmpty);
+
+      orders.detailResult = DataSuccess(_order(status: 'paid').copyWith(
+        partialFulfillmentProposedAt: DateTime.utc(2026, 9, 16),
+      ));
+      await cubit.load();
+      orders.calls.clear();
+      await cubit.respondPartialFulfillment(PartialFulfillmentDecision.cancelWhole);
+      expect(orders.calls, contains('partial:1:cancel_whole'));
+      await cubit.close();
+    });
+
+    test('cancel tidak sah sesudah dikirim', () async {
       orders.detailResult = DataSuccess(_order(status: 'shipped'));
       final cubit = OrderDetailCubit(1);
       await cubit.load();

@@ -45,6 +45,7 @@ class AddressDraft {
     this.isPrimary = false,
     this.latitude,
     this.longitude,
+    this.cityId,
   });
 
   final String label;
@@ -58,6 +59,10 @@ class AddressDraft {
   final double? latitude;
   final double? longitude;
 
+  /// Id `master_cities` kalau kota dipilih dari daftar; `null` untuk teks
+  /// bebas. Tetap sah: master lokasi di seed baru berisi 15 kota.
+  final int? cityId;
+
   factory AddressDraft.from(AddressModel address) => AddressDraft(
         label: address.label,
         recipientName: address.recipientName,
@@ -69,6 +74,7 @@ class AddressDraft {
         isPrimary: address.isPrimary,
         latitude: address.latitude,
         longitude: address.longitude,
+        cityId: address.cityId,
       );
 
   /// Field yang masih kosong, untuk ditandai di formulir.

@@ -39,7 +39,6 @@ abstract class LoyaltyTierModel with _$LoyaltyTierModel {
 
     /// `bronze` / `silver` / `gold` / `platinum`.
     @StringJson() @Default('') String code,
-
     @StringJson() @Default('') String name,
     @IntJson() @JsonKey(name: 'min_points') @Default(0) int minPoints,
 
@@ -86,9 +85,9 @@ abstract class LoyaltyMembershipModel with _$LoyaltyMembershipModel {
     /// pola yang sama dengan `expires_at` di checkout. Backend menyeragamkan
     /// zona waktunya di commit `93c6a14`, dan sudah diverifikasi ulang:
     /// selisihnya kini tepat satu tahun.
-    @ServerDateTimeJson() @JsonKey(name: 'tier_valid_until')
+    @ServerDateTimeJson()
+    @JsonKey(name: 'tier_valid_until')
     DateTime? validUntil,
-
     @ServerDateTimeJson() @JsonKey(name: 'updated_at') DateTime? updatedAt,
 
     /// Tingkat saat ini, sudah disisipkan server.
@@ -170,12 +169,10 @@ abstract class CashbackTransactionModel with _$CashbackTransactionModel {
 
     /// `null` untuk cashback yang tidak berasal dari pesanan.
     @IntOrNullJson() @JsonKey(name: 'order_id') int? orderId,
-
     @DoubleJson() @Default(0) double amount,
 
     /// Kode status mentah; pakai [status] untuk logika.
     @StringJson() @JsonKey(name: 'status') @Default('') String statusCode,
-
     @ServerDateTimeJson() @JsonKey(name: 'credited_at') DateTime? creditedAt,
     @ServerDateTimeJson() @JsonKey(name: 'created_at') DateTime? createdAt,
   }) = _CashbackTransactionModel;
@@ -203,9 +200,13 @@ abstract class RewardBreakdownModel with _$RewardBreakdownModel {
   const factory RewardBreakdownModel({
     @IntJson() @Default(0) int base,
     @IntJson() @JsonKey(name: 'tier_bonus') @Default(0) int tierBonus,
-    @IntJson() @JsonKey(name: 'payment_method_bonus') @Default(0)
+    @IntJson()
+    @JsonKey(name: 'payment_method_bonus')
+    @Default(0)
     int paymentMethodBonus,
-    @IntJson() @JsonKey(name: 'voucher_cashback') @Default(0)
+    @IntJson()
+    @JsonKey(name: 'voucher_cashback')
+    @Default(0)
     int voucherCashback,
   }) = _RewardBreakdownModel;
 
@@ -231,7 +232,9 @@ abstract class RewardPreviewModel with _$RewardPreviewModel {
 
   const factory RewardPreviewModel({
     @DoubleJson() @Default(0) double subtotal,
-    @IntJson() @JsonKey(name: 'estimated_cashback_coins') @Default(0)
+    @IntJson()
+    @JsonKey(name: 'estimated_cashback_coins')
+    @Default(0)
     int estimatedCoins,
     RewardBreakdownModel? breakdown,
 

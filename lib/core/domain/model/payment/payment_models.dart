@@ -34,24 +34,26 @@ abstract class PaymentModel with _$PaymentModel {
 
   const factory PaymentModel({
     @IntJson() required int id,
-    @StringOrNullJson() @JsonKey(name: 'checkout_session_id')
+    @StringOrNullJson()
+    @JsonKey(name: 'checkout_session_id')
     String? checkoutSessionId,
-    @StringJson() @JsonKey(name: 'payment_method') @Default('')
+    @StringJson()
+    @JsonKey(name: 'payment_method')
+    @Default('')
     String paymentMethod,
     @StringOrNullJson() String? provider,
-    @StringOrNullJson() @JsonKey(name: 'provider_reference')
+    @StringOrNullJson()
+    @JsonKey(name: 'provider_reference')
     String? providerReference,
     @DoubleJson() @Default(0) double amount,
 
     /// `pending` / `paid` / `expired` / `failed`.
     @StringJson() @Default('') String status,
-
     @ServerDateTimeJson() @JsonKey(name: 'paid_at') DateTime? paidAt,
 
     /// Tenggat bayar, 1 jam sesudah [createdAt]. Dulu UTC sementara
     /// [createdAt] WIB; backend sudah menyeragamkannya (commit `93c6a14`).
     @ServerDateTimeJson() @JsonKey(name: 'expired_at') DateTime? expiredAt,
-
     @ServerDateTimeJson() @JsonKey(name: 'created_at') DateTime? createdAt,
   }) = _PaymentModel;
 
@@ -90,7 +92,6 @@ abstract class PaymentInstructionModel with _$PaymentInstructionModel {
     @StringOrNullJson() @JsonKey(name: 'qr_string') String? qrString,
     @StringOrNullJson() @JsonKey(name: 'va_number') String? vaNumber,
     @StringOrNullJson() String? bank,
-
     @ServerDateTimeJson() @JsonKey(name: 'expires_at') DateTime? expiresAt,
   }) = _PaymentInstructionModel;
 

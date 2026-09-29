@@ -167,19 +167,55 @@ class CheckoutService {
     }
   }
 
+  /// `GET /checkout/sessions/{id}/wallet-summary` — saldo Wallet vs total
+  /// tagihan sesi ini. **Kontrak yang diusulkan** (docs/22 #1); lihat
+  /// [WalletSummaryModel] dan `assets/mock/pending_api/README.md`.
+  ///
+  /// Di server hari ini rutenya tidak ada, jadi balasannya 404 **HTML** —
+  /// sampai ke pemanggil sebagai `DataError.isRouteNotFound`, tanda bahwa
+  /// checkout harus memakai pemilih metode pembayaran lama.
+  Future<ApiEnvelope<WalletSummaryModel>> fetchWalletSummary(String id) async {
+    final context = 'GET /checkout/sessions/$id/wallet-summary';
+    try {
+      final response =
+          await _dio.get<dynamic>('/checkout/sessions/$id/wallet-summary');
+      return parseEnvelope(
+        response,
+        (raw) =>
+            WalletSummaryModel.fromJson(Map<String, dynamic>.from(raw as Map)),
+        context: context,
+      );
+    } on DioException catch (e) {
+      throw ApiException.fromDio(e, context: context);
+    }
+  }
+
   /// `POST /checkout/sessions/{id}/confirm` → order terbentuk.
   ///
   /// Mengonfirmasi sesi yang sudah dikonfirmasi dibalas
   /// `422 CHECKOUT_CONFIRM_FAILED`.
+  ///
+  /// [pin] hanya untuk `payment_method: "wallet"` (**kontrak yang
+  /// diusulkan**, docs/22 #2): server memverifikasi PIN, mendebit saldo, dan
+  /// menandai order `paid` dalam satu transaksi. Tanpa [pin] body-nya persis
+  /// seperti hari ini.
+  ///
+  /// ⚠️ `LoggingInterceptor` (debug) **belum menyensor field `pin`** — sama
+  /// halnya untuk `POST /wallet/withdraw`. `pin` perlu masuk
+  /// `_sensitiveFields` di sana.
   Future<ApiEnvelope<CheckoutConfirmResult>> confirm(
     String id, {
     required String paymentMethod,
+    String? pin,
   }) async {
     final context = 'POST /checkout/sessions/$id/confirm';
     try {
       final response = await _dio.post<dynamic>(
         '/checkout/sessions/$id/confirm',
-        data: {'payment_method': paymentMethod},
+        data: {
+          'payment_method': paymentMethod,
+          if (pin != null) 'pin': pin,
+        },
       );
       return parseEnvelope(
         response,

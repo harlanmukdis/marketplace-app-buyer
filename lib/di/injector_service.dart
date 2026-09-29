@@ -1,11 +1,19 @@
 import 'package:dio/dio.dart';
 import 'package:marketplace_app_member/config/network/dio_client.dart';
+import 'package:marketplace_app_member/core/data/datasources/remote/service/account_service.dart';
 import 'package:marketplace_app_member/core/data/datasources/remote/service/auth_service.dart';
+import 'package:marketplace_app_member/core/data/datasources/remote/service/home_service.dart';
+import 'package:marketplace_app_member/core/data/datasources/remote/service/live_service.dart';
+import 'package:marketplace_app_member/core/data/datasources/remote/service/location_service.dart';
+import 'package:marketplace_app_member/core/data/datasources/remote/service/media_service.dart';
+import 'package:marketplace_app_member/core/data/datasources/remote/service/voucher_service.dart';
 import 'package:marketplace_app_member/core/data/datasources/remote/service/address_service.dart';
 import 'package:marketplace_app_member/core/data/datasources/remote/service/cart_service.dart';
 import 'package:marketplace_app_member/core/data/datasources/remote/service/chat_service.dart';
 import 'package:marketplace_app_member/core/data/datasources/remote/service/checkout_service.dart';
 import 'package:marketplace_app_member/core/data/datasources/remote/service/notification_service.dart';
+import 'package:marketplace_app_member/core/data/datasources/remote/service/store_service.dart';
+import 'package:marketplace_app_member/core/data/datasources/remote/service/support_service.dart';
 import 'package:marketplace_app_member/core/data/datasources/remote/service/order_service.dart';
 import 'package:marketplace_app_member/core/data/datasources/remote/service/payment_service.dart';
 import 'package:marketplace_app_member/core/data/datasources/remote/service/review_service.dart';
@@ -64,4 +72,12 @@ void initializeService() {
   injector.registerLazySingleton<NotificationService>(
     () => NotificationService(api),
   );
+  injector.registerLazySingleton<StoreService>(() => StoreService(api));
+  injector.registerLazySingleton<SupportService>(() => SupportService(api));
+  injector.registerLazySingleton<AccountService>(() => AccountService(api));
+  injector.registerLazySingleton<VoucherService>(() => VoucherService(api));
+  injector.registerLazySingleton<HomeService>(() => HomeService(api));
+  injector.registerLazySingleton<LocationService>(() => LocationService(api));
+  injector.registerLazySingleton<LiveService>(() => LiveService(api));
+  injector.registerLazySingleton<MediaService>(() => MediaService(api));
 }

@@ -1,23 +1,29 @@
 import 'package:flutter/material.dart';
 
 // Colors
-const Color kLightPrimaryColor = Color(0xff1D55F3);
-const Color kDarkPrimaryColor = Color(0xff246BFD);
-const Color kLightSecondColor = Color(0xff212121);
-const Color kDarkSecondColor = Color(0xffF7F7F7);
-const Color kLightThirdColor = Color(0xff616161);
-const Color kDarkThirdColor = Color(0xffE8E8E8);
-const Color kBorderColor = Color(0xffF2F2F2);
-const Color kSuccessColor = Colors.green;
-const Color kWarningColor = Colors.deepOrangeAccent;
-const Color kErrorColor = Colors.redAccent;
-const Color kDeleteColor = Color(0xffFF3D00);
+//
+// Nilainya mengikuti design system Xpedia
+// (assets/stitch_xpedia_buyer_project/design_buyer.md §1). Nama lamanya
+// dipertahankan karena dipakai ratusan kali lewat pola
+// `isAppDarkMode() ? kDark… : kLight…`; token yang lebih lengkap ada di
+// lib/core/design/xp_colors.dart.
+const Color kLightPrimaryColor = Color(0xff0056FE); // brand-primary
+const Color kDarkPrimaryColor = Color(0xff4682FF); // primary (dark)
+const Color kLightSecondColor = Color(0xff111827); // text-primary
+const Color kDarkSecondColor = Color(0xffF7F8FA); // text-primary (dark)
+const Color kLightThirdColor = Color(0xff4B5563); // text-secondary
+const Color kDarkThirdColor = Color(0xff9CA3AF); // text-secondary (dark)
+const Color kBorderColor = Color(0xffE5E7EB); // border-subtle
+const Color kSuccessColor = Color(0xff109553);
+const Color kWarningColor = Color(0xffF59E0B);
+const Color kErrorColor = Color(0xffFB132D); // danger
+const Color kDeleteColor = Color(0xffFB132D);
 const Color kWhiteColor = Colors.white;
 const Color kBlackColor = Colors.black;
-const Color kDarkColor = Color(0xff2B2B2B);
+const Color kDarkColor = Color(0xff0B1220); // canvas (dark)
 
 // Font
-const String kFontFamily = 'Hanimation';
+const String kFontFamily = 'Inter';
 
 // General
 const String kAccessToken = 'accessToken';

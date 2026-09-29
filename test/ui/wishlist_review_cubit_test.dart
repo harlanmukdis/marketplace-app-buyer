@@ -42,6 +42,14 @@ class _FakeWishlistRepository implements WishlistRepository {
     calls.add('remove:$productId');
     return result;
   }
+
+  DataState<List<WishlistItemModel>>? alertResult;
+
+  @override
+  Future<DataState<List<WishlistItemModel>>> setAlert(int productId, {required bool enabled}) async {
+    calls.add('alert:$productId:$enabled');
+    return alertResult ?? result;
+  }
 }
 
 class _FakeReviewRepository implements ReviewRepository {
@@ -73,6 +81,10 @@ class _FakeReviewRepository implements ReviewRepository {
     calls.add('report:$reviewId');
     return const DataSuccess(null);
   }
+
+  // Method ulasan-saya (domain lain) tidak dipakai test ini.
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
 void main() {
@@ -88,6 +100,56 @@ void main() {
 
   tearDown(() async {
     await injector.reset();
+  });
+
+  group('WishlistCubit — pantau harga (🔶 kontrak usulan)', () {
+    test('setAlert memakai id produk dan membawa meta simulasi', () async {
+      wishlist.result = const DataSuccess([
+        WishlistItemModel(productId: 3, wishlistItemId: 103, alertEnabled: false),
+      ]);
+      wishlist.alertResult = const DataSuccess(
+        [WishlistItemModel(productId: 3, wishlistItemId: 103, alertEnabled: true)],
+        meta: {
+          'mock_fields': ['alert_enabled'],
+        },
+      );
+      final cubit = WishlistCubit();
+      await cubit.load();
+
+      final watched = await cubit.setAlert(3, enabled: true);
+
+      expect(watched, isTrue);
+      expect(wishlist.calls, contains('alert:3:true'));
+      final state = cubit.state as WishlistReady;
+      expect(state.watchedCount, 1);
+      expect(state.meta['mock_fields'], ['alert_enabled']);
+      expect(state.alertMutatingIds, isEmpty);
+      await cubit.close();
+    });
+
+    test('gagal menyimpan tidak mengosongkan daftar dan melaporkan error', () async {
+      wishlist.alertResult = DataFailed(_error('VALIDATION_ERROR'));
+      final cubit = WishlistCubit();
+      await cubit.load();
+
+      final watched = await cubit.setAlert(3, enabled: true);
+
+      expect(watched, isNull);
+      final state = cubit.state as WishlistReady;
+      expect(state.items, hasLength(1));
+      expect(state.actionError?.code, 'VALIDATION_ERROR');
+      expect(state.alertMutatingIds, isEmpty);
+      await cubit.close();
+    });
+
+    test('baris tanpa alert_enabled = fitur belum didukung, lonceng disembunyikan', () {
+      final item = WishlistItemModel.fromJson(const {'product_id': '3', 'name': 'A'});
+      expect(item.supportsAlert, isFalse);
+      final withField =
+          WishlistItemModel.fromJson(const {'product_id': '3', 'alert_enabled': '1'});
+      expect(withField.supportsAlert, isTrue);
+      expect(withField.isWatched, isTrue);
+    });
   });
 
   group('WishlistCubit', () {

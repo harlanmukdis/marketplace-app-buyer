@@ -90,6 +90,8 @@ _AppliedVoucherModel _$AppliedVoucherModelFromJson(Map<String, dynamic> json) =>
       maxDiscount: const DoubleOrNullJson().fromJson(json['max_discount']),
       discountAmount:
           const DoubleOrNullJson().fromJson(json['discount_amount']),
+      voucherId: const IntOrNullJson().fromJson(json['voucher_id']),
+      estimatedValue: const DoubleOrNullJson().fromJson(json['value']),
     );
 
 Map<String, dynamic> _$AppliedVoucherModelToJson(
@@ -103,6 +105,8 @@ Map<String, dynamic> _$AppliedVoucherModelToJson(
       'max_discount': const DoubleOrNullJson().toJson(instance.maxDiscount),
       'discount_amount':
           const DoubleOrNullJson().toJson(instance.discountAmount),
+      'voucher_id': const IntOrNullJson().toJson(instance.voucherId),
+      'value': const DoubleOrNullJson().toJson(instance.estimatedValue),
     };
 
 _CartSummaryModel _$CartSummaryModelFromJson(Map<String, dynamic> json) =>

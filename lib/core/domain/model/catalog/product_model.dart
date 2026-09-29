@@ -32,15 +32,16 @@ abstract class ProductModel with _$ProductModel {
     @StringOrNullJson() String? description,
 
     /// `physical` / `digital` / `service`.
-    @StringJson() @JsonKey(name: 'product_type') @Default('physical')
+    @StringJson()
+    @JsonKey(name: 'product_type')
+    @Default('physical')
     String productType,
-
     @DoubleJson() @JsonKey(name: 'base_price') @Default(0) double basePrice,
 
     /// Harga coret, **independen dari flash sale**. `null` = tidak ada diskon.
-    @DoubleOrNullJson() @JsonKey(name: 'compare_at_price')
+    @DoubleOrNullJson()
+    @JsonKey(name: 'compare_at_price')
     double? compareAtPrice,
-
     @IntOrNullJson() @JsonKey(name: 'weight_grams') int? weightGrams,
     @StringJson() @Default('active') String status,
     @IntJson() @JsonKey(name: 'sold_count') @Default(0) int soldCount,
@@ -92,6 +93,25 @@ abstract class ProductModel with _$ProductModel {
     /// muncul kapan saja. [badgeLabels] membuang yang tidak dikenal.
     @Default(<String>[]) List<String> badges,
 
+    /// Mode pemenuhan yang dipilih penjual (backend v1.6+, blueprint Seller
+    /// Ch.1): `ready_stock`, `infinite`, `pre_order`, `custom_order`,
+    /// `discontinued`. Ada di **listing maupun detail**. Pakai [stockMode],
+    /// jangan string ini langsung.
+    @StringJson()
+    @JsonKey(name: 'fulfillment_mode')
+    @Default('ready_stock')
+    String fulfillmentMode,
+
+    /// Lama pengerjaan dalam hari — wajib untuk `pre_order`/`custom_order`,
+    /// `null` untuk mode lain.
+    @IntOrNullJson()
+    @JsonKey(name: 'fulfillment_lead_time_days')
+    int? fulfillmentLeadTimeDays,
+
+    /// Ketersediaan hasil hitungan server, **hanya di detail**:
+    /// [fulfillmentMode] ditambah `low_stock`/`out_of_stock` yang diturunkan
+    /// dari stok live (`<= 10` dianggap menipis). `null` di listing.
+    @StringOrNullJson() String? availability,
     @Default(<ProductVariantModel>[]) List<ProductVariantModel> variants,
     @Default(<ProductImageModel>[]) List<ProductImageModel> images,
     @Default(<CourierModel>[]) List<CourierModel> couriers,
@@ -178,6 +198,49 @@ abstract class ProductModel with _$ProductModel {
   }
 
   bool get hasRating => ratingCount > 0;
+
+  /// Mode stok untuk chip di kartu, keranjang, dan detail.
+  ///
+  /// Detail membawa [availability] yang sudah dihitung server — itu yang
+  /// dipakai kalau ada, supaya ambang "menipis" tidak diduplikasi di sini.
+  /// Listing hanya membawa [fulfillmentMode]; di sana `ready_stock` tetap
+  /// "Ready Stok", karena server **membuang produk ready-stock yang stoknya
+  /// nol dari listing** (backend v1.6+), jadi yang tampil pasti masih ada.
+  StockMode get stockMode =>
+      StockMode.parse(availability) ??
+      StockMode.parse(fulfillmentMode) ??
+      StockMode.ready;
+}
+
+/// Mode stok (design_buyer.md §1 "Stock mode chips").
+enum StockMode {
+  ready('Ready Stok'),
+  infinite('Stok Selalu Ada'),
+  low('Stok Menipis'),
+  preOrder('Pre-Order'),
+  customOrder('Custom Order'),
+  outOfStock('Stok Habis'),
+  discontinued('Tidak Dijual Lagi');
+
+  const StockMode(this.label);
+
+  final String label;
+
+  /// Bisa dimasukkan keranjang. ⚠️ Server sendiri **tidak** menolak
+  /// `discontinued` di keranjang/checkout — hanya menyembunyikannya dari
+  /// pencarian — jadi aplikasi yang menahannya.
+  bool get isPurchasable => this != outOfStock && this != discontinued;
+
+  static StockMode? parse(String? raw) => switch (raw) {
+        'ready_stock' => ready,
+        'infinite' => infinite,
+        'low_stock' => low,
+        'pre_order' => preOrder,
+        'custom_order' => customOrder,
+        'out_of_stock' => outOfStock,
+        'discontinued' => discontinued,
+        _ => null,
+      };
 }
 
 /// Varian produk. **Selalu ada minimal satu**, bahkan untuk produk tanpa
@@ -199,9 +262,9 @@ abstract class ProductVariantModel with _$ProductVariantModel {
     ///
     /// Server mengirimnya sebagai **string berisi JSON** (`'{"warna":"Hitam"}'`),
     /// bukan objek — karena itu [JsonMapJson], bukan Map biasa.
-    @JsonMapJson() @JsonKey(name: 'variant_options')
+    @JsonMapJson()
+    @JsonKey(name: 'variant_options')
     Map<String, dynamic>? variantOptions,
-
     @DoubleJson() @Default(0) double price,
     @IntOrNullJson() @JsonKey(name: 'weight_grams') int? weightGrams,
     @StringOrNullJson() @JsonKey(name: 'image_url') String? imageUrl,
@@ -221,7 +284,8 @@ abstract class ProductVariantModel with _$ProductVariantModel {
     /// ⚠️ Belum terdokumentasi di `docs/18-frontend-integration-guide.md` §8
     /// walau servernya sudah mengirimkannya.
     @StringOrNullJson() @JsonKey(name: 'warehouse_city') String? warehouseCity,
-    @StringOrNullJson() @JsonKey(name: 'warehouse_province')
+    @StringOrNullJson()
+    @JsonKey(name: 'warehouse_province')
     String? warehouseProvince,
   }) = _ProductVariantModel;
 
@@ -245,7 +309,10 @@ abstract class ProductVariantModel with _$ProductVariantModel {
   String get optionLabel {
     final options = variantOptions;
     if (options == null || options.isEmpty) return '';
-    return options.values.map((v) => v?.toString() ?? '').where((v) => v.isNotEmpty).join(' · ');
+    return options.values
+        .map((v) => v?.toString() ?? '')
+        .where((v) => v.isNotEmpty)
+        .join(' · ');
   }
 }
 

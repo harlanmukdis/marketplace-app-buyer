@@ -203,19 +203,33 @@ void main() {
       expect(messages.single.content, isNull);
     });
 
-    test('🔴 message_type di luar ENUM tersimpan sebagai STRING KOSONG',
+    test('message_type di luar daftar kini DITOLAK, termasuk video',
         () async {
-      // MySQL non-strict: nilainya tidak ditolak, hanya dipotong jadi ''.
-      await dio.post<dynamic>(
-        '/chat/conversations/$conversationId/messages',
-        data: {'message_type': 'sticker', 'content': 'x'},
-      );
+      // Dulu MySQL non-strict memotongnya jadi '' dan tetap menyimpan
+      // pesannya. Sejak backend v1.x `send_message()` memvalidasi whitelist
+      // `text|image|product_share|order_share` — blueprint melarang video,
+      // dokumen, dan audio di chat.
+      for (final type in ['sticker', 'video']) {
+        final response = await dio.post<dynamic>(
+          '/chat/conversations/$conversationId/messages',
+          data: {'message_type': type, 'content': 'x'},
+          options: Options(validateStatus: (_) => true),
+        );
+        expect(response.statusCode, 422, reason: type);
+        expect(response.data['error']['code'], 'VALIDATION_ERROR');
+      }
+      expect((await chat.fetchMessages(conversationId)).data, isEmpty);
+    });
 
-      final message = (await chat.fetchMessages(conversationId)).data.single;
-      expect(message.typeCode, isEmpty);
-      expect(message.type, ChatMessageType.unknown);
-      expect(message.displayText, 'x',
-          reason: 'isinya terbaca, jadi tetap ditampilkan');
+    test('🔴 nomor HP, email, dan tautan diblokir CHAT_CONTENT_BLOCKED',
+        () async {
+      // Moderasi sinkron di `Chat_model::_moderate_content()`. Pesannya TIDAK
+      // tersimpan — layar harus mengembalikan teksnya ke kolom tulis.
+      await expectLater(
+        chat.sendMessage(conversationId, content: 'wa aku 0812-3456-7890 ya'),
+        throwsA(predicate((e) => e.toString().contains('CHAT_CONTENT_BLOCKED'))),
+      );
+      expect((await chat.fetchMessages(conversationId)).data, isEmpty);
     });
 
     test('mark-read TIDAK menandai pesan sendiri', () async {

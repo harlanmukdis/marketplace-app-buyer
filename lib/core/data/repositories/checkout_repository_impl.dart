@@ -63,10 +63,25 @@ class CheckoutRepositoryImpl implements CheckoutRepository {
   Future<DataState<CheckoutConfirmResult>> confirm(
     String sessionId, {
     required String paymentMethod,
+    String? pin,
   }) async {
     try {
-      final env =
-          await _service.confirm(sessionId, paymentMethod: paymentMethod);
+      final env = await _service.confirm(
+        sessionId,
+        paymentMethod: paymentMethod,
+        pin: pin,
+      );
+      return DataSuccess(env.data, meta: env.meta, statusCode: env.statusCode);
+    } on ApiException catch (e) {
+      return DataFailed(e.error);
+    }
+  }
+
+  @override
+  Future<DataState<WalletSummaryModel>> fetchWalletSummary(
+      String sessionId) async {
+    try {
+      final env = await _service.fetchWalletSummary(sessionId);
       return DataSuccess(env.data, meta: env.meta, statusCode: env.statusCode);
     } on ApiException catch (e) {
       return DataFailed(e.error);

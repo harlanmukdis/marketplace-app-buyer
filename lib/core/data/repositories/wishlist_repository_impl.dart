@@ -20,6 +20,11 @@ class WishlistRepositoryImpl implements WishlistRepository {
   Future<DataState<List<WishlistItemModel>>> remove(int productId) =>
       _mutateThenRead(() => _service.remove(productId));
 
+  @override
+  Future<DataState<List<WishlistItemModel>>> setAlert(int productId,
+          {required bool enabled}) =>
+      _mutateThenRead(() => _service.setAlert(productId, enabled: enabled));
+
   Future<DataState<List<WishlistItemModel>>> _mutateThenRead(
     Future<Object?> Function() mutate,
   ) async {

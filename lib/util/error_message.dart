@@ -17,6 +17,11 @@ String errorMessageFor(BuildContext context, DataError error) {
   final l = S.of(context);
 
   switch (error.code) {
+    // Pesan validasi lokal ditulis aplikasi sendiri untuk user — satu-satunya
+    // `message` yang aman ditampilkan (lihat `ClientErrorCode.localValidation`).
+    case ClientErrorCode.localValidation:
+      return error.message;
+
     // --- transport ---
     case ClientErrorCode.network:
       return l.noInternetConnection;
@@ -105,6 +110,60 @@ String? _shoppingMessage(String code) {
       return 'Pencarian sedang tidak tersedia. Coba jelajahi lewat kategori.';
     case ApiErrorCode.insufficientBalance:
       return 'Saldo tidak mencukupi.';
+
+    case ApiErrorCode.chatContentBlocked:
+      return 'Pesan tidak terkirim. Demi keamanan, jangan bagikan nomor HP, '
+          'email, tautan, atau akun di platform lain.';
+    case ApiErrorCode.shippingCoverageUnavailable:
+      return 'Ada produk yang tidak bisa dikirim ke alamat ini. Coba alamat '
+          'lain atau hapus produknya dari keranjang.';
+    case ApiErrorCode.invalidSealCode:
+      return 'Kode segel tidak cocok. Periksa kode di notifikasi pengiriman.';
+    case ApiErrorCode.invoiceNotAvailable:
+      return 'Invoice baru terbit setelah pesanan selesai.';
+
+    // Minimum, rekening, dan saldo sudah disaring `WalletCubit` sebelum
+    // request dikirim, jadi yang sampai ke sini praktis hanya urusan PIN.
+    case ApiErrorCode.withdrawalRejected:
+      return 'Penarikan ditolak. Periksa PIN kamu — kalau belum pernah '
+          'membuatnya, buat PIN penarikan dulu.';
+    case ApiErrorCode.ticketNotFound:
+      return 'Tiket Xpedia 911 tidak ditemukan.';
+    case ApiErrorCode.notParticipant:
+      return 'Percakapan ini tidak bisa dibuka.';
+
+    case ApiErrorCode.invalidPin:
+      return 'PIN salah. Periksa lagi PIN Xpedia Wallet kamu.';
+    case ApiErrorCode.pinNotSet:
+      return 'Buat PIN Xpedia Wallet dulu untuk melanjutkan.';
+    case ApiErrorCode.voucherQuotaExceeded:
+      return 'Kuota voucher ini sudah habis.';
+    case ApiErrorCode.voucherAlreadyUsed:
+      return 'Voucher ini sudah pernah kamu pakai.';
+    case ApiErrorCode.voucherMinSpendNotMet:
+      return 'Belanjaanmu belum memenuhi minimum untuk voucher ini.';
+    case ApiErrorCode.voucherAlreadyClaimed:
+      return 'Voucher ini sudah ada di akunmu.';
+    case ApiErrorCode.cancellationNotAllowed:
+      return 'Pesanan ini sudah tidak bisa diajukan pembatalan.';
+    case ApiErrorCode.cancellationRequestExists:
+      return 'Permohonan pembatalan untuk pesanan ini sudah diajukan.';
+    case ApiErrorCode.reviewEditWindowClosed:
+      return 'Ulasan hanya bisa diubah sampai 30 hari sejak dikirim.';
+    case ApiErrorCode.reviewNotFound:
+      return 'Ulasan tidak ditemukan.';
+    case ApiErrorCode.uploadFailed:
+      return 'Berkas gagal diunggah. Periksa jenis dan ukurannya lalu coba lagi.';
+    case ApiErrorCode.idCardAlreadyUsed:
+      return 'NIK ini sudah dipakai akun Xpedia lain.';
+    case ApiErrorCode.identityLocked:
+      return 'Nama lengkap terkunci karena identitasmu sudah diverifikasi.';
+    case ApiErrorCode.invalidOtp:
+      return 'Kode OTP salah.';
+    case ApiErrorCode.otpExpired:
+      return 'Kode OTP sudah kedaluwarsa. Minta kode baru.';
+    case ApiErrorCode.contactChangeNotFound:
+      return 'Permintaan penggantian sudah tidak berlaku. Mulai lagi dari awal.';
   }
   return null;
 }

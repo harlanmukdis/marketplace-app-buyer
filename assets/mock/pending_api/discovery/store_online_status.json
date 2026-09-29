@@ -1,0 +1,7 @@
+{
+  "1": { "online_status": "online", "last_active_minutes_ago": 0 },
+  "2": { "online_status": "offline", "last_active_minutes_ago": 5 },
+  "3": { "online_status": "online", "last_active_minutes_ago": 0 },
+  "4": { "online_status": "offline", "last_active_minutes_ago": 180 },
+  "default": { "online_status": "offline", "last_active_minutes_ago": 60 }
+}

@@ -170,6 +170,7 @@ extension CatalogHomeStatePatterns on CatalogHomeState {
             ProductFacets facets,
             int page,
             bool hasMore,
+            int? total,
             bool isLoadingMore,
             DataError? loadMoreError,
             CatalogQuery? query)?
@@ -192,6 +193,7 @@ extension CatalogHomeStatePatterns on CatalogHomeState {
             _that.facets,
             _that.page,
             _that.hasMore,
+            _that.total,
             _that.isLoadingMore,
             _that.loadMoreError,
             _that.query);
@@ -227,6 +229,7 @@ extension CatalogHomeStatePatterns on CatalogHomeState {
             ProductFacets facets,
             int page,
             bool hasMore,
+            int? total,
             bool isLoadingMore,
             DataError? loadMoreError,
             CatalogQuery? query)
@@ -249,6 +252,7 @@ extension CatalogHomeStatePatterns on CatalogHomeState {
             _that.facets,
             _that.page,
             _that.hasMore,
+            _that.total,
             _that.isLoadingMore,
             _that.loadMoreError,
             _that.query);
@@ -281,6 +285,7 @@ extension CatalogHomeStatePatterns on CatalogHomeState {
             ProductFacets facets,
             int page,
             bool hasMore,
+            int? total,
             bool isLoadingMore,
             DataError? loadMoreError,
             CatalogQuery? query)?
@@ -302,6 +307,7 @@ extension CatalogHomeStatePatterns on CatalogHomeState {
             _that.facets,
             _that.page,
             _that.hasMore,
+            _that.total,
             _that.isLoadingMore,
             _that.loadMoreError,
             _that.query);
@@ -364,6 +370,7 @@ class CatalogLoaded implements CatalogHomeState {
       this.facets = ProductFacets.empty,
       this.page = 1,
       this.hasMore = false,
+      this.total,
       this.isLoadingMore = false,
       this.loadMoreError,
       this.query})
@@ -401,6 +408,11 @@ class CatalogLoaded implements CatalogHomeState {
   @JsonKey()
   final bool hasMore;
 
+  /// `meta.total` apa adanya — jumlah produk yang cocok, untuk label
+  /// "1.238 produk" di hasil pencarian. `null` kalau server tidak
+  /// mengirimnya.
+  final int? total;
+
   /// Sedang menambah halaman berikutnya di bawah daftar yang sudah tampil.
   @JsonKey()
   final bool isLoadingMore;
@@ -428,6 +440,7 @@ class CatalogLoaded implements CatalogHomeState {
             (identical(other.facets, facets) || other.facets == facets) &&
             (identical(other.page, page) || other.page == page) &&
             (identical(other.hasMore, hasMore) || other.hasMore == hasMore) &&
+            (identical(other.total, total) || other.total == total) &&
             (identical(other.isLoadingMore, isLoadingMore) ||
                 other.isLoadingMore == isLoadingMore) &&
             (identical(other.loadMoreError, loadMoreError) ||
@@ -443,13 +456,14 @@ class CatalogLoaded implements CatalogHomeState {
       facets,
       page,
       hasMore,
+      total,
       isLoadingMore,
       loadMoreError,
       query);
 
   @override
   String toString() {
-    return 'CatalogHomeState.loaded(products: $products, categories: $categories, facets: $facets, page: $page, hasMore: $hasMore, isLoadingMore: $isLoadingMore, loadMoreError: $loadMoreError, query: $query)';
+    return 'CatalogHomeState.loaded(products: $products, categories: $categories, facets: $facets, page: $page, hasMore: $hasMore, total: $total, isLoadingMore: $isLoadingMore, loadMoreError: $loadMoreError, query: $query)';
   }
 }
 
@@ -466,6 +480,7 @@ abstract mixin class $CatalogLoadedCopyWith<$Res>
       ProductFacets facets,
       int page,
       bool hasMore,
+      int? total,
       bool isLoadingMore,
       DataError? loadMoreError,
       CatalogQuery? query});
@@ -490,6 +505,7 @@ class _$CatalogLoadedCopyWithImpl<$Res>
     Object? facets = null,
     Object? page = null,
     Object? hasMore = null,
+    Object? total = freezed,
     Object? isLoadingMore = null,
     Object? loadMoreError = freezed,
     Object? query = freezed,
@@ -515,6 +531,10 @@ class _$CatalogLoadedCopyWithImpl<$Res>
           ? _self.hasMore
           : hasMore // ignore: cast_nullable_to_non_nullable
               as bool,
+      total: freezed == total
+          ? _self.total
+          : total // ignore: cast_nullable_to_non_nullable
+              as int?,
       isLoadingMore: null == isLoadingMore
           ? _self.isLoadingMore
           : isLoadingMore // ignore: cast_nullable_to_non_nullable
@@ -713,7 +733,15 @@ mixin _$CatalogQuery {
   int? get minRating;
   double? get minPrice;
   double? get maxPrice;
+
+  /// Urutan bawaan `recommended`: blueprint melarang kontrol urutan di sisi
+  /// pembeli, jadi peringkat sepenuhnya milik server.
   ProductSort get sort;
+
+  /// Tujuan kirim (kota/provinsi alamat utama). Server membuang produk yang
+  /// tidak bisa dikirim ke sana, jadi hasil yang tampil memang bisa dibeli.
+  String? get destCity;
+  String? get destProvince;
 
   /// Create a copy of CatalogQuery
   /// with the given fields replaced by the non-null parameter values.
@@ -737,16 +765,20 @@ mixin _$CatalogQuery {
                 other.minPrice == minPrice) &&
             (identical(other.maxPrice, maxPrice) ||
                 other.maxPrice == maxPrice) &&
-            (identical(other.sort, sort) || other.sort == sort));
+            (identical(other.sort, sort) || other.sort == sort) &&
+            (identical(other.destCity, destCity) ||
+                other.destCity == destCity) &&
+            (identical(other.destProvince, destProvince) ||
+                other.destProvince == destProvince));
   }
 
   @override
-  int get hashCode => Object.hash(
-      runtimeType, text, categoryId, minRating, minPrice, maxPrice, sort);
+  int get hashCode => Object.hash(runtimeType, text, categoryId, minRating,
+      minPrice, maxPrice, sort, destCity, destProvince);
 
   @override
   String toString() {
-    return 'CatalogQuery(text: $text, categoryId: $categoryId, minRating: $minRating, minPrice: $minPrice, maxPrice: $maxPrice, sort: $sort)';
+    return 'CatalogQuery(text: $text, categoryId: $categoryId, minRating: $minRating, minPrice: $minPrice, maxPrice: $maxPrice, sort: $sort, destCity: $destCity, destProvince: $destProvince)';
   }
 }
 
@@ -762,7 +794,9 @@ abstract mixin class $CatalogQueryCopyWith<$Res> {
       int? minRating,
       double? minPrice,
       double? maxPrice,
-      ProductSort sort});
+      ProductSort sort,
+      String? destCity,
+      String? destProvince});
 }
 
 /// @nodoc
@@ -783,6 +817,8 @@ class _$CatalogQueryCopyWithImpl<$Res> implements $CatalogQueryCopyWith<$Res> {
     Object? minPrice = freezed,
     Object? maxPrice = freezed,
     Object? sort = null,
+    Object? destCity = freezed,
+    Object? destProvince = freezed,
   }) {
     return _then(_self.copyWith(
       text: freezed == text
@@ -809,6 +845,14 @@ class _$CatalogQueryCopyWithImpl<$Res> implements $CatalogQueryCopyWith<$Res> {
           ? _self.sort
           : sort // ignore: cast_nullable_to_non_nullable
               as ProductSort,
+      destCity: freezed == destCity
+          ? _self.destCity
+          : destCity // ignore: cast_nullable_to_non_nullable
+              as String?,
+      destProvince: freezed == destProvince
+          ? _self.destProvince
+          : destProvince // ignore: cast_nullable_to_non_nullable
+              as String?,
     ));
   }
 }
@@ -906,16 +950,30 @@ extension CatalogQueryPatterns on CatalogQuery {
 
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>(
-    TResult Function(String? text, int? categoryId, int? minRating,
-            double? minPrice, double? maxPrice, ProductSort sort)?
+    TResult Function(
+            String? text,
+            int? categoryId,
+            int? minRating,
+            double? minPrice,
+            double? maxPrice,
+            ProductSort sort,
+            String? destCity,
+            String? destProvince)?
         $default, {
     required TResult orElse(),
   }) {
     final _that = this;
     switch (_that) {
       case _CatalogQuery() when $default != null:
-        return $default(_that.text, _that.categoryId, _that.minRating,
-            _that.minPrice, _that.maxPrice, _that.sort);
+        return $default(
+            _that.text,
+            _that.categoryId,
+            _that.minRating,
+            _that.minPrice,
+            _that.maxPrice,
+            _that.sort,
+            _that.destCity,
+            _that.destProvince);
       case _:
         return orElse();
     }
@@ -936,15 +994,29 @@ extension CatalogQueryPatterns on CatalogQuery {
 
   @optionalTypeArgs
   TResult when<TResult extends Object?>(
-    TResult Function(String? text, int? categoryId, int? minRating,
-            double? minPrice, double? maxPrice, ProductSort sort)
+    TResult Function(
+            String? text,
+            int? categoryId,
+            int? minRating,
+            double? minPrice,
+            double? maxPrice,
+            ProductSort sort,
+            String? destCity,
+            String? destProvince)
         $default,
   ) {
     final _that = this;
     switch (_that) {
       case _CatalogQuery():
-        return $default(_that.text, _that.categoryId, _that.minRating,
-            _that.minPrice, _that.maxPrice, _that.sort);
+        return $default(
+            _that.text,
+            _that.categoryId,
+            _that.minRating,
+            _that.minPrice,
+            _that.maxPrice,
+            _that.sort,
+            _that.destCity,
+            _that.destProvince);
       case _:
         throw StateError('Unexpected subclass');
     }
@@ -964,15 +1036,29 @@ extension CatalogQueryPatterns on CatalogQuery {
 
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>(
-    TResult? Function(String? text, int? categoryId, int? minRating,
-            double? minPrice, double? maxPrice, ProductSort sort)?
+    TResult? Function(
+            String? text,
+            int? categoryId,
+            int? minRating,
+            double? minPrice,
+            double? maxPrice,
+            ProductSort sort,
+            String? destCity,
+            String? destProvince)?
         $default,
   ) {
     final _that = this;
     switch (_that) {
       case _CatalogQuery() when $default != null:
-        return $default(_that.text, _that.categoryId, _that.minRating,
-            _that.minPrice, _that.maxPrice, _that.sort);
+        return $default(
+            _that.text,
+            _that.categoryId,
+            _that.minRating,
+            _that.minPrice,
+            _that.maxPrice,
+            _that.sort,
+            _that.destCity,
+            _that.destProvince);
       case _:
         return null;
     }
@@ -988,7 +1074,9 @@ class _CatalogQuery extends CatalogQuery {
       this.minRating,
       this.minPrice,
       this.maxPrice,
-      this.sort = ProductSort.latest})
+      this.sort = ProductSort.recommended,
+      this.destCity,
+      this.destProvince})
       : super._();
 
   @override
@@ -1001,9 +1089,19 @@ class _CatalogQuery extends CatalogQuery {
   final double? minPrice;
   @override
   final double? maxPrice;
+
+  /// Urutan bawaan `recommended`: blueprint melarang kontrol urutan di sisi
+  /// pembeli, jadi peringkat sepenuhnya milik server.
   @override
   @JsonKey()
   final ProductSort sort;
+
+  /// Tujuan kirim (kota/provinsi alamat utama). Server membuang produk yang
+  /// tidak bisa dikirim ke sana, jadi hasil yang tampil memang bisa dibeli.
+  @override
+  final String? destCity;
+  @override
+  final String? destProvince;
 
   /// Create a copy of CatalogQuery
   /// with the given fields replaced by the non-null parameter values.
@@ -1027,16 +1125,20 @@ class _CatalogQuery extends CatalogQuery {
                 other.minPrice == minPrice) &&
             (identical(other.maxPrice, maxPrice) ||
                 other.maxPrice == maxPrice) &&
-            (identical(other.sort, sort) || other.sort == sort));
+            (identical(other.sort, sort) || other.sort == sort) &&
+            (identical(other.destCity, destCity) ||
+                other.destCity == destCity) &&
+            (identical(other.destProvince, destProvince) ||
+                other.destProvince == destProvince));
   }
 
   @override
-  int get hashCode => Object.hash(
-      runtimeType, text, categoryId, minRating, minPrice, maxPrice, sort);
+  int get hashCode => Object.hash(runtimeType, text, categoryId, minRating,
+      minPrice, maxPrice, sort, destCity, destProvince);
 
   @override
   String toString() {
-    return 'CatalogQuery(text: $text, categoryId: $categoryId, minRating: $minRating, minPrice: $minPrice, maxPrice: $maxPrice, sort: $sort)';
+    return 'CatalogQuery(text: $text, categoryId: $categoryId, minRating: $minRating, minPrice: $minPrice, maxPrice: $maxPrice, sort: $sort, destCity: $destCity, destProvince: $destProvince)';
   }
 }
 
@@ -1054,7 +1156,9 @@ abstract mixin class _$CatalogQueryCopyWith<$Res>
       int? minRating,
       double? minPrice,
       double? maxPrice,
-      ProductSort sort});
+      ProductSort sort,
+      String? destCity,
+      String? destProvince});
 }
 
 /// @nodoc
@@ -1076,6 +1180,8 @@ class __$CatalogQueryCopyWithImpl<$Res>
     Object? minPrice = freezed,
     Object? maxPrice = freezed,
     Object? sort = null,
+    Object? destCity = freezed,
+    Object? destProvince = freezed,
   }) {
     return _then(_CatalogQuery(
       text: freezed == text
@@ -1102,6 +1208,14 @@ class __$CatalogQueryCopyWithImpl<$Res>
           ? _self.sort
           : sort // ignore: cast_nullable_to_non_nullable
               as ProductSort,
+      destCity: freezed == destCity
+          ? _self.destCity
+          : destCity // ignore: cast_nullable_to_non_nullable
+              as String?,
+      destProvince: freezed == destProvince
+          ? _self.destProvince
+          : destProvince // ignore: cast_nullable_to_non_nullable
+              as String?,
     ));
   }
 }

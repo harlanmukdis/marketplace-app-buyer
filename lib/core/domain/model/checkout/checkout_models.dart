@@ -71,8 +71,9 @@ abstract class CheckoutSessionModel with _$CheckoutSessionModel {
     /// ⚠️ Dikirim sebagai **string berisi JSON**, bukan array bersarang.
     /// Dipakai [snapshotItems] untuk membacanya.
     @StringOrNullJson() @JsonKey(name: 'cart_snapshot') String? cartSnapshot,
-
-    @IntOrNullJson() @JsonKey(name: 'shipping_address_id') int? shippingAddressId,
+    @IntOrNullJson()
+    @JsonKey(name: 'shipping_address_id')
+    int? shippingAddressId,
 
     /// `null` sebelum kurir dipilih; sesudahnya map berkunci `store_id`.
     ///
@@ -83,11 +84,13 @@ abstract class CheckoutSessionModel with _$CheckoutSessionModel {
     /// Tanpa [JsonMapJson], `GET /checkout/sessions/{id}` melempar
     /// `type 'String' is not a subtype of type 'Map<String, dynamic>?'`
     /// begitu kurir dipilih — persis di tengah alur checkout.
-    @JsonMapJson() @JsonKey(name: 'selected_couriers')
+    @JsonMapJson()
+    @JsonKey(name: 'selected_couriers')
     Map<String, dynamic>? selectedCouriers,
 
     /// Sama seperti [selectedCouriers]: string berisi JSON, bukan objek.
-    @JsonMapJson() @JsonKey(name: 'applied_vouchers')
+    @JsonMapJson()
+    @JsonKey(name: 'applied_vouchers')
     Map<String, dynamic>? appliedVouchers,
 
     /// String berdesimal di endpoint ini (`"3049000.00"`), angka di
@@ -100,7 +103,6 @@ abstract class CheckoutSessionModel with _$CheckoutSessionModel {
     /// sementara [createdAt] dalam WIB; backend sudah menyeragamkannya — lihat
     /// catatan di kepala berkas ini.
     @ServerDateTimeJson() @JsonKey(name: 'expires_at') DateTime? expiresAt,
-
     @ServerDateTimeJson() @JsonKey(name: 'created_at') DateTime? createdAt,
   }) = _CheckoutSessionModel;
 
@@ -135,10 +137,7 @@ abstract class CheckoutSessionModel with _$CheckoutSessionModel {
     try {
       final decoded = jsonDecode(raw);
       if (decoded is! List) return const [];
-      return decoded
-          .whereType<Map>()
-          .map(Map<String, dynamic>.from)
-          .toList();
+      return decoded.whereType<Map>().map(Map<String, dynamic>.from).toList();
     } on FormatException {
       return const [];
     }
@@ -174,9 +173,18 @@ abstract class ShippingOptionModel with _$ShippingOptionModel {
   const ShippingOptionModel._();
 
   const factory ShippingOptionModel({
-    @StringJson() @JsonKey(name: 'courier_code') @Default('') String courierCode,
-    @StringJson() @JsonKey(name: 'service_code') @Default('') String serviceCode,
-    @StringJson() @JsonKey(name: 'service_name') @Default('') String serviceName,
+    @StringJson()
+    @JsonKey(name: 'courier_code')
+    @Default('')
+    String courierCode,
+    @StringJson()
+    @JsonKey(name: 'service_code')
+    @Default('')
+    String serviceCode,
+    @StringJson()
+    @JsonKey(name: 'service_name')
+    @Default('')
+    String serviceName,
     @StringOrNullJson() String? zone,
     @DoubleJson() @JsonKey(name: 'weight_kg') @Default(0) double weightKg,
     @DoubleJson() @Default(0) double cost,
@@ -203,9 +211,10 @@ abstract class ShippingOptionModel with _$ShippingOptionModel {
 @freezed
 abstract class ShippingSelectionResult with _$ShippingSelectionResult {
   const factory ShippingSelectionResult({
-    @JsonKey(name: 'selected_couriers')
-    Map<String, dynamic>? selectedCouriers,
-    @DoubleJson() @JsonKey(name: 'shipping_total') @Default(0)
+    @JsonKey(name: 'selected_couriers') Map<String, dynamic>? selectedCouriers,
+    @DoubleJson()
+    @JsonKey(name: 'shipping_total')
+    @Default(0)
     double shippingTotal,
     @DoubleJson() @JsonKey(name: 'grand_total') @Default(0) double grandTotal,
   }) = _ShippingSelectionResult;
@@ -225,14 +234,100 @@ abstract class CheckoutConfirmResult with _$CheckoutConfirmResult {
 
   const factory CheckoutConfirmResult({
     @JsonKey(name: 'order_ids') @Default(<int>[]) List<int> orderIds,
-    @IntOrNullJson() @JsonKey(name: 'payment_transaction_id')
+    @IntOrNullJson()
+    @JsonKey(name: 'payment_transaction_id')
     int? paymentTransactionId,
+
+    // --- kontrak YANG DIUSULKAN untuk bayar via Xpedia Wallet (docs/22 #1–#2)
+    //
+    // Belum dikirim server; di debug disisipkan mock
+    // (`checkout_mock_routes.dart`). Pada alur lama ketiganya tidak ada, jadi
+    // default-nya harus berarti "belum dibayar".
+
+    /// `true` kalau konfirmasi **sekaligus membayar** dari saldo Wallet.
+    /// `false` di alur lama: order masih harus dibayar di layar pembayaran.
+    @BoolJson() @Default(false) bool paid,
+
+    /// Baris `wallet_transactions` hasil pendebitan.
+    @IntOrNullJson()
+    @JsonKey(name: 'wallet_transaction_id')
+    int? walletTransactionId,
+
+    /// Saldo sesudah dipotong — ditampilkan di layar sukses supaya pembeli
+    /// tidak perlu membuka dompet untuk memastikannya.
+    @DoubleOrNullJson() @JsonKey(name: 'balance_after') double? balanceAfter,
   }) = _CheckoutConfirmResult;
 
   factory CheckoutConfirmResult.fromJson(Map<String, dynamic> json) =>
       _$CheckoutConfirmResultFromJson(json);
 
   bool get isMultiStore => orderIds.length > 1;
+}
+
+/// Ringkasan pembayaran Xpedia Wallet untuk satu sesi checkout —
+/// **kontrak yang diusulkan**, `GET /checkout/sessions/{id}/wallet-summary`.
+///
+/// 🔴 Endpoint ini **belum ada** di marketplace-api (docs/22 #1: checkout
+/// wajib Wallet). Di debug dijawab mock; di build yang mock-nya mati, rute
+/// tak dikenal dibalas 404 HTML (`DataError.isRouteNotFound`) dan checkout
+/// kembali ke pemilih metode pembayaran lama. Jadi begitu backend
+/// membangunnya dengan bentuk ini, alur Wallet menyala sendiri.
+///
+/// Kenapa dihitung server, bukan dirakit aplikasi dari `GET /wallet` +
+/// `grand_total`: saldo yang **boleh dipakai** (dikurangi saldo tertahan),
+/// total final (ongkir + voucher), dan apakah PIN sudah dibuat hanya diketahui
+/// server — dan `GET /wallet` sama sekali tidak memberi tahu soal PIN
+/// (CLAUDE.md, "Dompet"). Menghitungnya di dua tempat mengundang layar yang
+/// bilang "saldo cukup" lalu server menolak.
+@freezed
+abstract class WalletSummaryModel with _$WalletSummaryModel {
+  const WalletSummaryModel._();
+
+  const factory WalletSummaryModel({
+    /// Saldo yang bisa dipakai membayar (sudah dikurangi saldo tertahan).
+    @DoubleJson()
+    @JsonKey(name: 'wallet_balance')
+    @Default(0)
+    double walletBalance,
+
+    /// Sama dengan `grand_total` sesi — sudah termasuk ongkir dan voucher.
+    @DoubleJson() @JsonKey(name: 'grand_total') @Default(0) double grandTotal,
+
+    /// `max(0, grand_total − wallet_balance)`.
+    @DoubleJson() @Default(0) double shortfall,
+    @BoolJson() @JsonKey(name: 'can_pay') @Default(false) bool canPay,
+
+    /// Minimum top up (blueprint: Rp 10.000). Dikirim server supaya tidak
+    /// hardcoded di dua tempat seperti minimum penarikan.
+    @DoubleJson() @JsonKey(name: 'min_topup') @Default(10000) double minTopup,
+
+    /// Sudahkah PIN Wallet dibuat. Tanpa field ini aplikasi tidak punya cara
+    /// mengetahuinya sebelum pembayaran ditolak.
+    @BoolJson() @JsonKey(name: 'pin_set') @Default(false) bool pinSet,
+  }) = _WalletSummaryModel;
+
+  factory WalletSummaryModel.fromJson(Map<String, dynamic> json) =>
+      _$WalletSummaryModelFromJson(json);
+
+  bool get isInsufficient => !canPay && shortfall > 0;
+
+  /// Nominal top up yang disarankan: selisihnya, dibulatkan ke atas ke
+  /// ribuan, dan tidak pernah di bawah minimum.
+  double get suggestedTopup {
+    final rounded = (shortfall / 1000).ceil() * 1000.0;
+    return rounded < minTopup ? minTopup : rounded;
+  }
+}
+
+/// Kode error **yang diusulkan** untuk bayar via Wallet. Belum ada di
+/// `ApiErrorCode` karena backend belum mengirimnya — pindahkan ke sana (dan
+/// ke `errorMessageFor`) begitu endpointnya dibangun.
+abstract final class WalletPayErrorCode {
+  /// PIN salah. `details.attempts_left` = sisa percobaan sebelum 429.
+  static const invalidPin = 'INVALID_PIN';
+
+  /// Pembeli belum pernah membuat PIN Wallet.
+  static const pinNotSet = 'PIN_NOT_SET';
 }
 
 /// Format sisa waktu reservasi untuk hitung mundur di layar.

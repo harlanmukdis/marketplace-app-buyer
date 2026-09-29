@@ -1,0 +1,40 @@
+{
+  "tracking_history": [
+    {
+      "status": "delivered",
+      "description": "Paket telah diterima di alamat tujuan",
+      "location": "Alamat tujuan",
+      "occurred_at": "2026-09-30 13:40:00"
+    },
+    {
+      "status": "in_transit",
+      "description": "Paket sedang dibawa kurir menuju alamat tujuan",
+      "location": "Hub kota tujuan",
+      "occurred_at": "2026-09-30 09:20:00"
+    },
+    {
+      "status": "in_transit",
+      "description": "Paket telah tiba di kota tujuan",
+      "location": "Hub kota tujuan",
+      "occurred_at": "2026-09-29 18:45:00"
+    },
+    {
+      "status": "in_transit",
+      "description": "Paket telah diberangkatkan dari kota asal",
+      "location": "Gateway kota asal",
+      "occurred_at": "2026-09-29 08:10:00"
+    },
+    {
+      "status": "in_transit",
+      "description": "Paket diterima di gudang sortir",
+      "location": "Gudang sortir kota asal",
+      "occurred_at": "2026-09-28 21:30:00"
+    },
+    {
+      "status": "picked_up",
+      "description": "Paket telah diserahkan penjual ke kurir",
+      "location": "Kota asal",
+      "occurred_at": "2026-09-28 14:20:00"
+    }
+  ]
+}

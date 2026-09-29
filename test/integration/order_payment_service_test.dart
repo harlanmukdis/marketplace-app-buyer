@@ -183,12 +183,24 @@ void main() {
       expect(gap, const Duration(hours: 1));
     });
 
-    test('shipping_address_snapshot hanya membawa address_id', () async {
+    test('🔴 detail kini membawa shipping_address, bukan snapshot', () async {
+      // Sejak backend v1.x (blueprint Seller Ch.7) `GET /orders/{id}` membuang
+      // `shipping_address_snapshot` dan menggantinya dengan alamat yang sudah
+      // terselesaikan — join LIVE ke user_addresses, bukan snapshot. Daftar
+      // `GET /orders` masih membawa snapshot lama.
       final placed = await placeOrder();
-      final order = (await orders.fetchOrder(placed.orderIds.first)).data;
+      final id = placed.orderIds.first;
+      final order = (await orders.fetchOrder(id)).data;
 
-      expect(order.shippingAddressId, addressId);
-      expect(order.shippingAddressSnapshot!.keys, ['address_id']);
+      expect(order.shippingAddressSnapshot, isNull);
+      expect(order.shippingAddress, isNotNull);
+      expect(order.shippingAddress!.recipientName, isNotEmpty);
+      expect(order.shippingAddress!.city, isNotEmpty);
+
+      final listed = (await orders.fetchOrders()).data.firstWhere((o) => o.id == id);
+      expect(listed.shippingAddressId, addressId);
+
+      await orders.cancel(id, reason: 'uji otomatis');
     });
 
     test('pesanan milik user lain dibalas 403, bukan 404', () async {
@@ -235,6 +247,39 @@ void main() {
       final placed = await placeOrder();
       final tracking = await orders.fetchTracking(placed.orderIds.first);
       expect(tracking.data, isNull);
+    });
+
+    // Satu pesanan untuk empat kontrak baru, supaya suite tidak menghabiskan
+    // stok lebih cepat (lihat `support/seeded_product.dart`).
+    test('kontrak endpoint pasca-beli baru pada pesanan pending', () async {
+      final placed = await placeOrder();
+      final id = placed.orderIds.first;
+
+      // Invoice hanya untuk `completed`.
+      await expectLater(
+        orders.fetchInvoice(id),
+        throwsA(predicate((e) => e.toString().contains('INVOICE_NOT_AVAILABLE'))),
+      );
+
+      // Tanpa usulan kirim sebagian dari penjual.
+      await expectLater(
+        orders.respondPartialFulfillment(id, PartialFulfillmentDecision.continuePartial),
+        throwsA(predicate((e) => e.toString().contains('VALIDATION_ERROR'))),
+      );
+
+      // Bukan Secure+ / belum dikirim → daftar kosong, bukan error.
+      expect((await orders.fetchShipmentEvidence(id)).data, isEmpty);
+
+      // Field baru ikut di detail.
+      final order = (await orders.fetchOrder(id)).data;
+      expect(order.cancellationFault, isNull);
+      expect(order.awaitsPartialDecision, isFalse);
+      expect(order.canCancel, isTrue);
+
+      // Pembatalan pembeli kini mencatat pihak penyebabnya.
+      await orders.cancel(id, reason: 'uji otomatis');
+      final cancelled = (await orders.fetchOrder(id)).data;
+      expect(cancelled.cancellationFault, 'buyer');
     });
   });
 

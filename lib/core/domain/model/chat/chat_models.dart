@@ -20,9 +20,9 @@ abstract class ChatConversationModel with _$ChatConversationModel {
     /// `null` untuk percakapan yang belum berisi pesan apa pun — dan itu
     /// mungkin terjadi, karena `POST /chat/conversations` membuat barisnya
     /// lebih dulu tanpa pesan.
-    @ServerDateTimeJson() @JsonKey(name: 'last_message_at')
+    @ServerDateTimeJson()
+    @JsonKey(name: 'last_message_at')
     DateTime? lastMessageAt,
-
     @ServerDateTimeJson() @JsonKey(name: 'created_at') DateTime? createdAt,
 
     /// 🔴 **Selalu `0`, dan jangan dipercaya.**
@@ -35,7 +35,9 @@ abstract class ChatConversationModel with _$ChatConversationModel {
     ///
     /// Dimodelkan supaya keberadaannya terdokumentasi — bukan untuk dipakai.
     /// Lihat [hasReliableUnreadCount].
-    @IntJson() @JsonKey(name: 'buyer_unread_count') @Default(0)
+    @IntJson()
+    @JsonKey(name: 'buyer_unread_count')
+    @Default(0)
     int buyerUnreadCount,
   }) = _ChatConversationModel;
 
@@ -56,13 +58,17 @@ abstract class ChatConversationModel with _$ChatConversationModel {
 
 /// Jenis pesan, sesuai `ENUM` kolom `chat_messages.message_type`.
 ///
-/// ⚠️ **ENUM-nya tidak ditegakkan.** MySQL berjalan non-strict di repo ini,
-/// jadi nilai di luar daftar — diuji dengan `"sticker"` — tersimpan sebagai
-/// **string kosong**, bukan ditolak. Karena itu [unknown] bukan kemewahan:
-/// pesan dengan jenis kosong benar-benar bisa ada di database.
+/// Sejak backend v1.x `send_message()` **menolak** jenis di luar
+/// `text|image|product_share|order_share` dengan `422 VALIDATION_ERROR`, dan
+/// `video` dihapus dari ENUM (blueprint: tidak ada video/dokumen/audio di
+/// chat). Dulu nilai asing tersimpan sebagai string kosong — pesan lama
+/// semacam itu masih bisa ada di database, jadi [unknown] dan [video] tetap
+/// dipertahankan **untuk membaca**, tidak pernah untuk mengirim.
 enum ChatMessageType {
   text('text'),
   image('image'),
+
+  /// Hanya untuk membaca pesan lama; server kini menolaknya.
   video('video'),
   productShare('product_share'),
   orderShare('order_share'),
@@ -99,7 +105,6 @@ abstract class ChatMessageModel with _$ChatMessageModel {
     /// **Boleh `null`.** Server menerima `POST` tanpa `content` dan
     /// membalasnya `201` — tidak ada validasi sama sekali.
     @StringOrNullJson() String? content,
-
     @IntOrNullJson() @JsonKey(name: 'shared_product_id') int? sharedProductId,
     @IntOrNullJson() @JsonKey(name: 'shared_order_id') int? sharedOrderId,
     @ServerDateTimeJson() @JsonKey(name: 'created_at') DateTime? createdAt,
@@ -110,6 +115,14 @@ abstract class ChatMessageModel with _$ChatMessageModel {
     /// pemanggil, jadi pesan sendiri tidak pernah ditandai terbaca oleh diri
     /// sendiri — diverifikasi ke server.
     @ServerDateTimeJson() @JsonKey(name: 'read_at') DateTime? readAt,
+
+    /// Terisi saat lawan bicara **mengambil** pesan (`/messages` atau poll) —
+    /// ditambahkan backend v1.x. Artinya membuka ruang chat kini menulis ke
+    /// database.
+    @ServerDateTimeJson() @JsonKey(name: 'delivered_at') DateTime? deliveredAt,
+
+    /// `sent` / `delivered` / `read`, dihitung server.
+    @StringOrNullJson() @JsonKey(name: 'status') String? deliveryStatus,
   }) = _ChatMessageModel;
 
   factory ChatMessageModel.fromJson(Map<String, dynamic> json) =>
@@ -117,7 +130,18 @@ abstract class ChatMessageModel with _$ChatMessageModel {
 
   ChatMessageType get type => ChatMessageType.fromCode(typeCode);
 
-  bool get isRead => readAt != null;
+  bool get isRead => readAt != null || deliveryStatus == 'read';
+
+  /// Empat keadaan centang dari blueprint (design_buyer.md §5 no. 10):
+  /// menunggu, 1 abu, 2 abu, 2 biru. "Menunggu" hanya ada di sisi aplikasi
+  /// (pesan yang sedang dikirim), jadi dari server paling rendah `sent`.
+  MessageDelivery get delivery {
+    if (isRead) return MessageDelivery.read;
+    if (deliveredAt != null || deliveryStatus == 'delivered') {
+      return MessageDelivery.delivered;
+    }
+    return MessageDelivery.sent;
+  }
 
   /// `true` kalau pesan ini dikirim oleh [userId].
   ///
@@ -139,3 +163,6 @@ abstract class ChatMessageModel with _$ChatMessageModel {
     };
   }
 }
+
+/// Keadaan kirim sebuah pesan milik sendiri.
+enum MessageDelivery { pending, sent, delivered, read }

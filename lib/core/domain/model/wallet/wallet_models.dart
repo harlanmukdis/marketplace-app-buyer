@@ -63,9 +63,7 @@ abstract class WalletModel with _$WalletModel {
 
     /// Saldo yang ditahan (mis. penarikan yang sedang diproses). Tidak bisa
     /// dipakai membayar.
-    @DoubleJson() @JsonKey(name: 'held_balance') @Default(0)
-    double heldBalance,
-
+    @DoubleJson() @JsonKey(name: 'held_balance') @Default(0) double heldBalance,
     @StringJson() @Default('active') String status,
     @ServerDateTimeJson() @JsonKey(name: 'updated_at') DateTime? updatedAt,
     @Default(<WalletTransactionModel>[])
@@ -103,10 +101,13 @@ abstract class WalletTransactionModel with _$WalletTransactionModel {
 
     /// **Selalu positif.** Arahnya dari [type].
     @DoubleJson() @Default(0) double amount,
-
-    @DoubleJson() @JsonKey(name: 'balance_before') @Default(0)
+    @DoubleJson()
+    @JsonKey(name: 'balance_before')
+    @Default(0)
     double balanceBefore,
-    @DoubleJson() @JsonKey(name: 'balance_after') @Default(0)
+    @DoubleJson()
+    @JsonKey(name: 'balance_after')
+    @Default(0)
     double balanceAfter,
 
     /// `order`, `refund`, `withdrawal_request`, `affiliate_commission`,
@@ -144,7 +145,9 @@ abstract class WalletTransactionModel with _$WalletTransactionModel {
 @freezed
 abstract class WalletTopupResult with _$WalletTopupResult {
   const factory WalletTopupResult({
-    @IntJson() @JsonKey(name: 'payment_transaction_id') @Default(0)
+    @IntJson()
+    @JsonKey(name: 'payment_transaction_id')
+    @Default(0)
     int paymentTransactionId,
     @StringOrNullJson() @JsonKey(name: 'topup_reference') String? reference,
     @DoubleJson() @Default(0) double amount,
@@ -154,49 +157,78 @@ abstract class WalletTopupResult with _$WalletTopupResult {
       _$WalletTopupResultFromJson(json);
 }
 
-/// Isian formulir penarikan dana.
+/// Rekening tujuan penarikan, dari `GET /me/bank-accounts`.
 ///
-/// ⚠️ **Batas minimumnya divalidasi di aplikasi, dan itu terpaksa.** Server
-/// menolak "di bawah minimum" dan "saldo tidak cukup" dengan **kode error yang
-/// sama** (`WITHDRAWAL_REJECTED`), hanya pesannya berbeda — sementara panduan
-/// FE melarang mencocokkan `error.message`. Dengan memeriksa minimum lebih
-/// dulu, `WITHDRAWAL_REJECTED` yang benar-benar sampai ke user praktis hanya
-/// berarti saldo kurang, sehingga pesannya bisa tepat.
+/// Maksimal **3 rekening**, dan nama pemiliknya **wajib sama persis** (tanpa
+/// memandang huruf besar-kecil) dengan `users.full_name` — kalau tidak,
+/// `POST` dibalas `422 VALIDATION_ERROR`. Aturan ini dari blueprint (hanya
+/// rekening atas nama sendiri).
+@freezed
+abstract class BankAccountModel with _$BankAccountModel {
+  const BankAccountModel._();
+
+  const factory BankAccountModel({
+    @IntJson() required int id,
+    @StringJson() @JsonKey(name: 'bank_name') @Default('') String bankName,
+    @StringJson()
+    @JsonKey(name: 'account_number')
+    @Default('')
+    String accountNumber,
+    @StringJson()
+    @JsonKey(name: 'account_holder_name')
+    @Default('')
+    String accountHolderName,
+    @ServerDateTimeJson() @JsonKey(name: 'created_at') DateTime? createdAt,
+  }) = _BankAccountModel;
+
+  factory BankAccountModel.fromJson(Map<String, dynamic> json) =>
+      _$BankAccountModelFromJson(json);
+
+  static const int maxAccounts = 3;
+
+  /// "•••• 7890" — cukup untuk mengenali rekening tanpa menampilkannya utuh.
+  String get maskedNumber {
+    final digits = accountNumber.trim();
+    if (digits.length <= 4) return digits;
+    return '•••• ${digits.substring(digits.length - 4)}';
+  }
+}
+
+/// Isi formulir penarikan.
+///
+/// Sejak backend v1.x (blueprint Wallet) penarikan menuntut **PIN 6 digit**
+/// dan **rekening tersimpan** (`bank_account_id`). Field bank mentah
+/// (`bank_name`, dst) yang dulu dikirim kini **diabaikan** server.
 class WithdrawalDraft {
   const WithdrawalDraft({
     required this.amount,
-    this.bankName = '',
-    this.bankAccountNumber = '',
-    this.bankAccountName = '',
+    this.bankAccountId,
+    this.pin = '',
   });
 
   final double amount;
-  final String bankName;
-  final String bankAccountNumber;
-  final String bankAccountName;
+  final int? bankAccountId;
+  final String pin;
 
-  /// Minimum penarikan.
-  ///
-  /// Server memakai `50000` sebagai **fallback hardcoded**, dengan komentar
-  /// bahwa nilai aktifnya semestinya dibaca dari `admin_settings
-  /// .min_withdrawal_amount`. Jadi angka ini bisa melenceng kalau admin
-  /// mengubahnya — server tetap penjaga terakhirnya.
+  /// Minimum penarikan. Kini dibaca server dari config
+  /// (`min_withdrawal_amount`, bawaan 50000), bukan literal — tapi belum dari
+  /// `admin_settings` di DB, jadi angka ini tetap bisa melenceng.
   static const double minimumAmount = 50000;
 
-  Set<String> get missingFields => {
-        if (bankName.trim().isEmpty) 'bank_name',
-        if (bankAccountNumber.trim().isEmpty) 'bank_account_number',
-        if (bankAccountName.trim().isEmpty) 'bank_account_name',
-      };
+  static final RegExp _pinPattern = RegExp(r'^\d{6}$');
 
   bool get meetsMinimum => amount >= minimumAmount;
 
-  bool get isValid => meetsMinimum && missingFields.isEmpty;
+  bool get hasValidPin => _pinPattern.hasMatch(pin);
+
+  bool get isValid => meetsMinimum && bankAccountId != null && hasValidPin;
+
+  WithdrawalDraft withPin(String value) =>
+      WithdrawalDraft(amount: amount, bankAccountId: bankAccountId, pin: value);
 
   Map<String, dynamic> toJson() => {
         'amount': amount,
-        'bank_name': bankName.trim(),
-        'bank_account_number': bankAccountNumber.trim(),
-        'bank_account_name': bankAccountName.trim(),
+        'bank_account_id': bankAccountId,
+        'pin': pin,
       };
 }

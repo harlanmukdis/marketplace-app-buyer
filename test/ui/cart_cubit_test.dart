@@ -26,7 +26,9 @@ CartSnapshot _snapshot({int quantity = 2, bool selected = true}) {
     storeName: 'Toko Kopi',
   );
   return CartSnapshot(
-    groups: [CartStoreGroup(storeName: 'Toko Kopi', items: [item])],
+    groups: [
+      CartStoreGroup(storeName: 'Toko Kopi', items: [item])
+    ],
     summary: CartSummaryModel(
       subtotal: selected ? 1000.0 * quantity : 0.0,
       itemCount: selected ? 1 : 0,
@@ -253,5 +255,64 @@ void main() {
 
     expect(repository.calls, contains('select:1:false'));
     await cubit.close();
+  });
+
+  group('aksi massal (Pilih Semua / Hapus)', () {
+    CartSnapshot twoLines({bool firstSelected = true}) => CartSnapshot(
+          groups: [
+            CartStoreGroup(storeName: 'Toko Kopi', items: [
+              CartItemModel(id: 1, storeId: 7, isSelected: firstSelected),
+              const CartItemModel(id: 2, storeId: 7, isSelected: false),
+            ]),
+          ],
+          summary: const CartSummaryModel(),
+        );
+
+    test('setSelectedMany hanya mengirim baris yang nilainya berbeda',
+        () async {
+      repository.result = DataSuccess(twoLines());
+      final cubit = CartCubit();
+      await cubit.load();
+
+      await cubit.setSelectedMany([1, 2], true);
+
+      // Baris 1 sudah tercentang — tidak ada PATCH sia-sia untuknya.
+      expect(repository.calls, isNot(contains('select:1:true')));
+      expect(repository.calls, contains('select:2:true'));
+      expect((cubit.state as CartReady).mutatingItemIds, isEmpty);
+      await cubit.close();
+    });
+
+    test('removeItems menghapus berurutan, satu DELETE per baris', () async {
+      repository.result = DataSuccess(twoLines());
+      final cubit = CartCubit();
+      await cubit.load();
+
+      await cubit.removeItems([1, 2]);
+
+      expect(
+        repository.calls.where((c) => c.startsWith('remove:')),
+        ['remove:1', 'remove:2'],
+      );
+      await cubit.close();
+    });
+
+    test('berhenti pada kegagalan pertama dan mempertahankan isi keranjang',
+        () async {
+      repository.result = DataSuccess(twoLines());
+      final cubit = CartCubit();
+      await cubit.load();
+
+      repository.result = DataFailed(_error('NETWORK'));
+      await cubit.removeItems([1, 2]);
+
+      final state = cubit.state as CartReady;
+      expect(
+          repository.calls.where((c) => c.startsWith('remove:')), ['remove:1']);
+      expect(state.cart.totalLines, 2);
+      expect(state.actionError?.code, 'NETWORK');
+      expect(state.mutatingItemIds, isEmpty);
+      await cubit.close();
+    });
   });
 }

@@ -29,6 +29,11 @@ sealed class CatalogHomeState with _$CatalogHomeState {
     /// Masih ada halaman berikutnya, dihitung dari `meta.total`.
     @Default(false) bool hasMore,
 
+    /// `meta.total` apa adanya — jumlah produk yang cocok, untuk label
+    /// "1.238 produk" di hasil pencarian. `null` kalau server tidak
+    /// mengirimnya.
+    int? total,
+
     /// Sedang menambah halaman berikutnya di bawah daftar yang sudah tampil.
     @Default(false) bool isLoadingMore,
 
@@ -65,7 +70,15 @@ abstract class CatalogQuery with _$CatalogQuery {
     int? minRating,
     double? minPrice,
     double? maxPrice,
-    @Default(ProductSort.latest) ProductSort sort,
+
+    /// Urutan bawaan `recommended`: blueprint melarang kontrol urutan di sisi
+    /// pembeli, jadi peringkat sepenuhnya milik server.
+    @Default(ProductSort.recommended) ProductSort sort,
+
+    /// Tujuan kirim (kota/provinsi alamat utama). Server membuang produk yang
+    /// tidak bisa dikirim ke sana, jadi hasil yang tampil memang bisa dibeli.
+    String? destCity,
+    String? destProvince,
   }) = _CatalogQuery;
 
   /// Ada filter aktif selain urutan default.

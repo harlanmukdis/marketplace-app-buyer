@@ -1,0 +1,30 @@
+[
+  {
+    "id": "9101",
+    "order_id": "12",
+    "order_item_id": "31",
+    "product_id": "4",
+    "store_id": "2",
+    "product_name": "Produk Simulasi A",
+    "variant_options": "{\"warna\":\"Contoh\"}",
+    "rating": "5",
+    "comment": "Contoh ulasan simulasi yang masih bisa diubah.",
+    "is_anonymous": "0",
+    "created_at": "2026-09-27 10:00:00",
+    "updated_at": "2026-09-27 10:00:00"
+  },
+  {
+    "id": "9102",
+    "order_id": "9",
+    "order_item_id": "22",
+    "product_id": "7",
+    "store_id": "3",
+    "product_name": "Produk Simulasi B",
+    "variant_options": null,
+    "rating": "4",
+    "comment": "Contoh ulasan simulasi yang sudah lewat 30 hari.",
+    "is_anonymous": "1",
+    "created_at": "2026-08-10 19:30:00",
+    "updated_at": "2026-08-12 08:00:00"
+  }
+]

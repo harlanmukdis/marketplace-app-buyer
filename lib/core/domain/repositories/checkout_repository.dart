@@ -77,10 +77,20 @@ abstract class CheckoutRepository {
   /// ⚠️ Jangan pernah mengulang panggilan ini secara otomatis: backend belum
   /// menangani `Idempotency-Key`, jadi pengulangan berisiko menggandakan
   /// order.
+  ///
+  /// [pin] dikirim hanya untuk `paymentMethod: 'wallet'` — bayar langsung dari
+  /// saldo (kontrak yang diusulkan, docs/22 #2). `DataSuccess.meta` ikut
+  /// diteruskan supaya layar bisa menandai hasil simulasi.
   Future<DataState<CheckoutConfirmResult>> confirm(
     String sessionId, {
     required String paymentMethod,
+    String? pin,
   });
+
+  /// Saldo Wallet vs total sesi (kontrak yang diusulkan). Kegagalan
+  /// `isRouteNotFound` berarti backend belum punya pembayaran Wallet —
+  /// pemanggil jatuh ke alur metode pembayaran lama.
+  Future<DataState<WalletSummaryModel>> fetchWalletSummary(String sessionId);
 
   /// Membatalkan sesi dan melepas reservasi stok.
   Future<DataState<void>> cancelSession(String sessionId);

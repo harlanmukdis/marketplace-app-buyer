@@ -6,6 +6,7 @@ library;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:marketplace_app_member/core/domain/model/cart/cart_model.dart';
+import 'package:marketplace_app_member/core/domain/model/cart/voucher_model.dart';
 
 /// Satu grup toko persis seperti dikirim `GET /cart`.
 const _groupJson = <String, dynamic>{
@@ -44,7 +45,8 @@ void main() {
     test('is_selected "1"/"0" jadi bool, bukan string truthy', () {
       // "0" adalah string tidak kosong — kalau diperiksa sembarangan ia
       // truthy, dan baris yang tidak dicentang akan terlihat tercentang.
-      final selected = CartItemModel.fromJson(const {'id': 1, 'is_selected': '1'});
+      final selected =
+          CartItemModel.fromJson(const {'id': 1, 'is_selected': '1'});
       final unselected =
           CartItemModel.fromJson(const {'id': 2, 'is_selected': '0'});
 
@@ -204,6 +206,62 @@ void main() {
       final summary = CartSummaryModel.fromJson(
           const {'subtotal': 10000, 'item_count': 1, 'discount_amount': 50000});
       expect(summary.payableSubtotal, 0);
+    });
+  });
+
+  group('voucher', () {
+    test('GET /me/vouchers: kolom tabel vouchers sebagai string MySQL', () {
+      // Bentuk dari `SELECT v.*, uvc.claimed_at` — belum pernah teramati
+      // berisi (tidak ada seed), jadi diturunkan dari skema.
+      final voucher = VoucherModel.fromJson(const {
+        'id': '3',
+        'store_id': null,
+        'code': 'HEMAT10',
+        'name': 'Hemat 10%',
+        'discount_type': 'percentage',
+        'discount_value': '10.00',
+        'max_discount': '50000.00',
+        'min_spend': '100000.00',
+        'quota': '100',
+        'used_count': '0',
+        'max_use_per_user': '1',
+        'valid_from': '2026-09-01 00:00:00',
+        'valid_until': '2099-12-31 23:59:59',
+        'status': 'active',
+        'claimed_at': '2026-09-29 10:00:00',
+      });
+      expect(voucher.storeId, isNull);
+      expect(voucher.discountValue, 10);
+      expect(voucher.maxDiscount, 50000);
+      expect(voucher.minSpend, 100000);
+      expect(voucher.isUsable, isTrue);
+    });
+
+    test('voucher kedaluwarsa tetap terbaca tapi tidak bisa dipakai', () {
+      final voucher = VoucherModel.fromJson(const {
+        'id': '4',
+        'code': 'LAMA',
+        'status': 'expired',
+        'valid_until': '2020-01-01 00:00:00',
+      });
+      expect(voucher.isUsable, isFalse);
+    });
+
+    test('rekomendasi membawa voucher_id dan value (angka asli)', () {
+      final recommended = AppliedVoucherModel.fromJson(const {
+        'code': 'ONGKIR',
+        'category': 'shipping',
+        'store_id': null,
+        'discount_type': 'free_shipping',
+        'discount_value': 20000.0,
+        'max_discount': null,
+        'discount_amount': null,
+        'voucher_id': 9,
+        'value': 20000.0,
+      });
+      expect(recommended.voucherId, 9);
+      expect(recommended.estimatedValue, 20000);
+      expect(recommended.reducesPayment, isFalse);
     });
   });
 }

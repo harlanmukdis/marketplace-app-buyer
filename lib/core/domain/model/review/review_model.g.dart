@@ -57,3 +57,54 @@ Map<String, dynamic> _$ReviewReplyModelToJson(_ReviewReplyModel instance) =>
       'reply_text': const StringOrNullJson().toJson(instance.replyText),
       'created_at': const ServerDateTimeJson().toJson(instance.createdAt),
     };
+
+_MyReviewModel _$MyReviewModelFromJson(Map<String, dynamic> json) =>
+    _MyReviewModel(
+      id: const IntJson().fromJson(json['id']),
+      orderId: json['order_id'] == null
+          ? 0
+          : const IntJson().fromJson(json['order_id']),
+      orderItemId: json['order_item_id'] == null
+          ? 0
+          : const IntJson().fromJson(json['order_item_id']),
+      productId: json['product_id'] == null
+          ? 0
+          : const IntJson().fromJson(json['product_id']),
+      storeId: json['store_id'] == null
+          ? 0
+          : const IntJson().fromJson(json['store_id']),
+      productName: const StringOrNullJson().fromJson(json['product_name']),
+      variantOptions: const JsonMapJson().fromJson(json['variant_options']),
+      rating:
+          json['rating'] == null ? 0 : const IntJson().fromJson(json['rating']),
+      comment: const StringOrNullJson().fromJson(json['comment']),
+      isAnonymous: json['is_anonymous'] == null
+          ? false
+          : const BoolJson().fromJson(json['is_anonymous']),
+      createdAt: const ServerDateTimeJson().fromJson(json['created_at']),
+      updatedAt: const ServerDateTimeJson().fromJson(json['updated_at']),
+      editableUntil:
+          const ServerDateTimeJson().fromJson(json['editable_until']),
+      isEditable: json['is_editable'] == null
+          ? false
+          : const BoolJson().fromJson(json['is_editable']),
+    );
+
+Map<String, dynamic> _$MyReviewModelToJson(_MyReviewModel instance) =>
+    <String, dynamic>{
+      'id': const IntJson().toJson(instance.id),
+      'order_id': const IntJson().toJson(instance.orderId),
+      'order_item_id': const IntJson().toJson(instance.orderItemId),
+      'product_id': const IntJson().toJson(instance.productId),
+      'store_id': const IntJson().toJson(instance.storeId),
+      'product_name': const StringOrNullJson().toJson(instance.productName),
+      'variant_options': const JsonMapJson().toJson(instance.variantOptions),
+      'rating': const IntJson().toJson(instance.rating),
+      'comment': const StringOrNullJson().toJson(instance.comment),
+      'is_anonymous': const BoolJson().toJson(instance.isAnonymous),
+      'created_at': const ServerDateTimeJson().toJson(instance.createdAt),
+      'updated_at': const ServerDateTimeJson().toJson(instance.updatedAt),
+      'editable_until':
+          const ServerDateTimeJson().toJson(instance.editableUntil),
+      'is_editable': const BoolJson().toJson(instance.isEditable),
+    };

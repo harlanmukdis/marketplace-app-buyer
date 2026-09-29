@@ -33,6 +33,8 @@ abstract class CatalogRepository {
     String? city,
     String? province,
     String? courier,
+    String? destCity,
+    String? destProvince,
     ProductSort sort,
     int page,
     int perPage,

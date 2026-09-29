@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:marketplace_app_member/core/design/xp_colors.dart';
+import 'package:marketplace_app_member/core/design/xp_text.dart';
 import 'package:marketplace_app_member/core/utils/app_routes.dart';
+import 'package:marketplace_app_member/ui/main/chat/chat_room_context.dart';
 import 'package:marketplace_app_member/ui/main/chat/cubit/chat_list_cubit.dart';
 import 'package:marketplace_app_member/util/error_message.dart';
 
@@ -16,15 +19,21 @@ import 'package:marketplace_app_member/util/error_message.dart';
 /// `UNIQUE (buyer_id, store_id)`), jadi menekan tombol ini berkali-kali tidak
 /// menumpuk percakapan duplikat.
 ///
-/// ⚠️ **Nama toko tidak ikut dikirim**, sehingga judul ruangnya jatuh ke
-/// "Chat". `GET /products/{id}` hanya membawa `store_id` — tidak ada nama
-/// toko di dalamnya, dan tidak ada endpoint publik untuk menukar id jadi
-/// nama. Namanya baru muncul saat ruang dibuka lewat daftar percakapan, yang
-/// responsnya memang di-join ke `stores`.
+/// `GET /products/{id}` hanya membawa `store_id`, tanpa nama toko. Pemanggil
+/// yang sudah memuat profil tokonya (`GET /stores/{id}`, publik) mengoper
+/// [storeName] supaya judul ruang langsung benar; tanpa itu judulnya jatuh ke
+/// "Chat" sampai ruang dibuka lewat daftar percakapan, yang di-join ke
+/// `stores`.
+///
+/// [productId] diisi halaman produk: ruang chat lalu menawarkan kartu
+/// "Tanyakan produk ini" yang mengirim `product_share` — pertanyaan penjual
+/// langsung punya konteks tanpa pembeli menyalin nama produk.
 class ChatWithStoreButton extends StatelessWidget {
-  const ChatWithStoreButton({super.key, required this.storeId});
+  const ChatWithStoreButton({super.key, required this.storeId, this.storeName, this.productId});
 
   final int storeId;
+  final String? storeName;
+  final int? productId;
 
   @override
   Widget build(BuildContext context) {
@@ -33,15 +42,17 @@ class ChatWithStoreButton extends StatelessWidget {
     // permintaan yang terbuang.
     return BlocProvider(
       create: (_) => ChatListCubit(),
-      child: _Button(storeId: storeId),
+      child: _Button(storeId: storeId, storeName: storeName, productId: productId),
     );
   }
 }
 
 class _Button extends StatefulWidget {
-  const _Button({required this.storeId});
+  const _Button({required this.storeId, this.storeName, this.productId});
 
   final int storeId;
+  final String? storeName;
+  final int? productId;
 
   @override
   State<_Button> createState() => _ButtonState();
@@ -74,23 +85,41 @@ class _ButtonState extends State<_Button> {
       return;
     }
 
-    if (mounted) context.push(AppRoutes.chatRoomPath(id));
+    final name = widget.storeName?.trim();
+    ChatRoomContext.put(
+      id,
+      ChatRoomContext(storeId: widget.storeId, productId: widget.productId),
+    );
+    if (mounted) {
+      context.push(
+        AppRoutes.chatRoomPath(id),
+        extra: name == null || name.isEmpty ? null : name,
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
       width: double.infinity,
+      height: 44,
       child: OutlinedButton.icon(
         onPressed: _opening ? null : _open,
+        style: OutlinedButton.styleFrom(
+          foregroundColor: XpColors.textSecondary,
+          side: BorderSide(color: XpColors.borderDefault),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(XpRadius.m)),
+          textStyle: XpText.labelL(context),
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+        ),
         icon: _opening
             ? const SizedBox(
                 width: 16,
                 height: 16,
                 child: CircularProgressIndicator(strokeWidth: 2),
               )
-            : const Icon(Icons.chat_bubble_outline, size: 18),
-        label: const Text('Chat penjual'),
+            : const Icon(Icons.chat_outlined, size: 18),
+        label: const Text('Chat Penjual'),
       ),
     );
   }

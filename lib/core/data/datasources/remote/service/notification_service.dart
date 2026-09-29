@@ -71,8 +71,7 @@ class NotificationService {
   Future<ApiEnvelope<void>> markRead(int id) async {
     const context = 'POST /me/notifications/{id}/read';
     try {
-      final response =
-          await _dio.post<dynamic>('/me/notifications/$id/read');
+      final response = await _dio.post<dynamic>('/me/notifications/$id/read');
       return parseEnvelope(response, (_) {}, context: context);
     } on DioException catch (e) {
       throw ApiException.fromDio(e, context: context);

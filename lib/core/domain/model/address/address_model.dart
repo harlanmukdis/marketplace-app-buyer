@@ -26,15 +26,25 @@ abstract class AddressModel with _$AddressModel {
 
     /// Server mengisi `'Rumah'` kalau tidak dikirim.
     @StringJson() @Default('') String label,
-    @StringJson() @JsonKey(name: 'recipient_name') @Default('')
+    @StringJson()
+    @JsonKey(name: 'recipient_name')
+    @Default('')
     String recipientName,
     @StringJson() @Default('') String phone,
 
     /// Alamat lengkap satu baris. **Bukan** `address_line`.
-    @StringJson() @JsonKey(name: 'full_address') @Default('') String fullAddress,
+    @StringJson()
+    @JsonKey(name: 'full_address')
+    @Default('')
+    String fullAddress,
     @StringJson() @Default('') String city,
     @StringJson() @Default('') String province,
     @StringJson() @JsonKey(name: 'postal_code') @Default('') String postalCode,
+
+    /// FK opsional ke `master_cities` (`GET /locations/cities`). `null` untuk
+    /// alamat lama atau kota yang diketik bebas — master lokasi di seed baru
+    /// berisi 15 kota, jadi teks bebas tetap sah.
+    @IntOrNullJson() @JsonKey(name: 'city_id') int? cityId,
     @DoubleOrNullJson() double? latitude,
     @DoubleOrNullJson() double? longitude,
 

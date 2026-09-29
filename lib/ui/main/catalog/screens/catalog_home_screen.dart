@@ -1,27 +1,60 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:marketplace_app_member/core/design/xp_colors.dart';
+import 'package:marketplace_app_member/core/design/xp_text.dart';
+import 'package:marketplace_app_member/core/design/xp_widgets.dart';
 import 'package:marketplace_app_member/core/domain/model/catalog/category_model.dart';
-import 'package:marketplace_app_member/core/function/components.dart';
+import 'package:marketplace_app_member/core/domain/model/catalog/product_model.dart';
 import 'package:marketplace_app_member/core/utils/app_routes.dart';
-import 'package:marketplace_app_member/core/utils/app_styles.dart';
-import 'package:marketplace_app_member/core/utils/constant.dart';
-import 'package:marketplace_app_member/core/utils/extensions.dart';
+import 'package:marketplace_app_member/ui/main/address/cubit/address_cubit.dart';
 import 'package:marketplace_app_member/ui/main/catalog/cubit/catalog_home_cubit.dart';
+import 'package:marketplace_app_member/ui/main/catalog/cubit/home_layout_cubit.dart';
+import 'package:marketplace_app_member/ui/main/catalog/widgets/home_sections.dart';
 import 'package:marketplace_app_member/ui/main/catalog/widgets/product_card.dart';
+import 'package:marketplace_app_member/ui/main/shell/app_scope.dart';
+import 'package:marketplace_app_member/ui/main/shell/xp_app_bars.dart';
+import 'package:marketplace_app_member/ui/main/store/cubit/live_sessions_cubit.dart';
+import 'package:marketplace_app_member/ui/main/store/widgets/live_widgets.dart';
+import 'package:marketplace_app_member/ui/main/wallet/cubit/wallet_cubit.dart';
 import 'package:marketplace_app_member/util/error_message.dart';
+import 'package:marketplace_app_member/util/format_helper.dart';
 
-/// Home katalog: pencarian, baris kategori, dan grid produk berpaginasi.
+/// Beranda Xpedia (`beranda_xpedia_buyer`).
 ///
-/// Cubit dibuat lokal lewat `BlocProvider` mengikuti pola yang berlaku di
-/// repo ini — tidak ada provider global.
+/// Yang dibangun dari desain: app bar varian A + strip "Kirim ke", kartu
+/// Xpedia Wallet, section home CMS (hero carousel, promo grid, baris
+/// kategori, flash sale, rel rekomendasi — dari `GET /home/layout`), baris
+/// kategori, strip "LIVE NOW", grid "Rekomendasi Spesial", dan banner
+/// kepercayaan.
+///
+/// * **Home CMS** memakai endpoint sungguhan yang di dev masih `[]` (tabel
+///   CMS belum di-seed) — beranda tampil persis seperti sebelumnya sampai
+///   admin mengisi section. Tidak di-mock.
+/// * 🔶 **Strip Live** membaca endpoint usulan `GET /live-sessions` (mock di
+///   debug, berlencana "Simulasi"); tanpa mock ia tidak tampil.
+/// * **Grid layanan** (XpediaFood/Ride/Mart/Tagihan) sengaja tidak dibangun —
+///   layanan itu tidak ada di API ini.
+///
+/// Pencarian **tidak** diketik di sini: kolom cari membuka layar pencarian
+/// tersendiri, seperti desainnya.
 class CatalogHomeScreen extends StatelessWidget {
-  const CatalogHomeScreen({super.key});
+  const CatalogHomeScreen({super.key, this.onLogoTap});
+
+  /// Logo Xpedia adalah kontrol Beranda (design_buyer.md §5 no. 3) — di tab
+  /// Beranda sendiri ia menggulir ke atas.
+  final VoidCallback? onLogoTap;
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (_) => CatalogHomeCubit()..load(),
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider(create: (_) => CatalogHomeCubit()..load()),
+        BlocProvider(create: (_) => AddressCubit()..load()),
+        BlocProvider(create: (_) => WalletCubit()..load()),
+        BlocProvider(create: (_) => HomeLayoutCubit()..load()),
+        BlocProvider(create: (_) => LiveSessionsCubit.liveNow()..load()),
+      ],
       child: const _CatalogHomeBody(),
     );
   }
@@ -36,7 +69,6 @@ class _CatalogHomeBody extends StatefulWidget {
 
 class _CatalogHomeBodyState extends State<_CatalogHomeBody> {
   final _scrollController = ScrollController();
-  final _searchController = TextEditingController();
 
   @override
   void initState() {
@@ -49,13 +81,12 @@ class _CatalogHomeBodyState extends State<_CatalogHomeBody> {
     _scrollController
       ..removeListener(_onScroll)
       ..dispose();
-    _searchController.dispose();
     super.dispose();
   }
 
-  /// Memuat halaman berikutnya sebelum user benar-benar menyentuh dasar,
-  /// supaya gulirannya tidak tersendat. `loadMore` sendiri sudah menolak
-  /// panggilan ganda, jadi listener ini boleh berisik.
+  /// Memuat halaman berikutnya sebelum user benar-benar menyentuh dasar.
+  /// `loadMore` sendiri menolak panggilan ganda, jadi listener ini boleh
+  /// berisik.
   void _onScroll() {
     if (!_scrollController.hasClients) return;
     final position = _scrollController.position;
@@ -64,26 +95,74 @@ class _CatalogHomeBodyState extends State<_CatalogHomeBody> {
     }
   }
 
+  void _scrollToTop() {
+    if (_scrollController.hasClients) {
+      _scrollController.animateTo(0,
+          duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final dark = isAppDarkMode();
-
-    return Scaffold(
-      backgroundColor: dark ? kDarkColor : kWhiteColor,
-      body: SafeArea(
-        child: BlocBuilder<CatalogHomeCubit, CatalogHomeState>(
+    return MultiBlocListener(
+      listeners: [
+        // Alamat utama menentukan tujuan kirim: server membuang produk yang
+        // tidak bisa dikirim ke sana.
+        BlocListener<AddressCubit, AddressState>(
+          listener: (context, state) {
+            final primary = state.primary;
+            if (primary == null) return;
+            CatalogHomeCubit.get(context)
+                .setDestination(city: primary.city, province: primary.province);
+          },
+        ),
+        BlocListener<CatalogHomeCubit, CatalogHomeState>(
+          listener: (context, state) {
+            if (state is CatalogLoaded) {
+              context.read<StoreDirectoryCubit>().ensure(state.products.map((p) => p.storeId));
+            }
+          },
+        ),
+      ],
+      child: Scaffold(
+        backgroundColor: XpColors.canvas,
+        appBar: XpHomeAppBar(
+          onLogoTap: _scrollToTop,
+          bottom: const _DeliveryStrip(),
+        ),
+        body: BlocBuilder<CatalogHomeCubit, CatalogHomeState>(
           builder: (context, state) {
             return RefreshIndicator(
-              onRefresh: () => CatalogHomeCubit.get(context).retry(),
+              onRefresh: () async {
+                await Future.wait([
+                  CatalogHomeCubit.get(context).retry(),
+                  context.read<WalletCubit>().load(),
+                  context.read<HomeLayoutCubit>().load(),
+                  context.read<LiveSessionsCubit>().load(),
+                ]);
+              },
               child: CustomScrollView(
                 controller: _scrollController,
-                // Selalu bisa digulir supaya pull-to-refresh tetap bekerja
-                // di layar kosong maupun layar error.
                 physics: const AlwaysScrollableScrollPhysics(),
                 slivers: [
-                  SliverToBoxAdapter(child: _searchField(context)),
-                  ..._categoryRow(state),
-                  ..._content(context, state),
+                  const SliverPadding(
+                    padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
+                    sliver: SliverToBoxAdapter(child: _WalletCard()),
+                  ),
+                  const _CmsSections(),
+                  ..._categories(context, state),
+                  const SliverToBoxAdapter(child: HomeLiveStrip()),
+                  const SliverToBoxAdapter(
+                    child: XpSectionHeader(
+                      title: 'Rekomendasi Spesial',
+                      subtitle: 'Pilihan terbaik dikurasi khusus untukmu',
+                    ),
+                  ),
+                  ..._products(context, state),
+                  const SliverPadding(
+                    padding: EdgeInsets.fromLTRB(16, 24, 16, 24),
+                    sliver: SliverToBoxAdapter(child: _TrustBanner()),
+                  ),
                 ],
               ),
             );
@@ -93,188 +172,273 @@ class _CatalogHomeBodyState extends State<_CatalogHomeBody> {
     );
   }
 
-  Widget _searchField(BuildContext context) {
-    final dark = isAppDarkMode();
-    return Padding(
-      padding: const EdgeInsetsDirectional.fromSTEB(16, 12, 16, 8),
-      child: TextField(
-        controller: _searchController,
-        textInputAction: TextInputAction.search,
-        onSubmitted: (value) => CatalogHomeCubit.get(context).search(value),
-        style: AppStyles.styleRegular14(context).copyWith(
-          color: dark ? kDarkSecondColor : kLightSecondColor,
-        ),
-        decoration: InputDecoration(
-          hintText: 'Cari produk',
-          hintStyle: AppStyles.styleRegular14(context).copyWith(
-            color: dark ? kDarkThirdColor : kLightThirdColor,
-          ),
-          prefixIcon: const Icon(Icons.search),
-          suffixIcon: _searchController.text.isEmpty
-              ? null
-              : IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () {
-                    _searchController.clear();
-                    CatalogHomeCubit.get(context).search('');
-                  },
-                ),
-          filled: true,
-          fillColor: dark ? kLightSecondColor : kBorderColor,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide.none,
-          ),
-        ),
-      ),
-    );
-  }
-
-  List<Widget> _categoryRow(CatalogHomeState state) {
+  List<Widget> _categories(BuildContext context, CatalogHomeState state) {
     final categories = switch (state) {
       CatalogLoaded(:final categories) => categories,
       CatalogEmpty(:final categories) => categories,
       _ => const <CategoryModel>[],
     };
     if (categories.isEmpty) return const [];
-
     final selected = switch (state) {
-      CatalogLoaded(:final query) => query?.categoryId,
-      CatalogEmpty(:final query) => query?.categoryId,
+      CatalogLoaded(:final query) || CatalogEmpty(:final query) => query?.categoryId,
       _ => null,
     };
-
+    final roots = categories.where((c) => c.parentId == null).toList();
+    final shown = roots.isEmpty ? categories : roots;
     return [
       SliverToBoxAdapter(
         child: SizedBox(
-          height: 44,
-          child: ListView.separated(
+          height: 56,
+          child: ListView(
             scrollDirection: Axis.horizontal,
-            padding: const EdgeInsetsDirectional.symmetric(horizontal: 16),
-            itemCount: categories.length + 1,
-            separatorBuilder: (_, __) => 8.sbw,
-            itemBuilder: (context, index) {
-              if (index == 0) {
-                return _CategoryChip(
-                  label: 'Semua',
-                  selected: selected == null,
-                  onTap: () => CatalogHomeCubit.get(context).selectCategory(null),
-                );
-              }
-              final category = categories[index - 1];
-              return _CategoryChip(
-                label: category.name,
-                selected: selected == category.id,
-                onTap: () =>
-                    CatalogHomeCubit.get(context).selectCategory(category.id),
-              );
-            },
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+            children: [
+              _CategoryChip(
+                label: 'Semua',
+                selected: selected == null,
+                onTap: () => CatalogHomeCubit.get(context).selectCategory(null),
+              ),
+              for (final category in shown)
+                _CategoryChip(
+                  label: category.name,
+                  selected: selected == category.id,
+                  onTap: () => CatalogHomeCubit.get(context).selectCategory(category.id),
+                ),
+            ],
           ),
         ),
       ),
-      const SliverToBoxAdapter(child: SizedBox(height: 12)),
     ];
   }
 
-  List<Widget> _content(BuildContext context, CatalogHomeState state) {
-    return switch (state) {
-      CatalogInitial() || CatalogLoading() => [
-          const SliverFillRemaining(
-            hasScrollBody: false,
-            child: Center(child: CircularProgressIndicator()),
+  List<Widget> _products(BuildContext context, CatalogHomeState state) {
+    switch (state) {
+      case CatalogInitial():
+      case CatalogLoading():
+        return const [
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.all(48),
+              child: Center(child: CircularProgressIndicator()),
+            ),
           ),
-        ],
-      CatalogError(:final error) => [
-          SliverFillRemaining(
-            hasScrollBody: false,
-            child: _Message(
-              icon: Icons.cloud_off_rounded,
-              title: errorMessageFor(context, error),
-              actionLabel: 'Coba lagi',
+        ];
+      case CatalogError(:final error):
+        return [
+          SliverToBoxAdapter(
+            child: XpEmptyState(
+              icon: Icons.wifi_off_rounded,
+              title: 'Produk belum bisa dimuat',
+              message: errorMessageFor(context, error),
+              actionLabel: 'Coba Lagi',
               onAction: () => CatalogHomeCubit.get(context).retry(),
             ),
           ),
-        ],
-      CatalogEmpty(:final query) => [
-          SliverFillRemaining(
-            hasScrollBody: false,
-            child: _Message(
-              icon: Icons.search_off_rounded,
-              title: query?.isSearching ?? false
-                  ? 'Tidak ada produk yang cocok dengan pencarian itu'
-                  : 'Belum ada produk di sini',
-              // Saat ada filter aktif, jalan keluarnya "hapus filter", bukan
-              // "coba lagi" — mengulang permintaan yang sama akan kosong lagi.
-              actionLabel: (query?.hasFilter ?? false) ? 'Hapus filter' : null,
+        ];
+      case CatalogEmpty(:final query):
+        return [
+          SliverToBoxAdapter(
+            child: XpEmptyState(
+              icon: Icons.inventory_2_outlined,
+              title: 'Belum ada produk di sini',
+              message: 'Coba kategori lain atau cari produk yang kamu butuhkan.',
+              actionLabel: query?.hasFilter == true ? 'Lihat Semua Produk' : null,
               onAction: () => CatalogHomeCubit.get(context).clearFilters(),
             ),
           ),
-        ],
-      CatalogLoaded() => _grid(context, state),
-    };
-  }
-
-  List<Widget> _grid(BuildContext context, CatalogLoaded state) {
-    return [
-      SliverPadding(
-        padding: const EdgeInsetsDirectional.symmetric(horizontal: 16),
-        sliver: SliverGrid(
-          gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-            maxCrossAxisExtent: 220,
-            mainAxisSpacing: 16,
-            crossAxisSpacing: 12,
-            childAspectRatio: 0.62,
-          ),
-          delegate: SliverChildBuilderDelegate(
-            (context, index) {
-              final product = state.products[index];
-              return ProductCard(
-                product: product,
-                onTap: () => context.push(
-                  AppRoutes.productDetailPath(product.id),
+        ];
+      case CatalogLoaded(:final products, :final isLoadingMore, :final loadMoreError):
+        return [
+          SliverPadding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            sliver: SliverLayoutBuilder(
+              builder: (context, constraints) => SliverGrid(
+                gridDelegate: productGridDelegate(constraints.crossAxisExtent),
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) {
+                    final ProductModel product = products[index];
+                    return ProductCard(
+                      product: product,
+                      onTap: () => context.push(AppRoutes.productDetailPath(product.id)),
+                    );
+                  },
+                  childCount: products.length,
                 ),
-              );
-            },
-            childCount: state.products.length,
+              ),
+            ),
+          ),
+          if (isLoadingMore)
+            const SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.all(16),
+                child: Center(child: CircularProgressIndicator()),
+              ),
+            ),
+          if (loadMoreError != null)
+            SliverToBoxAdapter(
+              child: Center(
+                child: TextButton(
+                  onPressed: () => CatalogHomeCubit.get(context).loadMore(),
+                  child: const Text('Gagal memuat — coba lagi'),
+                ),
+              ),
+            ),
+        ];
+    }
+  }
+}
+
+/// Section home CMS, terurut `sort_order`. Tidak menggambar apa pun selama
+/// layout kosong atau gagal dimuat.
+class _CmsSections extends StatelessWidget {
+  const _CmsSections();
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<HomeLayoutCubit, HomeLayoutState>(
+      builder: (context, state) {
+        if (state is! HomeLayoutLoaded) {
+          return const SliverToBoxAdapter(child: SizedBox.shrink());
+        }
+        return SliverList.list(
+          children: [
+            for (final section in state.sections)
+              HomeCmsSection(
+                section: section,
+                onCategory: (id) => CatalogHomeCubit.get(context).selectCategory(id),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+/// Strip "Kirim ke …" di bawah app bar.
+class _DeliveryStrip extends StatelessWidget implements PreferredSizeWidget {
+  const _DeliveryStrip();
+
+  @override
+  Size get preferredSize => const Size.fromHeight(40);
+
+  @override
+  Widget build(BuildContext context) {
+    final primary = context.watch<AddressCubit>().state.primary;
+    final label = primary == null
+        ? 'Atur alamat pengiriman'
+        : [primary.label, primary.city].where((v) => v.trim().isNotEmpty).join(', ');
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+      child: Material(
+        color: XpColors.sunken,
+        borderRadius: BorderRadius.circular(XpRadius.s),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(XpRadius.s),
+          onTap: () async {
+            await context.push(AppRoutes.addresses);
+            if (context.mounted) context.read<AddressCubit>().load();
+          },
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            child: Row(
+              children: [
+                Icon(Icons.location_on_outlined, size: 16, color: XpColors.primary),
+                const SizedBox(width: 6),
+                Text('Kirim ke ',
+                    style: XpText.bodyS(context).copyWith(color: XpColors.textTertiary)),
+                Expanded(
+                  child: Text(label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: XpText.labelM(context)),
+                ),
+                Text('Ubah',
+                    style: XpText.labelM(context)
+                        .copyWith(color: XpColors.primary, fontWeight: FontWeight.w600)),
+              ],
+            ),
           ),
         ),
       ),
-      SliverToBoxAdapter(child: _footer(context, state)),
-    ];
+    );
   }
+}
 
-  Widget _footer(BuildContext context, CatalogLoaded state) {
-    if (state.isLoadingMore) {
-      return const Padding(
-        padding: EdgeInsetsDirectional.symmetric(vertical: 24),
-        child: Center(child: CircularProgressIndicator()),
-      );
-    }
+/// Kartu Xpedia Wallet navy dengan saldo dan Top Up.
+class _WalletCard extends StatelessWidget {
+  const _WalletCard();
 
-    final error = state.loadMoreError;
-    if (error != null) {
-      return Padding(
-        padding: const EdgeInsetsDirectional.symmetric(vertical: 24),
-        child: Center(
-          child: TextButton.icon(
-            onPressed: () => CatalogHomeCubit.get(context).loadMore(),
-            icon: const Icon(Icons.refresh),
-            label: Text(errorMessageFor(context, error)),
+  @override
+  Widget build(BuildContext context) {
+    final state = context.watch<WalletCubit>().state;
+    final balance = switch (state) {
+      WalletReady(:final wallet) => formatRupiah(wallet.availableBalance),
+      WalletLoading() => '…',
+      WalletError() => 'Rp -',
+    };
+    return Semantics(
+      button: true,
+      label: 'Xpedia Wallet, saldo $balance',
+      child: InkWell(
+        borderRadius: BorderRadius.circular(XpRadius.l),
+        onTap: () => context.push(AppRoutes.wallet),
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(XpRadius.l),
+            gradient: const LinearGradient(
+              colors: [Color(0xff0F286C), Color(0xff112D7C), Color(0xff0056FE)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(XpRadius.m),
+                ),
+                child: const Icon(Icons.account_balance_wallet_outlined,
+                    color: XpColors.signatureGold, size: 22),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Xpedia Wallet',
+                        style: XpText.labelS(context)
+                            .copyWith(color: Colors.white.withValues(alpha: 0.8))),
+                    const SizedBox(height: 2),
+                    Text(balance,
+                        style: XpText.titleL(context)
+                            .copyWith(color: Colors.white, fontWeight: FontWeight.w700)),
+                  ],
+                ),
+              ),
+              FilledButton.icon(
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size(48, 36),
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  side: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
+                ),
+                onPressed: () => context.push(AppRoutes.wallet),
+                icon: const Icon(Icons.add, size: 16),
+                label: const Text('Top Up'),
+              ),
+            ],
           ),
         ),
-      );
-    }
-
-    return const SizedBox(height: 24);
+      ),
+    );
   }
 }
 
 class _CategoryChip extends StatelessWidget {
-  const _CategoryChip({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
+  const _CategoryChip({required this.label, required this.selected, required this.onTap});
 
   final String label;
   final bool selected;
@@ -282,68 +446,34 @@ class _CategoryChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dark = isAppDarkMode();
-    final primary = dark ? kDarkPrimaryColor : kLightPrimaryColor;
-
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(20),
-      child: Container(
-        alignment: Alignment.center,
-        padding: const EdgeInsetsDirectional.symmetric(horizontal: 16),
-        decoration: BoxDecoration(
-          color: selected ? primary : (dark ? kLightSecondColor : kBorderColor),
-          borderRadius: BorderRadius.circular(20),
+    return Padding(
+      padding: const EdgeInsetsDirectional.only(end: 8),
+      child: ChoiceChip(
+        label: Text(label),
+        selected: selected,
+        onSelected: (_) => onTap(),
+        labelStyle: XpText.labelM(context).copyWith(
+          color: selected ? XpColors.primary : XpColors.textSecondary,
         ),
-        child: Text(
-          label,
-          style: AppStyles.styleMedium14(context).copyWith(
-            color: selected
-                ? kWhiteColor
-                : (dark ? kDarkSecondColor : kLightSecondColor),
-          ),
-        ),
+        side: BorderSide(color: selected ? XpColors.primary : XpColors.borderDefault),
       ),
     );
   }
 }
 
-class _Message extends StatelessWidget {
-  const _Message({
-    required this.icon,
-    required this.title,
-    this.actionLabel,
-    this.onAction,
-  });
-
-  final IconData icon;
-  final String title;
-  final String? actionLabel;
-  final VoidCallback? onAction;
+/// Banner kepercayaan. Desain menulis "Xpedia Care" — merek yang dilarang
+/// design_buyer.md §5 no. 11; satu-satunya merek layanan adalah Xpedia 911.
+class _TrustBanner extends StatelessWidget {
+  const _TrustBanner();
 
   @override
   Widget build(BuildContext context) {
-    final dark = isAppDarkMode();
-    return Padding(
-      padding: const EdgeInsetsDirectional.symmetric(horizontal: 32),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, size: 48, color: dark ? kDarkThirdColor : kLightThirdColor),
-          16.sbh,
-          Text(
-            title,
-            textAlign: TextAlign.center,
-            style: AppStyles.styleMedium16(context).copyWith(
-              color: dark ? kDarkSecondColor : kLightSecondColor,
-            ),
-          ),
-          if (actionLabel != null) ...[
-            16.sbh,
-            FilledButton(onPressed: onAction, child: Text(actionLabel!)),
-          ],
-        ],
-      ),
+    return XpBanner(
+      icon: Icons.verified_user_outlined,
+      title: 'Transaksi 100% Aman & Terlindungi',
+      message: 'Butuh bantuan? Xpedia 911 siap membantu kapan saja.',
+      onTap: () => context.push(AppRoutes.support),
+      trailing: Icon(Icons.chevron_right, color: XpColors.primary),
     );
   }
 }

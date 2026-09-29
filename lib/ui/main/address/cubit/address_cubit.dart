@@ -9,6 +9,14 @@ import 'package:marketplace_app_member/di/injector.dart';
 part 'address_cubit.freezed.dart';
 part 'address_state.dart';
 
+/// Penolakan yang dibuat aplikasi sendiri; hanya kode ini yang `message`-nya
+/// ditampilkan `errorMessageFor`.
+DataError _localValidation(String message) => DataError(
+      code: ClientErrorCode.localValidation,
+      message: message,
+      kind: DataErrorKind.api,
+    );
+
 /// Daftar alamat pengiriman.
 ///
 /// ⚠️ **Kelengkapan alamat divalidasi di sini, bukan di server.** `POST
@@ -24,6 +32,25 @@ class AddressCubit extends Cubit<AddressState> {
 
   final AddressRepository _repository;
 
+  /// Batas alamat tersimpan per akun (design_buyer.md / desain "Kelola
+  /// Alamat": "maksimal 3 alamat pengiriman aktif").
+  ///
+  /// 🔴 **Server tidak menegakkannya** (docs/22 #9) — `POST /me/addresses`
+  /// menerima alamat keempat, kelima, dan seterusnya. Jadi cubit inilah
+  /// satu-satunya penjaga: [save] menolak alamat baru begitu kuotanya penuh,
+  /// sebelum menyentuh jaringan. Mengubah alamat yang sudah ada tetap boleh.
+  static const int maxAddresses = 3;
+
+  /// Label Indonesia untuk nama field di [AddressDraft.missingFields].
+  static const _fieldLabels = <String, String>{
+    'recipient_name': 'nama penerima',
+    'phone': 'nomor telepon',
+    'full_address': 'alamat lengkap',
+    'city': 'kota/kabupaten',
+    'province': 'provinsi',
+    'postal_code': 'kode pos',
+  };
+
   Future<void> load() async {
     emit(const AddressState.loading());
     final result = await _repository.fetchAddresses();
@@ -38,12 +65,21 @@ class AddressCubit extends Cubit<AddressState> {
   /// ditolak tanpa request, dan alasannya dilaporkan lewat
   /// [AddressReady.actionError].
   Future<bool> save(AddressDraft draft, {int? id}) async {
-    if (!draft.isComplete) {
-      _emitActionError(DataError(
-        code: ApiErrorCode.validationError,
-        message: 'Lengkapi dulu: ${draft.missingFields.join(', ')}',
-        kind: DataErrorKind.api,
+    final current = state;
+    if (id == null &&
+        current is AddressReady &&
+        current.addresses.length >= maxAddresses) {
+      _emitActionError(_localValidation(
+        'Maksimal $maxAddresses alamat tersimpan. Hapus salah satu alamat '
+        'dulu untuk menambah yang baru.',
       ));
+      return false;
+    }
+
+    if (!draft.isComplete) {
+      final missing =
+          draft.missingFields.map((f) => _fieldLabels[f] ?? f).join(', ');
+      _emitActionError(_localValidation('Lengkapi dulu: $missing'));
       return false;
     }
 

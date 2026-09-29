@@ -40,6 +40,13 @@ mixin _$AddressModel {
   @StringJson()
   @JsonKey(name: 'postal_code')
   String get postalCode;
+
+  /// FK opsional ke `master_cities` (`GET /locations/cities`). `null` untuk
+  /// alamat lama atau kota yang diketik bebas — master lokasi di seed baru
+  /// berisi 15 kota, jadi teks bebas tetap sah.
+  @IntOrNullJson()
+  @JsonKey(name: 'city_id')
+  int? get cityId;
   @DoubleOrNullJson()
   double? get latitude;
   @DoubleOrNullJson()
@@ -87,6 +94,7 @@ mixin _$AddressModel {
                 other.province == province) &&
             (identical(other.postalCode, postalCode) ||
                 other.postalCode == postalCode) &&
+            (identical(other.cityId, cityId) || other.cityId == cityId) &&
             (identical(other.latitude, latitude) ||
                 other.latitude == latitude) &&
             (identical(other.longitude, longitude) ||
@@ -110,6 +118,7 @@ mixin _$AddressModel {
       city,
       province,
       postalCode,
+      cityId,
       latitude,
       longitude,
       isPrimary,
@@ -117,7 +126,7 @@ mixin _$AddressModel {
 
   @override
   String toString() {
-    return 'AddressModel(id: $id, userId: $userId, label: $label, recipientName: $recipientName, phone: $phone, fullAddress: $fullAddress, city: $city, province: $province, postalCode: $postalCode, latitude: $latitude, longitude: $longitude, isPrimary: $isPrimary, createdAt: $createdAt)';
+    return 'AddressModel(id: $id, userId: $userId, label: $label, recipientName: $recipientName, phone: $phone, fullAddress: $fullAddress, city: $city, province: $province, postalCode: $postalCode, cityId: $cityId, latitude: $latitude, longitude: $longitude, isPrimary: $isPrimary, createdAt: $createdAt)';
   }
 }
 
@@ -137,6 +146,7 @@ abstract mixin class $AddressModelCopyWith<$Res> {
       @StringJson() String city,
       @StringJson() String province,
       @StringJson() @JsonKey(name: 'postal_code') String postalCode,
+      @IntOrNullJson() @JsonKey(name: 'city_id') int? cityId,
       @DoubleOrNullJson() double? latitude,
       @DoubleOrNullJson() double? longitude,
       @BoolJson() @JsonKey(name: 'is_primary') bool isPrimary,
@@ -164,6 +174,7 @@ class _$AddressModelCopyWithImpl<$Res> implements $AddressModelCopyWith<$Res> {
     Object? city = null,
     Object? province = null,
     Object? postalCode = null,
+    Object? cityId = freezed,
     Object? latitude = freezed,
     Object? longitude = freezed,
     Object? isPrimary = null,
@@ -206,6 +217,10 @@ class _$AddressModelCopyWithImpl<$Res> implements $AddressModelCopyWith<$Res> {
           ? _self.postalCode
           : postalCode // ignore: cast_nullable_to_non_nullable
               as String,
+      cityId: freezed == cityId
+          ? _self.cityId
+          : cityId // ignore: cast_nullable_to_non_nullable
+              as int?,
       latitude: freezed == latitude
           ? _self.latitude
           : latitude // ignore: cast_nullable_to_non_nullable
@@ -329,6 +344,7 @@ extension AddressModelPatterns on AddressModel {
             @StringJson() String city,
             @StringJson() String province,
             @StringJson() @JsonKey(name: 'postal_code') String postalCode,
+            @IntOrNullJson() @JsonKey(name: 'city_id') int? cityId,
             @DoubleOrNullJson() double? latitude,
             @DoubleOrNullJson() double? longitude,
             @BoolJson() @JsonKey(name: 'is_primary') bool isPrimary,
@@ -351,6 +367,7 @@ extension AddressModelPatterns on AddressModel {
             _that.city,
             _that.province,
             _that.postalCode,
+            _that.cityId,
             _that.latitude,
             _that.longitude,
             _that.isPrimary,
@@ -385,6 +402,7 @@ extension AddressModelPatterns on AddressModel {
             @StringJson() String city,
             @StringJson() String province,
             @StringJson() @JsonKey(name: 'postal_code') String postalCode,
+            @IntOrNullJson() @JsonKey(name: 'city_id') int? cityId,
             @DoubleOrNullJson() double? latitude,
             @DoubleOrNullJson() double? longitude,
             @BoolJson() @JsonKey(name: 'is_primary') bool isPrimary,
@@ -406,6 +424,7 @@ extension AddressModelPatterns on AddressModel {
             _that.city,
             _that.province,
             _that.postalCode,
+            _that.cityId,
             _that.latitude,
             _that.longitude,
             _that.isPrimary,
@@ -439,6 +458,7 @@ extension AddressModelPatterns on AddressModel {
             @StringJson() String city,
             @StringJson() String province,
             @StringJson() @JsonKey(name: 'postal_code') String postalCode,
+            @IntOrNullJson() @JsonKey(name: 'city_id') int? cityId,
             @DoubleOrNullJson() double? latitude,
             @DoubleOrNullJson() double? longitude,
             @BoolJson() @JsonKey(name: 'is_primary') bool isPrimary,
@@ -460,6 +480,7 @@ extension AddressModelPatterns on AddressModel {
             _that.city,
             _that.province,
             _that.postalCode,
+            _that.cityId,
             _that.latitude,
             _that.longitude,
             _that.isPrimary,
@@ -483,6 +504,7 @@ class _AddressModel extends AddressModel {
       @StringJson() this.city = '',
       @StringJson() this.province = '',
       @StringJson() @JsonKey(name: 'postal_code') this.postalCode = '',
+      @IntOrNullJson() @JsonKey(name: 'city_id') this.cityId,
       @DoubleOrNullJson() this.latitude,
       @DoubleOrNullJson() this.longitude,
       @BoolJson() @JsonKey(name: 'is_primary') this.isPrimary = false,
@@ -530,6 +552,14 @@ class _AddressModel extends AddressModel {
   @StringJson()
   @JsonKey(name: 'postal_code')
   final String postalCode;
+
+  /// FK opsional ke `master_cities` (`GET /locations/cities`). `null` untuk
+  /// alamat lama atau kota yang diketik bebas — master lokasi di seed baru
+  /// berisi 15 kota, jadi teks bebas tetap sah.
+  @override
+  @IntOrNullJson()
+  @JsonKey(name: 'city_id')
+  final int? cityId;
   @override
   @DoubleOrNullJson()
   final double? latitude;
@@ -585,6 +615,7 @@ class _AddressModel extends AddressModel {
                 other.province == province) &&
             (identical(other.postalCode, postalCode) ||
                 other.postalCode == postalCode) &&
+            (identical(other.cityId, cityId) || other.cityId == cityId) &&
             (identical(other.latitude, latitude) ||
                 other.latitude == latitude) &&
             (identical(other.longitude, longitude) ||
@@ -608,6 +639,7 @@ class _AddressModel extends AddressModel {
       city,
       province,
       postalCode,
+      cityId,
       latitude,
       longitude,
       isPrimary,
@@ -615,7 +647,7 @@ class _AddressModel extends AddressModel {
 
   @override
   String toString() {
-    return 'AddressModel(id: $id, userId: $userId, label: $label, recipientName: $recipientName, phone: $phone, fullAddress: $fullAddress, city: $city, province: $province, postalCode: $postalCode, latitude: $latitude, longitude: $longitude, isPrimary: $isPrimary, createdAt: $createdAt)';
+    return 'AddressModel(id: $id, userId: $userId, label: $label, recipientName: $recipientName, phone: $phone, fullAddress: $fullAddress, city: $city, province: $province, postalCode: $postalCode, cityId: $cityId, latitude: $latitude, longitude: $longitude, isPrimary: $isPrimary, createdAt: $createdAt)';
   }
 }
 
@@ -637,6 +669,7 @@ abstract mixin class _$AddressModelCopyWith<$Res>
       @StringJson() String city,
       @StringJson() String province,
       @StringJson() @JsonKey(name: 'postal_code') String postalCode,
+      @IntOrNullJson() @JsonKey(name: 'city_id') int? cityId,
       @DoubleOrNullJson() double? latitude,
       @DoubleOrNullJson() double? longitude,
       @BoolJson() @JsonKey(name: 'is_primary') bool isPrimary,
@@ -665,6 +698,7 @@ class __$AddressModelCopyWithImpl<$Res>
     Object? city = null,
     Object? province = null,
     Object? postalCode = null,
+    Object? cityId = freezed,
     Object? latitude = freezed,
     Object? longitude = freezed,
     Object? isPrimary = null,
@@ -707,6 +741,10 @@ class __$AddressModelCopyWithImpl<$Res>
           ? _self.postalCode
           : postalCode // ignore: cast_nullable_to_non_nullable
               as String,
+      cityId: freezed == cityId
+          ? _self.cityId
+          : cityId // ignore: cast_nullable_to_non_nullable
+              as int?,
       latitude: freezed == latitude
           ? _self.latitude
           : latitude // ignore: cast_nullable_to_non_nullable

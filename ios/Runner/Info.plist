@@ -47,5 +47,19 @@
 		<true/>
 		<key>UIStatusBarHidden</key>
 		<false/>
+		<!-- Backend dev berjalan di http://localhost:8000. NSAllowsLocalNetworking
+	     hanya melonggarkan ATS untuk alamat lokal (localhost, .local, IP LAN),
+	     bukan untuk host internet mana pun. -->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
 	</dict>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Xpedia membutuhkan akses galeri untuk melampirkan foto atau video bukti komplain.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Xpedia membutuhkan kamera untuk memotret bukti komplain.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Xpedia membutuhkan mikrofon untuk merekam video bukti komplain.</string>
+</dict>
 </plist>

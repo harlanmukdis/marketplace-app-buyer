@@ -27,7 +27,7 @@ Buyer app for a **multi-vendor marketplace**, built on a purchased Flutter UI ki
 flutter pub get                       # install dependencies
 flutter run                           # run on connected device/emulator
 flutter analyze                       # static analysis (flutter_lints 4.0.0 via analysis_options.yaml)
-flutter test                          # run all tests (470; all pass)
+flutter test                          # run all tests (674 unit/widget + 159 integration; all pass)
 flutter test test/integration --concurrency=1   # integrasi: butuh backend hidup, WAJIB serial
 # ^ memakai 8 login; plafonnya 20 per IP per 15 menit, jadi maks DUA putaran
 #   beruntun. Lebih dari itu: DELETE FROM auth_rate_limits; (lihat "Rate limit
@@ -61,12 +61,12 @@ Note: `build_runner` 2.15 **removed `--delete-conflicting-outputs`** — passing
 
 | tree | data source | safe to build on? |
 |---|---|---|
-| `lib/ui/main/{auth,catalog,cart,address,checkout,order,payment,wishlist,review,wallet,notification,reward,chat}/` | marketplace-api, live | **yes** — `catalog` is the reference implementation |
-| `lib/features/` (the UI kit's sample tree) | hardcoded lists inside cubits (`HomePageCubit.productsTShirt`) | as sample UI only |
+| `lib/ui/main/{auth,catalog,cart,address,checkout,order,payment,wishlist,review,wallet,notification,reward,chat,store,support,profile,shell}/` | marketplace-api, live | **yes** — `catalog` is the reference implementation |
+| `lib/features/` (what is left of the UI kit) | only the entry flow (splash, onboarding, welcome — restyled to Xpedia), `HomeLayout`, and shared helpers | yes, but new screens go to `lib/ui/` |
 
 The third tree that used to sit between them — a complete data + UI stack written against the old Markas backend — **was deleted on 14 September 2026**. See "~~The dead layer~~" in Part 2 for what went and the endpoint translation table that survived it.
 
-The UI kit's own models (`lib/features/home/data/models/product_model.dart`) carry `fromJson` factories, but they were shaped for the kit's sample JSON, not for marketplace-api — treat them as sample data. The real one is `lib/core/domain/model/catalog/product_model.dart`.
+**The kit's sample screens were deleted on 29 September 2026** — 54 files unreachable from `main.dart` or any test (kit home/product/cart/checkout/profile/help-center/notification views, their cubits and models, the dead `AppCubit`, `custom_app_bar.dart`), plus the 14 `*.dart~` backups. The real product model is `lib/core/domain/model/catalog/product_model.dart`.
 
 ### Feature-first layout
 
@@ -82,7 +82,7 @@ The convention is applied loosely: `favorites`, `trending`, and `spalsh` are sin
 
 ### State: Cubits with mutable fields, not immutable state
 
-`flutter_bloc` cubits are created **locally** — each view wraps its own body in `BlocProvider(create: ...)` inside `build()`. There is no global provider and no DI container.
+`flutter_bloc` cubits are created **locally** — each view wraps its own body in `BlocProvider(create: ...)` inside `build()`. The single exception is `AppScope` (`lib/ui/main/shell/app_scope.dart`), provided in `MaterialApp.builder` above the router: `StoreDirectoryCubit`, `CartBadgeCubit`, and the app-wide `WishlistCubit` — see "Design system Xpedia" in Part 2.
 
 Cubits hold **public mutable fields** (`currentIndex`, `products`, controllers) and emit **marker states** that carry no data (`class HomeChangeBottomNav extends HomeLayoutState {}`). `BlocBuilder` reacts to the emit, then reads the field off the cubit. Follow this pattern; do not convert to data-carrying states piecemeal. (Part 2 replaces this with freezed sealed unions — a deliberate, project-wide migration, not a per-file change.)
 
@@ -108,16 +108,16 @@ This is the most important convention to get right. `lightTheme`/`darkTheme` exi
 color: isAppDarkMode() ? kDarkSecondColor : kLightSecondColor,
 ```
 
-`isAppDarkMode()` reads SharedPreferences **synchronously** via `CachedHelper.getData(kAppTheme)`. Colors are `k`-prefixed constants in [constant.dart](lib/core/utils/constant.dart). New UI should use these constants + `isAppDarkMode()`, not theme lookups.
+`isAppDarkMode()` reads SharedPreferences **synchronously** via `CachedHelper.getData(kAppTheme)`. Colors are `k`-prefixed constants in [constant.dart](lib/core/utils/constant.dart) — their values are now the Xpedia palette. **New UI should use the Xpedia tokens instead**: `XpColors.*` (getters that call `isAppDarkMode()` themselves) and `XpText.*` in `lib/core/design/` — see "Design system Xpedia" in Part 2. Still no theme lookups.
 
 **Theme and language changes restart the app.** `toggleAppTheme()` / `changeAppLanguage()` in [components.dart](lib/core/function/components.dart) persist the value then call `Phoenix.rebirth(context)`. This is why `CachedHelper.init()` must complete before `runApp` in [main.dart](lib/main.dart) — the whole app reads prefs synchronously at build time.
 
 ### Text and spacing helpers
 
-- **Text**: `AppStyles.styleSemiBold16(context)` etc. in [app_styles.dart](lib/core/utils/app_styles.dart). Every style takes `context` because font size is scaled by `getResponsiveFontSize()` against a 375pt base width, clamped to ±20%. Never hardcode a `TextStyle` with a raw `fontSize`.
+- **Text**: new screens use `XpText.titleM(context)` etc. (`lib/core/design/xp_text.dart`, the Inter scale from `design_buyer.md`). The kit's `AppStyles.styleSemiBold16(context)` in [app_styles.dart](lib/core/utils/app_styles.dart) remains for `lib/features/`. Every style takes `context` because font size is scaled by `getResponsiveFontSize()` against a 375pt base width, clamped to ±20%. Never hardcode a `TextStyle` with a raw `fontSize`.
 - **Spacing**: extensions in [extensions.dart](lib/core/utils/extensions.dart) — `16.pa`, `16.ps`/`.pe` (start/end), `.pt`/`.pb`, `.psh`/`.psv` all return **`EdgeInsetsDirectional`** (RTL-aware — important, Arabic is supported). Gaps use `12.sbh` / `12.sbw` for `SizedBox`. Screen size via `context.screenWidth` / `context.screenHeight`.
 - **Assets**: referenced through `AppImages` constants; `assets/images/` and `assets/icon/` are glob-registered in `pubspec.yaml`, so new files need only an `AppImages` entry.
-- **App bar**: `customAppBar(context, title, action: ...)` in [custom_app_bar.dart](lib/core/function/custom_app_bar.dart).
+- **App bar**: new screens use `XpStackAppBar` / `XpTabAppBar` / `XpHomeAppBar` (`lib/ui/main/shell/xp_app_bars.dart`). The kit's `customAppBar(context, title, action: ...)` in [custom_app_bar.dart](lib/core/function/custom_app_bar.dart) remains for `lib/features/`.
 
 ### Localization
 
@@ -129,10 +129,9 @@ Current state: `en` and `ar` are complete (284 keys) and selectable. `fr` appear
 
 ## Known rough edges
 
-- The Flutter counter template `test/widget_test.dart` is **gone** — the suite is real (470 tests, all passing) and is a usable signal. `test/integration/` (145 of those) hits a live backend, so it fails with connection errors when the API is not running; that is the environment, not a regression. Note the API is started with `php -S`, **not** `docker compose` — see "Menyalakan backend dev" in Part 2 — and the integration suite must run `--concurrency=1`.
-- 14 stale `*.dart~` backup files litter `lib/` (and `android/`). They are not compiled but **do show up in grep results** — always confirm a hit isn't in a `~` file before editing.
+- The Flutter counter template `test/widget_test.dart` is **gone** — the suite is real (674 unit/widget tests + 159 integration, all passing) and is a usable signal. `test/integration/` (159) hits a live backend, so it fails with connection errors when the API is not running; that is the environment, not a regression. Note the API is started with `php -S`, **not** `docker compose` — see "Menyalakan backend dev" in Part 2 — and the integration suite must run `--concurrency=1`.
 - `lib/features/my_cart/presentation/views/map_screen.dart` is 100% commented out, and the `com.google.android.geo.API_KEY` meta-data in `android/app/src/main/AndroidManifest.xml` is commented out too. Restoring the map needs both, plus an iOS key. Location permissions are already declared in the manifest.
-- **The app builds now, but every image is a placeholder.** The UI kit's asset folders were never copied into this repo, so all 67 files in `assets/images/` and `assets/icon/` are grey 64×64 stubs, and the `Hanimation` font declaration in `pubspec.yaml` stays **commented out** (a fake OTF crashes at start, so it could not be stubbed — all text falls back to the system font). What you see on screen is therefore not the kit's design. `assets/PLACEHOLDER-README.md` documents what was stubbed and how to restore the originals.
+- **The UI kit's images are placeholders.** The kit's asset folders were never copied into this repo, so all 67 files in `assets/images/` and `assets/icon/` are grey 64×64 stubs (`assets/PLACEHOLDER-README.md`). This matters less now: every API-wired screen was rebuilt on the Xpedia design and draws product images from the API. The font is **Inter** (`assets/fonts/inter/`, OFL) — the kit's `Hanimation` font was never in the repo and is gone.
 - Android `usesCleartextTraffic` / iOS ATS are **not** configured, so the `http://` base URL will fail on mobile. Not needed for the current web target; required before the first Android/iOS run.
 - `DevicePreview` wraps the app when `kDebugMode`, so debug builds render inside a simulated device frame — layout that looks wrong in debug may be the preview frame, not the code.
 - Orientation is locked to portrait in `main()`.
@@ -142,13 +141,13 @@ Current state: `en` and `ar` are complete (284 keys) and selectable. `fr` appear
 
 # Part 2 — Target architecture
 
-> ### 📘 BACA DULU: `docs/20-frontend-integration-guide.md`
+> ### 📘 BACA DULU: `docs/23-frontend-integration-guide.md`
 >
-> ⚠️ **Nomornya sudah berubah dua kali: 18 → 19 → 20** (21 September 2026). Slot 19 kini dipakai `19-security-audit-findings.md`, slot 18 oleh `18-reward-engine.md`. Berkasnya **tetap belum di-commit** di repo API — ia ada di working copy saja, jadi `git log` tidak akan menunjukkan perubahannya. Periksa `git status` repo API, bukan hanya `git log`. Jangan menyalin nomornya ke catatan baru tanpa mengecek: ia bergeser tiap kali backend menambah dokumen.
+> ⚠️ **Nomornya sudah berubah tiga kali: 18 → 19 → 20 → 23** (terakhir 28 September 2026; slot 20–22 kini gap analysis blueprint Xpedia). Kini **sudah di-commit**, tapi isinya **identik** dengan versi "20" (git similarity 100%) — panduan itu **tidak memuat satu pun** perubahan v1.6–v1.28 di bawah. Sumber sebenarnya: `CHANGELOG.md`, kodenya, dan catatan "Backend v1.6–v1.28" di file ini. Jangan menyalin nomornya tanpa mengecek: ia bergeser tiap kali backend menambah dokumen.
 >
 > Backend menerbitkan **panduan integrasi frontend khusus untuk app member & app seller** (14 September 2026). Itu titik masuk tunggal untuk pekerjaan FE: cara menjalankan API, kontrak dasar, peta 33 modul → endpoint → app mana yang memakainya, alur inti buyer dari browse sampai terima barang, dan daftar jebakan yang sudah diuji ke server. Poin bertanda **[terverifikasi]** di sana sudah ditembak ke server sungguhan, bukan dibaca dari dokumen.
 >
-> Urutan otoritas kalau sumber saling bertentangan: **`application/config/routes.php` > panduan 20 > Postman > docs lainnya.** Seluruh catatan di bawah ini sudah diselaraskan dengan panduan itu dan diverifikasi ulang ke server pada 14 September 2026.
+> Urutan otoritas kalau sumber saling bertentangan: **`application/config/routes.php` > panduan 23 > Postman > docs lainnya.** Seluruh catatan di bawah ini sudah diselaraskan dengan panduan itu dan diverifikasi ulang ke server pada 14 September 2026.
 >
 > ### 🔴 Rate limit auth — dan bagaimana suite integrasi disesuaikan (21 September 2026)
 >
@@ -272,7 +271,7 @@ Current state: `en` and `ar` are complete (284 keys) and selectable. `fr` appear
 >
 > ### ⚠️ `docker compose up` TIDAK jalan — API dijalankan dengan `php -S`
 >
-> Catatan sebelumnya di file ini yang menyarankan `docker compose up -d` **salah**. `Dockerfile` menyalin `infra/docker/nginx.conf` yang tidak ada di repo, dan stage runtime-nya nginx tanpa php-fpm. Cara yang benar ada di panduan 20 §1: siapkan MySQL, jalankan `database/schema/*.sql` lalu `database/seeds/*.sql`, kemudian `php -S 127.0.0.1:8000 -t . router.php` dengan `router.php` yang isinya diberikan di panduan itu (tidak ada di repo).
+> Catatan sebelumnya di file ini yang menyarankan `docker compose up -d` **salah**. `Dockerfile` menyalin `infra/docker/nginx.conf` yang tidak ada di repo, dan stage runtime-nya nginx tanpa php-fpm. Cara yang benar ada di panduan 23 §1: siapkan MySQL, jalankan `database/schema/*.sql` lalu `database/seeds/*.sql`, kemudian `php -S 127.0.0.1:8000 -t . router.php` dengan `router.php` — **kini sudah di-commit** di root repo API.
 >
 > Konsekuensinya untuk `/search/*`: **Elasticsearch/OpenSearch di 9200 tidak punya cara mudah dinyalakan**, jadi anggap search mati secara default dan pakai fallback yang dijelaskan di bawah.
 >
@@ -333,7 +332,9 @@ Current state: `en` and `ar` are complete (284 keys) and selectable. `fr` appear
 - **Notification domain** — `lib/core/…/notification/` + `lib/ui/main/notification/`; lihat "Domain notifikasi" di bawah
 - **Reward domain** — `lib/core/…/reward/` + `lib/ui/main/reward/`; lihat "Domain reward" di bawah
 - **Chat domain** — `lib/core/…/chat/` + `lib/ui/main/chat/`; lihat "Domain chat" di bawah
-- Tests: `test/util/` (17, murni), `test/data/` (166, fake service/store + parsing JSON asli), `test/ui/` (142, fake repository), `test/integration/` (145 — 144 jalan + 1 opt-in; butuh backend hidup, **jalankan `--concurrency=1`**) — **470 total, semuanya lulus**
+- **Store + Support (Xpedia 911) domain** — `lib/core/…/{store,support}/` + `lib/ui/main/{store,support}/`; lihat "Backend v1.6–v1.28" di bawah
+- **Design system Xpedia** — `lib/core/design/`, `lib/ui/main/shell/`; lihat "Design system Xpedia" di bawah
+- Tests: `test/util/`, `test/data/`, `test/ui/` (termasuk widget smoke test tiap layar di 390×844) — **674**; `test/integration/` (**159** jalan + 1 opt-in; butuh backend hidup, **jalankan `--concurrency=1`**) — semuanya lulus
 - **`integration_test/`** — app sungguhan di perangkat sungguhan, **di luar `flutter test`**; lihat "Test app sungguhan" di bawah
 
 Still absent: Firebase and `lib/firebase_options.dart`.
@@ -525,7 +526,7 @@ Field `payment_method` di body `POST /payments/{txId}/pay` **diabaikan server** 
 #### Bentuk data lain yang dipatok test
 
 - **Pola zona waktu yang sama dulu berulang di sini**: `payment_deadline` (order) dan `expired_at` (payment) UTC sementara `created_at` WIB. **Sudah diperbaiki** bersama checkout — lihat catatan `93c6a14` di atas; keduanya kini `ServerDateTimeJson`.
-- **`shipping_address_snapshot` hanya berisi `{"address_id": "59"}`** — bukan alamat lengkap, dan berupa string JSON. Menampilkan alamat tujuan butuh `GET /me/addresses`.
+- 🔴 **`GET /orders/{id}` kini membawa `shipping_address` terselesaikan** dan **tidak lagi** `shipping_address_snapshot` (backend v1.x) — join LIVE ke `user_addresses`, jadi mengedit/menghapus alamat mengubah pesanan lama. `GET /orders` (daftar) masih membawa snapshot lama `{"address_id": "59"}` berupa string JSON.
 - **`payments.order_id` selalu `null`.** Transaksi menempel pada `checkout_session_id`: satu pembayaran menutup **semua** order dari sesi itu. Jangan memakainya untuk mencari order.
 - Item order memakai **snapshot** nama, harga, dan opsi varian saat order dibuat — pesanan lama tetap benar walau produknya berubah.
 - `GET /orders/{id}` untuk pesanan orang lain dibalas **403 `PERMISSION_DENIED`**, bukan 404.
@@ -560,7 +561,7 @@ Konsekuensi untuk pengujian: **alur ulas tidak bisa dijalankan ujung ke ujung da
 
 Bentuknya **objek bersarang** `{reply_text, created_at}` atau `null` — bukan string JSON seperti `data` di notifikasi dan `selected_couriers` di sesi checkout, karena server merakitnya sendiri di PHP. Dimodelkan `ReviewReplyModel`, dan `ReviewModel.hasReply` sengaja memeriksa isinya: endpoint balasan tidak memvalidasi panjang, jadi `reply` bisa ada tapi hampa. ⚠️ **Tanpa nama penjual** — nama tokonya harus diambil dari konteks halaman produk.
 
-⚠️ Belum teramati di server: tidak ada ulasan yang di-seed (`GET /products/1/reviews` → `[]`), jadi bentuknya diturunkan dari kode backend dan dipatok di `test/data/`, bukan dari respons sungguhan. Layar ulasan **belum menampilkannya** — modelnya siap, widgetnya belum.
+⚠️ Belum teramati di server: tidak ada ulasan yang di-seed (`GET /products/1/reviews` → `[]`), jadi bentuknya diturunkan dari kode backend dan dipatok di `test/data/`, bukan dari respons sungguhan. `ProductReviewsSection` sudah menampilkannya (29 September 2026).
 
 #### Hal-hal yang di sini justru berjalan benar
 
@@ -573,6 +574,8 @@ Jangan tertukar: `meta.rating_histogram` menghitung **ulasan per bintang persis*
 Saldo, riwayat mutasi, topup, dan penarikan.
 
 #### 🔴 Dua penolakan penarikan memakai kode error yang SAMA
+
+> ⚠️ **Diperluas sejak backend v1.x**: penarikan kini menuntut **PIN + rekening tersimpan**, dan kelima penolakannya (minimum, PIN belum ada, PIN salah, rekening, saldo) memakai `WITHDRAWAL_REJECTED` yang sama. Lihat "Backend v1.6–v1.28 → Dompet".
 
 `POST /wallet/withdraw` membalas `422 WITHDRAWAL_REJECTED` baik untuk "di bawah minimum" maupun "saldo tidak mencukupi" — yang berbeda hanya `error.message`, sementara panduan FE melarang mencocokkan `message`. Dua situasi yang tindakannya bertolak belakang ("kecilkan nominal" vs "isi saldo dulu") jadi tidak bisa dibedakan.
 
@@ -619,6 +622,8 @@ Tiga endpoint: `GET /me/notifications`, `POST /me/notifications/{id}/read`, dan
 `POST /me/notifications/read-all`.
 
 #### 🔴 Kotak masuknya praktis SELALU kosong — dan itu bukan bug aplikasi
+
+> ⚠️ **Sebagian basi sejak backend v1.x**: kini ada notifikasi pertama untuk pembeli, `order_shipped_secure_plus` dengan `data: {order_id, seal_code}` — kode segel yang **wajib** untuk `confirm-delivery` pesanan Secure+. `NotificationScreen` merendernya sebagai kartu khusus dengan tombol Salin. Selebihnya catatan di bawah tetap berlaku.
 
 Dua pemanggil `Notification_model->create()`, dan **tidak satu pun menyasar
 pembeli**:
@@ -800,6 +805,15 @@ paling mudah menyita waktu:
 - **Satu berkas per invokasi** — berkas kedua tidak bisa start app.
 - **`DevicePreview` dilewati**, karena frame perangkat simulasinya membuat
   koordinat tap meleset.
+- **Mock aktif di debug**, jadi checkout melewati Wallet + lembar PIN (PIN mock
+  `123456`); dengan `--dart-define=PENDING_API_MOCK=false` test mengikuti
+  alur metode pembayaran lama.
+- **Grid produk beranda ada di bawah lipatan** (kartu Wallet, banner CMS, Live,
+  kategori) dan `SliverGrid` tidak membangun sel tak terlihat —
+  `pumpUntilProducts` menggulir sampai kartunya muncul.
+- **Saat test menggantung**, baca jejak langkahnya:
+  `find ~/Library/Containers/com.marketplace.member -name member_journey_steps.log`
+  — berisi langkah terakhir dan, saat gagal menunggu, seluruh teks di layar.
 
 #### 🔴 Dua bug yang hanya bisa ditemukan lapisan ini
 
@@ -927,11 +941,20 @@ karena itu **terlalu pasti** — testnya sudah diperbaiki agar tidak rapuh.
   akhir pada urutan menurun, sehingga percakapan yang baru dibuka tenggelam di
   bawah yang lama — `ChatListCubit` mengurutkan ulang memakai `sortedAt`, yang
   jatuh ke `created_at`.
-- **Server tidak memvalidasi apa pun.** Body tanpa `content` dibalas `201`
-  dengan isi `null`, dan `message_type` di luar `ENUM` tersimpan sebagai
-  **string kosong** (MySQL non-strict; diuji dengan `"sticker"`). Karena itu
+- **Body tanpa `content` masih dibalas `201`** dengan isi `null`. Karena itu
   `ChatRoomCubit` menolak teks kosong sendiri — gelembung hampa yang terlanjur
-  terkirim tidak bisa dihapus.
+  terkirim tidak bisa dihapus. ✅ Sejak backend v1.x `message_type` **divalidasi**
+  (`text|image|product_share|order_share`; `video` dan nilai asing →
+  `422 VALIDATION_ERROR`) — dulu tersimpan sebagai string kosong.
+- 🔴 **Moderasi sinkron: nomor HP, email, URL/domain, dan nama platform lain
+  → `422 CHAT_CONTENT_BLOCKED`**, pesannya **tidak tersimpan**, dan 3
+  pelanggaran/24 jam memicu fraud flag diam-diam. Pola pemisah ikut tertangkap
+  (`0812-3456-7890`, `wa . me`), tapi regex URL-nya **positif palsu**
+  (`"berapa.id nya kak"` diblokir). `ChatRoomScreen` mengembalikan teksnya ke
+  kolom tulis dan menampilkan pengingat keamanan permanen.
+- **`delivered_at` + `status` (`sent|delivered|read`)** kini ada di tiap pesan —
+  centang dua-abu kini sungguhan. `delivered_at` distempel saat lawan bicara
+  mengambil `/messages`, jadi **membuka ruang chat kini menulis ke database**.
 - **`mark_read` tidak pernah menandai pesan sendiri**: klausanya hanya
   menyentuh pesan yang pengirimnya bukan pemanggil. Jadi centang ganda di
   gelembung sendiri benar-benar berarti lawan bicara sudah membuka percakapan.
@@ -944,6 +967,92 @@ karena itu **terlalu pasti** — testnya sudah diperbaiki agar tidak rapuh.
   `GET /products/{id}` hanya membawa `store_id`, tanpa nama toko, dan tidak ada
   endpoint publik untuk menukarnya. Nama baru muncul lewat daftar percakapan,
   yang responsnya di-join ke `stores`.
+
+### Backend v1.6–v1.28 (blueprint Xpedia) — disinkronkan 29 September 2026
+
+24 commit backend `8fa683b..6546a65`, hampir seluruhnya blueprint **Seller**; sisi buyer tercatat di `docs/22-xpedia-buyer-blueprint-gap-analysis.md` dengan **15 temuan yang belum satu pun dikerjakan**. Diverifikasi ke server kecuali disebut lain; dipatok di `test/integration/` (`catalog_service_test`, `order_payment_service_test`, `wallet_service_test`, `chat_service_test`, dan berkas baru `store_support_service_test`).
+
+**Katalog**
+- `fulfillment_mode` (`ready_stock|infinite|pre_order|custom_order|discontinued`) + `fulfillment_lead_time_days` ada di listing **dan** detail; detail menambah `availability` (plus `low_stock` ≤10 dan `out_of_stock`, dihitung server). `ProductModel.stockMode` menyerap keduanya jadi `StockMode` untuk chip stok.
+- 🔴 **Listing kini MENYEMBUNYIKAN** `discontinued` dan `ready_stock` berstok nol — di semua `sort_by`, termasuk pencarian — sementara `GET /products/{id}` tetap mengembalikannya (tautan/wishlist bisa membuka produk yang tak bisa dicari). Karena itu chip "Ready Stok" di kartu listing sah walau listing tidak membawa angka stok.
+- 🔴 **Mode apa pun tetap butuh stok gudang**: `reserve_stock()` tidak membedakan `infinite`/`pre_order`/`custom_order`, jadi aplikasi menuntut `stock > 0` untuk semua mode. `discontinued` **tidak** ditolak keranjang/checkout — aplikasi yang menahannya (`StockMode.isPurchasable`).
+- `sort_by=recommended` (`natural_performance_score`) jadi urutan bawaan beranda & pencarian — blueprint **melarang** kontrol urutan/filter di sisi pembeli. `dest_city`/`dest_province` membuang produk yang tak terjangkau kirim; beranda mengisinya dari alamat utama.
+- `GET /products` **tidak membawa nama toko**. `StoreDirectoryCubit` mengambil `GET /stores/{id}` **per toko** (bukan per kartu) dan menyimpannya.
+
+**Toko** (domain baru `StoreService`/`StoreRepository`)
+- `GET /stores/{id}` publik membawa `primary_status` (`unverified|verified_individual|verified_company|official_store|managed_by_xpedia`), `has_signature_badge`, `is_following`.
+- 🔴 **`stores.rating_avg` bukan rating yang benar** menurut blueprint (docs/22 #7; ia dari form rating toko terpisah). Yang benar — rata-rata ulasan produk — ada di `GET /stores/{id}/partners-performance` (publik, **angka asli**), bersama tingkat sukses & respons. Seed: `rating_avg "4.90"` vs performance `0`. `online_status`/`checkout_from_live` selalu `null`.
+- `POST /stores/{id}/follow` **tidak idempoten** (`422` kalau sudah mengikuti); `DELETE` selalu `200`. `GET /me/following` membawa `rating_avg` yang salah itu.
+
+**Pesanan**
+- Rute `accept` dihapus (kini 404 HTML); `processed` tak pernah ditulis lagi. Alur `pending → paid → packed → shipped → delivered → completed`.
+- **Tidak ada status "Menunggu Konfirmasi"**: custom order tetap `paid` dengan `requires_custom_confirmation="1"` + `custom_confirmed_at=null` (`OrderModel.awaitsSellerConfirmation`). Usulan kirim sebagian juga tetap `paid` dengan `partial_fulfillment_proposed_at` (`awaitsPartialDecision`) → `POST /orders/{id}/partial-fulfillment/respond {decision: continue_partial|cancel_whole}`.
+- Worker auto-batal + refund penuh ke Wallet (`cancellation_fault=seller`) bila resi tidak dibuat 48 jam sesudah bayar, atau custom order tak dikonfirmasi 48 jam.
+- `canCancel` kini `pending` **dan** `paid` (server memang menerima keduanya). Tahap "Ajukan Pembatalan" sesudah resi **belum punya endpoint** (docs/22 #3) — layar hanya menjelaskannya.
+- 🔴 **Secure+**: `confirm-delivery` menuntut `seal_code` dari notifikasi `order_shipped_secure_plus`; salah → `422 INVALID_SEAL_CODE`, >5/15 menit → `429` (benar pun dihitung). Aplikasi tidak tahu lebih dulu apakah pesanan Secure+, jadi kodenya diminta sesudah `INVALID_SEAL_CODE` pertama.
+- `GET /orders/{id}/invoice` hanya untuk `completed` (selainnya `422 INVOICE_NOT_AVAILABLE`); **JSON saja, tanpa PDF**, alamat tidak disensor (docs/22 #6). `GET /orders/{id}/shipment-evidence` → `[]` untuk non-Secure+.
+- `GET /orders/{id}/tracking` = baris `order_shipments` mentah. **`tracking_history` tidak pernah ditulis server** — layar Lacak Paket hanya punya resi, status, `shipped_at`/`delivered_at`.
+- 🔴 **Tidak ada `payment_transaction_id` di `GET /orders` maupun `/orders/{id}`**, dan tak ada endpoint yang memetakannya — pesanan `pending` **tidak bisa dibayar dari detail pesanan**, hanya dari layar sesudah checkout.
+- `refund-request` **tanpa gerbang status dan tanpa bukti** — `OrderModel.canRequestRefund` yang menjaga (hanya `delivered`/`completed`); diputuskan penjual, bukan tim Xpedia.
+
+**Dompet**
+- 🔴 `POST /wallet/withdraw` kini `{amount, pin, bank_account_id}`; field bank mentah **diabaikan**. PIN: `POST /me/withdrawal-pin {pin, current_pin?}` (6 digit; mengganti menuntut PIN lama — diverifikasi di `set_withdrawal_pin`). **Tidak ada cara menanyakan apakah PIN sudah ada** (`GET` jatuh ke `/wallet`). Rekening: `/me/bank-accounts` maks 3, nama pemilik **wajib sama** dengan `full_name` akun.
+- 🔴 PIN dibatasi **5/15 menit per user untuk tarik DAN untuk ganti PIN — percobaan benar ikut dihitung** (cacat yang sama dengan login). `WalletCubit` memvalidasi minimum → saldo tersedia → rekening → format PIN **sebelum** menyentuh jaringan; test integrasi hanya memakai 2 percobaan per jalur per putaran.
+- Minimum topup Rp 10.000 **tidak** ditegakkan server (docs/22 #12) — `WalletCubit.minimumTopup`. ⚠️ Penarikan yang ditolak admin **tidak mengembalikan saldo** (bug backend, dicatat di CHANGELOG-nya).
+
+**Xpedia 911** (domain baru `SupportService`/`SupportRepository`): `/support-tickets` (kategori ENUM `order_transaction|account_security|payment_wallet|report_violation`), 20/halaman tanpa `meta`; pesan pertama pengguna memindahkan `open → in_progress`; `description` **tidak** jadi pesan. 🔴 `related_order_id` tak diperiksa kepemilikannya dan id tak dikenal **meledak 500 HTML** — aplikasi hanya mengisinya dari rute pesanan milik sendiri.
+
+**Checkout**: `422 SHIPPING_COVERAGE_UNAVAILABLE` (`details` null) sebelum reservasi stok; `address_id` tak dikenal kini dibalas `VOUCHER_INVALID` (salah kode). **Belum wallet-only dan belum ada PIN bayar** (docs/22 #1–#2) — alur metode pembayaran lama tetap dipakai. ⚠️ Total checkout lama menjumlah `grand_total + ongkir` padahal `set_shipping` sudah memasukkan ongkir ke `grand_total` — **tagihan tampil lebih besar dari yang ditarik**; sudah diperbaiki dan dipatok test.
+
+**Alamat**: maks 3 **tidak** ditegakkan server (docs/22 #9) — `AddressCubit.maxAddresses`.
+
+🔴 **Keamanan, dilaporkan ke backend**: `GET /orders/{id}/tracking` **tanpa cek kepemilikan** dan kini membawa `delivery_seal_code` — siapa pun yang login (termasuk penjual) bisa membaca kode segel pesanan mana pun dan melewati gerbang Secure+. Aplikasi sengaja tidak memodelkan field itu.
+
+Kode error baru di `ApiErrorCode` + `errorMessageFor`: `CHAT_CONTENT_BLOCKED`, `SHIPPING_COVERAGE_UNAVAILABLE`, `INVALID_SEAL_CODE`, `INVOICE_NOT_AVAILABLE`, `WITHDRAWAL_REJECTED`, `TICKET_NOT_FOUND`, `NOT_PARTICIPANT`. Validasi yang dibuat aplikasi sendiri memakai `ClientErrorCode.localValidation` (`localValidationError()` di `lib/ui/main/profile/widgets/account_error_text.dart`) — **satu-satunya** kode yang `message`-nya boleh tampil ke user.
+
+### Design system Xpedia (29 September 2026)
+
+Seluruh layar ber-API dibangun ulang mengikuti desain Stitch di `assets/stitch_xpedia_buyer_project/` (tidak dibundel ke app — `pubspec` hanya mendaftarkan `assets/images/`, `assets/icon/`, `assets/fonts/`). **`design_buyer.md` di folder itu adalah sumber aturan** (token, skala tipe, aturan non-negotiable §5, gaya copy §6). Folder ber-`code.html` adalah layar mobile 390dp; folder `bXX_*.png` adalah mockup **desktop** kecuali `b16` (toko diikuti) dan `b32` (lacak paket).
+
+- **Token**: `lib/core/design/xp_colors.dart` (`XpColors.*` — getter yang membaca `isAppDarkMode()`, jadi konvensi "tanpa `Theme.of`" tetap berlaku), `xp_text.dart` (`XpText.*` di atas `getResponsiveFontSize`, tak pernah <11px; `XpRadius`), `xp_widgets.dart` (`XpCard` berbingkai, `XpPill`, `XpEmptyState`, `XpQuantityStepper`, `XpBanner`, `XpBottomBar`, …). Konstanta `k*` lama dipetakan ulang ke palet Xpedia, dan `app_theme.dart` kini memberi tema komponen (Filled/Outlined button, input, chip, sheet) — widget lama ikut berbentuk desain. **Layar baru pakai `XpColors`/`XpText`, bukan `AppStyles`**.
+- **Shell** (`lib/features/shared/views/home_layout.dart`, nama kelas & rute `homeLayout` dipertahankan): **tepat 5 tab** Beranda · Wishlist · Pesanan Saya · Chat · My Xpedia, dibangun malas dalam `IndexedStack`. Keranjang **bukan tab** — `CartActionButton` berlencana di app bar (`/cart`). Tab "Trending" kit dan `ProfileView` kit tidak lagi terjangkau dari navigasi. Layar tab menerima `onLogoTap` (logo Xpedia = tombol Beranda).
+- **App bar**: `XpHomeAppBar` / `XpTabAppBar` / `XpStackAppBar` di `lib/ui/main/shell/xp_app_bars.dart`. Tombol kembali `XpStackAppBar` bertooltip **"Kembali"** — `integration_test` mencarinya lewat tooltip itu.
+- **Widget dagang bersama** (`lib/ui/main/shell/xp_commerce.dart`): `StockChip`, `SellerStatusBadge`, `SignatureBadge`, `RatingLine` (**tidak menggambar apa pun tanpa ulasan** — aturan "tak pernah 0,0"), `PriceBlock`, `StoreLine`, `orderStatusPresentation`/`OrderStatusPill` (label desain: "Menunggu Pembayaran", "Pembayaran Berhasil", "Diproses", "Dalam Pengiriman", "Diterima", "Selesai", "Dibatalkan", "Menunggu Konfirmasi").
+- **`AppScope`** (di `MaterialApp.builder`): `StoreDirectoryCubit`, `CartBadgeCubit`, `WishlistCubit` app-wide — satu-satunya pengecualian aturan "cubit dibuat per layar", karena layar yang di-push berada di luar pohon `HomeLayout`. `HomeLayout` memuat ulang wishlist & lencana keranjang tiap dibuka (cubit ini hidup lebih lama dari sesi login).
+- **Kartu produk** `ProductCard` + `productGridDelegate(width)` — tinggi sel dihitung dari lebar, baris chip satu baris tetap; mengubah isi kartu berarti menghitung ulang `textBlock`.
+- Format angka gaya Indonesia di `format_helper.dart`: `formatCompact` ("1,2rb"), `formatRating` ("4,9"), `formatPercent` ("98,7%").
+
+**Elemen desain yang sengaja TIDAK dibangun karena tak ada datanya** (kartu palsu lebih buruk daripada tidak ada kartu): hero carousel beranda (`/home/layout` masih `[]`), grid layanan XpediaFood/Ride/Mart, semua fitur Live, blok Xpedia Wallet + layar saldo-kurang + PIN di checkout (docs/22 #1–#2), "Ajukan Pembatalan" sesudah resi (#3), unggah bukti komplain (#5), lonceng wishlist (#13), edit ulasan 30 hari (#8), peta & timeline kurir di Lacak Paket, unduh PDF invoice, status "Online" toko, gambar & chip stok di baris keranjang (`GET /cart` tidak membawanya), dan biometrik.
+
+### Mock untuk API yang belum dibangun (29 September 2026)
+
+Keputusan user: fitur blueprint yang backend-nya belum ada **tetap dibangun penuh**, terhadap **kontrak yang diusulkan**, dan dijawab mock JSON sampai backend membuatnya.
+
+- **Kerangka**: `lib/config/network/mock/pending_api_mock.dart` — `PendingApiMockInterceptor` dipasang pada Dio `"api"` (sesudah auth, sebelum logging) **hanya bila `PendingApiMock.enabled`** = `bool.fromEnvironment('PENDING_API_MOCK', defaultValue: kDebugMode)`. Release tidak pernah memasangnya; `--dart-define=PENDING_API_MOCK=false` mematikannya di debug. `test/integration/` memakai `DioClient.createBare`, jadi **tetap memaku server sungguhan**.
+- **Rute per domain** di `lib/config/network/mock/routes/{account,checkout,order,discovery}_mock_routes.dart`. `MockRoute.onRequest` menjawab tanpa menyentuh server (atau meneruskan sesudah mengubah request); `onResponse` **memperkaya respons sungguhan** dengan field yang belum dikirim server dan wajib memanggil `markMockFields`.
+- **Fixture + spesifikasi untuk backend**: `assets/mock/pending_api/<domain>/*.json` dan **`assets/mock/pending_api/README.md`** (tabel endpoint, body, respons, kode error, dan rujukan docs/22 #). Itu dokumen yang diserahkan ke tim backend.
+- **Aturan**: mock **hanya** untuk endpoint/field yang **tidak ada** di `routes.php`. Endpoint yang ada tapi datanya kosong (voucher, home CMS) memakai server sungguhan. Respons mock membawa `meta.mock`/`meta.mock_fields`; `SimulatedBadge` (`lib/ui/main/shell/simulated_badge.dart`) menandainya "Simulasi". Fitur mendeteksi kemampuan server: rute yang membalas 404 HTML (`DataError.isRouteNotFound`) membuat fiturnya **turun anggun** (checkout kembali ke pemilih metode lama, bagian KTP/Live/ulasan-saya disembunyikan).
+- **Begitu backend membangun sebuah endpoint: hapus rute mock-nya saja.** Service, repository, dan layar sudah ditulis terhadap kontraknya.
+
+| domain | endpoint yang di-mock | docs/22 |
+|---|---|---|
+| checkout | `GET /checkout/sessions/{id}/wallet-summary`; `POST .../confirm` dengan `payment_method: "wallet", pin` (diteruskan ke server sebagai `qris` → **order sungguhan tetap `pending`**; PIN mock `123456`) | #1, #2, #12 |
+| order | `POST`/`GET /orders/{id}/cancellation-request`; `GET /orders/{id}/insurance`; `tracking_history` di `GET /orders/{id}/tracking`; `GET /me/reviews`, `PATCH /reviews/{id}` (jendela 30 hari) | #3, #8 |
+| account | `GET`/`POST /me/identity-verification` (KTP); `POST /me/contact-change` + `/{id}/verify` (OTP mock `123456`); penolakan `PATCH /me` `full_name` saat identitas terverifikasi | #4, #10, #11 |
+| discovery | `GET /live-sessions`; `online_status` di `partners-performance`; `PATCH /wishlist/items/{product_id}` `{alert_enabled}` + `alert_enabled` di `GET /wishlist` | #13 |
+
+Field yang **diusulkan tanpa mock** (app sudah membaca/mengirimnya, backend tinggal menambah): `payment_transaction_id` di `GET /orders/{id}` (sementara diisi `OrderPaymentLinkStore` dari balasan confirm), `evidence_urls[]` di `refund-request`, `shipping_address_masked` di invoice, `is_current` di `/me/sessions`, `image_url`/`stock`/`fulfillment_mode` di baris `GET /cart`.
+
+Yang dibangun dengan **API sungguhan** di putaran ini: lupa/reset password (`dev_reset_token` dipakai di debug), sesi perangkat `/me/sessions`, voucher (klaim, pasang, lepas, rekomendasi, auto-apply — **tidak pernah** dipanggil saat keranjang kosong), home CMS `/home/layout` (kini **terisi** di dev), master lokasi `/locations/*` + `city_id`, unggah bukti `/media/upload`, Secure+ opt-in, berbagi produk/pesanan di chat, dan invoice PDF yang dirakit di perangkat (`pdf` + `printing`, alamat disensor di sisi app).
+
+**Temuan backend baru (belum dilaporkan):**
+- 🔴 `Jwt_auth::refresh()` menyisipkan baris sesi baru **setiap refresh tanpa mencabut yang lama** — refresh token lama tetap sah 30 hari dan daftar `/me/sessions` tumbuh satu baris per 15 menit. Layar Keamanan Akun mengelompokkan per perangkat karena itu.
+- 🔴 **Kode segel Secure+ berformat `SEAL-XXXXXXXX`** (13 karakter), sedangkan dialog lama menuntut tepat 6 — pesanan Secure+ **tidak pernah bisa dikonfirmasi diterima**. Sudah diperbaiki (menerima kode penuh atau 8 karakter lalu menambah awalan).
+- `insurance/opt-in` tanpa cek status, menerima `premium_amount` dari klien (bisa 0), premiumnya tak pernah ditagih, dan opt-in kedua meledak `UNIQUE (order_id)`.
+- Kirim chat tidak memeriksa kepemilikan `shared_order_id` maupun keberadaan `shared_product_id`; `city_id` asing di alamat → 500 (foreign key).
+- `GET /cart/recommended-vouchers` & auto-apply 500 saat keranjang kosong; `GET /me/vouchers` ikut mengembalikan voucher kedaluwarsa.
+
+`LoggingInterceptor` kini menyensor `pin`, `current_pin`, `otp`, `seal_code`, `id_card_number` — sebelumnya PIN penarikan tercetak mentah di log debug.
 
 ### Kontrak sisi member (diverifikasi ke server, 14 September 2026)
 
@@ -1047,7 +1156,7 @@ The kit's social-login buttons were dropped, not ported — the backend has no O
 
 A `@freezed` class with custom getters or methods **must** declare a private constructor (`const UserModel._();`), otherwise generation fails with `Getters require a MyClass._() constructor`. Also prefer getters **inside** the class over an `extension`: an extension is only in scope where its own library is imported, so `user.isVerified` silently fails to resolve in a file that imported the model only transitively.
 
-**Backend contract**: the member app talks to **marketplace-api** (CodeIgniter 3 modular HMVC + JWT), a multi-vendor marketplace. Reference material lives in that repo, not this one. Start at **`docs/20-frontend-integration-guide.md`** — it is written for exactly this app and marks which claims were tested against a running server. Then `docs/02-database-schema.md` + `database/schema/*.sql` for field shapes, `docs/04-rbac-permission-matrix.md` for roles, `docs/16-home-layout-cms.md` and `docs/17-campaign-engine.md` for the two newest modules, and `postman/Marketplace-API.postman_collection.json` (223 request, 32 folder) for request bodies.
+**Backend contract**: the member app talks to **marketplace-api** (CodeIgniter 3 modular HMVC + JWT), a multi-vendor marketplace. Reference material lives in that repo, not this one. Start at **`docs/23-frontend-integration-guide.md`** — it is written for exactly this app and marks which claims were tested against a running server. Then `docs/02-database-schema.md` + `database/schema/*.sql` for field shapes, `docs/04-rbac-permission-matrix.md` for roles, `docs/16-home-layout-cms.md` and `docs/17-campaign-engine.md` for the two newest modules, and `postman/Marketplace-API.postman_collection.json` (223 request, 32 folder) for request bodies.
 
 ⚠️ **Koleksi Postman-nya kini bentrok dengan data seed.** Variabel `store_id`/`product_id`/`warehouse_id` masih bernilai `1`, padahal id 1–8 sudah dipakai toko milik seller seed — menjalankan koleksinya apa adanya menghasilkan `403` berulang. Body request-nya tetap sahih; yang salah hanya nilai variabelnya.
 
@@ -1137,7 +1246,7 @@ Derived from the gap between Part 1 and Part 2. Steps 0-5 are done and the auth 
 
    **Ditambahkan 21 September 2026** (dari 25 commit backend `70ac372..90ab9db`, rilis v1.1.0 + v1.2.0):
 
-   - **Ikuti toko** — `POST/DELETE /stores/{id}/follow` + `GET /me/following` (commit `2ac6e9e`). Fitur member sungguhan yang belum ada di aplikasi sama sekali: belum ada tombol, model, maupun service.
+   - ~~**Ikuti toko**~~ — **selesai** (29 September 2026): `StoreService`, tombol "Ikuti Toko" di halaman toko, dan layar Toko Diikuti.
    - **Etalase toko** — `GET /stores/{id}/showcases` (publik) + `GET /showcases/{id}/products`. Hidup, tapi **`[]` di dev** karena belum ada seed. Sama seperti home CMS: tunggu ada isinya sebelum memodelkannya.
    - **`POST /orders/{id}/rating`** (commit `987458c`) — rating **toko**, terpisah dari ulasan **produk** (`POST /order-items/{id}/review`). Maksimal sekali per order, dan menuntut status `completed`; ulangan dibalas `409 ORDER_ALREADY_RATED`, status lain `422 ORDER_NOT_COMPLETED`. ⚠️ **Tidak bisa diuji ujung ke ujung** — kendala yang sama dengan ulasan: tidak ada pesanan yang bisa mencapai `completed` di dev.
    - **Master lokasi** — `GET /locations/provinces` dan `GET /locations/cities?province_id=` (commit `d025b40`), keduanya **publik dan sudah ada isinya**: 11 provinsi, 15 kota. Kolom alamat juga menerima **`city_id`** sekarang. Ini peluang nyata memperbaiki formulir alamat, yang hari ini masih mengetik `city`/`province` sebagai teks bebas — sumber ongkir salah kalau ejaannya meleset. ⚠️ Seednya masih tipis (15 kota untuk 11 provinsi), jadi dropdown murni akan memblokir user di kota yang belum terdaftar; sediakan jalan ketik-bebas sampai seednya lengkap. Perhatikan pula konvensi kolomnya **berbeda dari seluruh API**: `province_name`/`city_name`, `active`, `created_date` — bukan `name`, `is_active`, `created_at`.

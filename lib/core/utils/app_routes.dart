@@ -1,3 +1,25 @@
+import 'package:marketplace_app_member/ui/main/auth/screens/forgot_password_screen.dart';
+import 'package:marketplace_app_member/ui/main/auth/screens/reset_password_screen.dart';
+import 'package:marketplace_app_member/ui/main/profile/screens/account_security_screen.dart';
+import 'package:marketplace_app_member/ui/main/profile/screens/edit_profile_screen.dart';
+import 'package:marketplace_app_member/ui/main/profile/screens/settings_screen.dart';
+import 'package:marketplace_app_member/ui/main/review/screens/my_reviews_screen.dart';
+import 'package:marketplace_app_member/ui/main/voucher/screens/voucher_screen.dart';
+import 'package:marketplace_app_member/ui/main/address/screens/address_list_screen.dart';
+import 'package:marketplace_app_member/ui/main/cart/screens/cart_screen.dart';
+import 'package:marketplace_app_member/ui/main/catalog/screens/search_screen.dart';
+import 'package:marketplace_app_member/ui/main/order/screens/order_cancel_screen.dart';
+import 'package:marketplace_app_member/ui/main/order/screens/order_complaint_screen.dart';
+import 'package:marketplace_app_member/ui/main/order/screens/order_invoice_screen.dart';
+import 'package:marketplace_app_member/ui/main/order/screens/order_tracking_screen.dart';
+import 'package:marketplace_app_member/ui/main/review/screens/review_form_screen.dart';
+import 'package:marketplace_app_member/ui/main/store/screens/followed_stores_screen.dart';
+import 'package:marketplace_app_member/ui/main/store/screens/store_screen.dart';
+import 'package:marketplace_app_member/ui/main/support/screens/support_list_screen.dart';
+import 'package:marketplace_app_member/ui/main/support/screens/support_new_ticket_screen.dart';
+import 'package:marketplace_app_member/ui/main/support/screens/support_ticket_screen.dart';
+import 'package:marketplace_app_member/ui/main/wallet/screens/bank_accounts_screen.dart';
+import 'package:marketplace_app_member/ui/main/wallet/screens/withdrawal_pin_screen.dart';
 import 'package:animations/animations.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -14,26 +36,8 @@ import 'package:marketplace_app_member/ui/main/reward/screens/reward_screen.dart
 import 'package:marketplace_app_member/ui/main/payment/screens/payment_screen.dart';
 import 'package:marketplace_app_member/ui/main/wallet/screens/wallet_screen.dart';
 import 'package:marketplace_app_member/ui/main/auth/screens/register_screen.dart';
-import '../../features/auth/presentation/views/reset_password_view.dart';
 import '../../features/auth/presentation/views/welcome_view.dart';
-import '../../features/home/presentation/views/all_review.dart';
-import '../../features/home/presentation/views/new_fashion_view.dart';
-import '../../features/home/presentation/views/product_details.dart';
-import '../../features/home/presentation/views/write_review_screen.dart';
-import '../../features/my_cart/presentation/views/checkout_view.dart';
-import '../../features/notifications&messages/presentation/views/chat_view.dart';
 import '../../features/onboarding/presentation/views/onboarding_view.dart';
-import '../../features/profile/presentaion/views/about_app_view.dart';
-import '../../features/profile/presentaion/views/add_card_view.dart';
-import '../../features/profile/presentaion/views/contact_us_view.dart';
-import '../../features/profile/presentaion/views/contact_us_view2.dart';
-import '../../features/profile/presentaion/views/create_new_password_view.dart';
-import '../../features/profile/presentaion/views/edit_profile_view.dart';
-import '../../features/profile/presentaion/views/forgot_password_view.dart';
-import '../../features/profile/presentaion/views/help_center.dart';
-import '../../features/profile/presentaion/views/otp_verification_view.dart';
-import '../../features/profile/presentaion/views/payment_methods_view.dart';
-import '../../features/profile/presentaion/views/settings_view.dart';
 import '../../features/shared/views/home_layout.dart';
 import '../../features/spalsh/splash_screen.dart';
 
@@ -102,23 +106,71 @@ class AppRoutes {
   static String chatRoomPath(int conversationId) =>
       '/chat-room/$conversationId';
 
+  // --- Xpedia (desain Stitch) ---
+  //
+  // Seluruhnya path parameter, bukan `extra`, dengan alasan yang sama dengan
+  // `productDetail`: tahan refresh di web.
+
+  /// Keranjang. Bukan tab — desain Xpedia menaruhnya sebagai ikon app bar
+  /// berlencana (design_buyer.md §4 "Bottom navigation").
+  static const String cart = '/cart';
+
+  /// Hasil pencarian: `/search?q=…`. Tanpa filter dan tanpa urutan.
+  static const String search = '/search';
+
+  static String searchPath(String query) =>
+      Uri(path: search, queryParameters: {'q': query}).toString();
+
+  /// Halaman toko.
+  static const String store = '/store';
+
+  static String storePath(int storeId) => '/store/$storeId';
+
+  static const String followedStores = '/following';
+
+  static const String addresses = '/addresses';
+
+  /// Xpedia 911 — satu-satunya merek layanan pelanggan.
+  static const String support = '/xpedia-911';
+
+  static String supportTicketPath(int ticketId) => '/xpedia-911/$ticketId';
+
+  /// Membuat tiket baru, opsional terkait satu pesanan:
+  /// `/xpedia-911/new?order=12`.
+  static String supportNewPath({int? orderId}) => Uri(
+        path: '/xpedia-911/new',
+        queryParameters: orderId == null ? null : {'order': '$orderId'},
+      ).toString();
+
+  static String orderTrackingPath(int orderId) => '/order/$orderId/tracking';
+
+  static String orderInvoicePath(int orderId) => '/order/$orderId/invoice';
+
+  static String orderCancelPath(int orderId) => '/order/$orderId/cancel';
+
+  static String orderComplaintPath(int orderId) => '/order/$orderId/complaint';
+
+  /// Formulir ulasan satu baris pesanan: `/order/12/review/34`.
+  static String orderReviewPath(int orderId, int orderItemId) =>
+      '/order/$orderId/review/$orderItemId';
+
+  static const String bankAccounts = '/wallet/bank-accounts';
+
+  /// Perangkat yang login, verifikasi identitas (KTP), dan ganti email/HP.
+  static const String accountSecurity = '/account-security';
+
+  /// Voucher milik pembeli + pasang ke keranjang.
+  static const String vouchers = '/vouchers';
+
+  /// Ulasan yang pernah ditulis pembeli — bisa diedit 30 hari.
+  static const String myReviews = '/my-reviews';
+
+  static const String withdrawalPin = '/wallet/pin';
+
   static const String homeLayout = '/homeLayout';
-  static const String productDetails = '/productDetails';
-  static const String allReview = '/allReview';
-  static const String writeReview = '/writeReview';
-  static const String checkout = '/checkout';
-  static const String newFashion = '/newFashion';
   static const String editProfile = '/editProfile';
   static const String settings = '/settings';
-  static const String paymentMethods = '/paymentMethods';
-  static const String addCardView = '/addCard';
-  static const String helpCenter = '/helpCenter';
-  static const String contactUs = '/contactUs';
-  static const String contactUs2 = '/contactUs2';
-  static const String aboutApp = '/aboutApp';
   static const String forgotPassword = '/forgotPassword';
-  static const String otpVerification = '/otpVerification';
-  static const String createNewPassword = '/createNewPassword';
   /// Kotak masuk notifikasi ber-API.
   ///
   /// Dulu mengarah ke `NotificationsLayout` milik kit — cangkang dua tab
@@ -128,12 +180,174 @@ class AppRoutes {
   /// tab sungguhan lebih menyesatkan daripada tidak ada tab sama sekali.
   /// Cangkang tab bisa dihidupkan lagi saat chat dikerjakan.
   static const String notifications = '/notifications';
-  static const String chat = '/chat';
 }
 
 final GoRouter router = GoRouter(
   initialLocation: AppRoutes.splash,
   routes: <RouteBase>[
+    // --- Xpedia (desain Stitch) ---
+    GoRoute(
+      path: AppRoutes.accountSecurity,
+      pageBuilder: (BuildContext context, GoRouterState state) {
+        return FadeThroughTransitionPageWrapper(
+          transitionKey: state.pageKey,
+          page: const AccountSecurityScreen(),
+        );
+      },
+    ),
+    GoRoute(
+      path: AppRoutes.vouchers,
+      pageBuilder: (BuildContext context, GoRouterState state) {
+        return FadeThroughTransitionPageWrapper(
+          transitionKey: state.pageKey,
+          page: const VoucherScreen(),
+        );
+      },
+    ),
+    GoRoute(
+      path: AppRoutes.myReviews,
+      pageBuilder: (BuildContext context, GoRouterState state) {
+        return FadeThroughTransitionPageWrapper(
+          transitionKey: state.pageKey,
+          page: const MyReviewsScreen(),
+        );
+      },
+    ),
+    GoRoute(
+      path: AppRoutes.cart,
+      pageBuilder: (BuildContext context, GoRouterState state) {
+        return FadeThroughTransitionPageWrapper(
+          transitionKey: state.pageKey,
+          page: const CartScreen(),
+        );
+      },
+    ),
+    GoRoute(
+      path: AppRoutes.search,
+      pageBuilder: (BuildContext context, GoRouterState state) {
+        return FadeThroughTransitionPageWrapper(
+          transitionKey: state.pageKey,
+          page: SearchScreen(query: state.uri.queryParameters['q'] ?? ''),
+        );
+      },
+    ),
+    GoRoute(
+      path: '${AppRoutes.store}/:id',
+      pageBuilder: (BuildContext context, GoRouterState state) {
+        return FadeThroughTransitionPageWrapper(
+          transitionKey: state.pageKey,
+          page: StoreScreen(storeId: int.parse(state.pathParameters['id']!)),
+        );
+      },
+    ),
+    GoRoute(
+      path: AppRoutes.followedStores,
+      pageBuilder: (BuildContext context, GoRouterState state) {
+        return FadeThroughTransitionPageWrapper(
+          transitionKey: state.pageKey,
+          page: const FollowedStoresScreen(),
+        );
+      },
+    ),
+    GoRoute(
+      path: AppRoutes.addresses,
+      pageBuilder: (BuildContext context, GoRouterState state) {
+        return FadeThroughTransitionPageWrapper(
+          transitionKey: state.pageKey,
+          page: const AddressListScreen(),
+        );
+      },
+    ),
+    GoRoute(
+      path: '${AppRoutes.support}/new',
+      pageBuilder: (BuildContext context, GoRouterState state) {
+        return FadeThroughTransitionPageWrapper(
+          transitionKey: state.pageKey,
+          page: SupportNewTicketScreen(orderId: int.tryParse(state.uri.queryParameters['order'] ?? '')),
+        );
+      },
+    ),
+    GoRoute(
+      path: '${AppRoutes.support}/:id',
+      pageBuilder: (BuildContext context, GoRouterState state) {
+        return FadeThroughTransitionPageWrapper(
+          transitionKey: state.pageKey,
+          page: SupportTicketScreen(ticketId: int.parse(state.pathParameters['id']!)),
+        );
+      },
+    ),
+    GoRoute(
+      path: AppRoutes.support,
+      pageBuilder: (BuildContext context, GoRouterState state) {
+        return FadeThroughTransitionPageWrapper(
+          transitionKey: state.pageKey,
+          page: const SupportListScreen(),
+        );
+      },
+    ),
+    GoRoute(
+      path: '/order/:id/tracking',
+      pageBuilder: (BuildContext context, GoRouterState state) {
+        return FadeThroughTransitionPageWrapper(
+          transitionKey: state.pageKey,
+          page: OrderTrackingScreen(orderId: int.parse(state.pathParameters['id']!)),
+        );
+      },
+    ),
+    GoRoute(
+      path: '/order/:id/invoice',
+      pageBuilder: (BuildContext context, GoRouterState state) {
+        return FadeThroughTransitionPageWrapper(
+          transitionKey: state.pageKey,
+          page: OrderInvoiceScreen(orderId: int.parse(state.pathParameters['id']!)),
+        );
+      },
+    ),
+    GoRoute(
+      path: '/order/:id/cancel',
+      pageBuilder: (BuildContext context, GoRouterState state) {
+        return FadeThroughTransitionPageWrapper(
+          transitionKey: state.pageKey,
+          page: OrderCancelScreen(orderId: int.parse(state.pathParameters['id']!)),
+        );
+      },
+    ),
+    GoRoute(
+      path: '/order/:id/complaint',
+      pageBuilder: (BuildContext context, GoRouterState state) {
+        return FadeThroughTransitionPageWrapper(
+          transitionKey: state.pageKey,
+          page: OrderComplaintScreen(orderId: int.parse(state.pathParameters['id']!)),
+        );
+      },
+    ),
+    GoRoute(
+      path: '/order/:id/review/:itemId',
+      pageBuilder: (BuildContext context, GoRouterState state) {
+        return FadeThroughTransitionPageWrapper(
+          transitionKey: state.pageKey,
+          page: ReviewFormScreen(orderId: int.parse(state.pathParameters['id']!), orderItemId: int.parse(state.pathParameters['itemId']!)),
+        );
+      },
+    ),
+    GoRoute(
+      path: AppRoutes.bankAccounts,
+      pageBuilder: (BuildContext context, GoRouterState state) {
+        return FadeThroughTransitionPageWrapper(
+          transitionKey: state.pageKey,
+          page: const BankAccountsScreen(),
+        );
+      },
+    ),
+    GoRoute(
+      path: AppRoutes.withdrawalPin,
+      pageBuilder: (BuildContext context, GoRouterState state) {
+        return FadeThroughTransitionPageWrapper(
+          transitionKey: state.pageKey,
+          page: const WithdrawalPinScreen(),
+        );
+      },
+    ),
     GoRoute(
       path: AppRoutes.splash,
       pageBuilder: (BuildContext context, GoRouterState state) {
@@ -175,7 +389,10 @@ final GoRouter router = GoRouter(
       pageBuilder: (BuildContext context, GoRouterState state) {
         return FadeThroughTransitionPageWrapper(
           transitionKey: state.pageKey,
-          page: const ResetPasswordView(),
+          page: ResetPasswordScreen(
+            email: state.uri.queryParameters['email'],
+            token: state.uri.queryParameters['token'],
+          ),
         );
       },
     ),
@@ -257,57 +474,11 @@ final GoRouter router = GoRouter(
       },
     ),
     GoRoute(
-      path: AppRoutes.productDetails,
-      pageBuilder: (BuildContext context, GoRouterState state) {
-        final String images = state.extra! as String;
-        return FadeThroughTransitionPageWrapper(
-          transitionKey: state.pageKey,
-          page: ProductDetails(image: images),
-        );
-      },
-    ),
-    GoRoute(
-      path: AppRoutes.allReview,
-      pageBuilder: (BuildContext context, GoRouterState state) {
-        return FadeThroughTransitionPageWrapper(
-          transitionKey: state.pageKey,
-          page: const AllReviewScreen(),
-        );
-      },
-    ),
-    GoRoute(
-      path: AppRoutes.writeReview,
-      pageBuilder: (BuildContext context, GoRouterState state) {
-        return FadeThroughTransitionPageWrapper(
-          transitionKey: state.pageKey,
-          page: const WriteReviewScreen(),
-        );
-      },
-    ),
-    GoRoute(
-      path: AppRoutes.checkout,
-      pageBuilder: (BuildContext context, GoRouterState state) {
-        return FadeThroughTransitionPageWrapper(
-          transitionKey: state.pageKey,
-          page: const CheckoutView(),
-        );
-      },
-    ),
-    GoRoute(
-      path: AppRoutes.newFashion,
-      pageBuilder: (BuildContext context, GoRouterState state) {
-        return FadeThroughTransitionPageWrapper(
-          transitionKey: state.pageKey,
-          page: const NewFashionView(),
-        );
-      },
-    ),
-    GoRoute(
       path: AppRoutes.editProfile,
       pageBuilder: (BuildContext context, GoRouterState state) {
         return FadeThroughTransitionPageWrapper(
           transitionKey: state.pageKey,
-          page: const EditProfileView(),
+          page: const EditProfileScreen(),
         );
       },
     ),
@@ -316,70 +487,7 @@ final GoRouter router = GoRouter(
       pageBuilder: (BuildContext context, GoRouterState state) {
         return FadeThroughTransitionPageWrapper(
           transitionKey: state.pageKey,
-          page: const SettingsView(),
-        );
-      },
-    ),
-    GoRoute(
-      path: AppRoutes.paymentMethods,
-      pageBuilder: (BuildContext context, GoRouterState state) {
-        return FadeThroughTransitionPageWrapper(
-          transitionKey: state.pageKey,
-          page: const PaymentMethodsView(),
-        );
-      },
-    ),
-    GoRoute(
-      path: AppRoutes.addCardView,
-      pageBuilder: (BuildContext context, GoRouterState state) {
-        return FadeThroughTransitionPageWrapper(
-          transitionKey: state.pageKey,
-          page: const AddCardView(),
-        );
-      },
-    ),
-    GoRoute(
-      path: AppRoutes.helpCenter,
-      pageBuilder: (BuildContext context, GoRouterState state) {
-        return FadeThroughTransitionPageWrapper(
-          transitionKey: state.pageKey,
-          page: const HelpCenterView(),
-        );
-      },
-    ),
-    GoRoute(
-      path: AppRoutes.contactUs,
-      pageBuilder: (BuildContext context, GoRouterState state) {
-        return FadeThroughTransitionPageWrapper(
-          transitionKey: state.pageKey,
-          page: const ContactUsView(),
-        );
-      },
-    ),
-    GoRoute(
-      path: AppRoutes.contactUs,
-      pageBuilder: (BuildContext context, GoRouterState state) {
-        return FadeThroughTransitionPageWrapper(
-          transitionKey: state.pageKey,
-          page: const ContactUsView(),
-        );
-      },
-    ),
-    GoRoute(
-      path: AppRoutes.contactUs2,
-      pageBuilder: (BuildContext context, GoRouterState state) {
-        return FadeThroughTransitionPageWrapper(
-          transitionKey: state.pageKey,
-          page: const ContactUsView2(),
-        );
-      },
-    ),
-    GoRoute(
-      path: AppRoutes.aboutApp,
-      pageBuilder: (BuildContext context, GoRouterState state) {
-        return FadeThroughTransitionPageWrapper(
-          transitionKey: state.pageKey,
-          page: const AboutAppView(),
+          page: const SettingsScreen(),
         );
       },
     ),
@@ -388,25 +496,7 @@ final GoRouter router = GoRouter(
       pageBuilder: (BuildContext context, GoRouterState state) {
         return FadeThroughTransitionPageWrapper(
           transitionKey: state.pageKey,
-          page: const ForgotPasswordView(),
-        );
-      },
-    ),
-    GoRoute(
-      path: AppRoutes.otpVerification,
-      pageBuilder: (BuildContext context, GoRouterState state) {
-        return FadeThroughTransitionPageWrapper(
-          transitionKey: state.pageKey,
-          page: const OtpVerificationView(),
-        );
-      },
-    ),
-    GoRoute(
-      path: AppRoutes.createNewPassword,
-      pageBuilder: (BuildContext context, GoRouterState state) {
-        return FadeThroughTransitionPageWrapper(
-          transitionKey: state.pageKey,
-          page: const CreateNewPasswordView(),
+          page: const ForgotPasswordScreen(),
         );
       },
     ),
@@ -447,15 +537,6 @@ final GoRouter router = GoRouter(
         return FadeThroughTransitionPageWrapper(
           transitionKey: state.pageKey,
           page: const NotificationScreen(),
-        );
-      },
-    ),
-    GoRoute(
-      path: AppRoutes.chat,
-      pageBuilder: (BuildContext context, GoRouterState state) {
-        return FadeThroughTransitionPageWrapper(
-          transitionKey: state.pageKey,
-          page: const ChatView(),
         );
       },
     ),

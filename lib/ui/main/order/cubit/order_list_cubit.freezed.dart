@@ -153,8 +153,13 @@ extension OrderListStatePatterns on OrderListState {
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>({
     TResult Function()? loading,
-    TResult Function(List<OrderModel> orders, int page, bool hasMore,
-            bool isLoadingMore, DataError? loadMoreError)?
+    TResult Function(
+            List<OrderModel> orders,
+            int page,
+            bool hasMore,
+            bool isLoadingMore,
+            DataError? loadMoreError,
+            OrderListFilter filter)?
         loaded,
     TResult Function()? empty,
     TResult Function(DataError error)? error,
@@ -166,7 +171,7 @@ extension OrderListStatePatterns on OrderListState {
         return loading();
       case OrderListLoaded() when loaded != null:
         return loaded(_that.orders, _that.page, _that.hasMore,
-            _that.isLoadingMore, _that.loadMoreError);
+            _that.isLoadingMore, _that.loadMoreError, _that.filter);
       case OrderListEmpty() when empty != null:
         return empty();
       case OrderListError() when error != null:
@@ -192,8 +197,13 @@ extension OrderListStatePatterns on OrderListState {
   @optionalTypeArgs
   TResult when<TResult extends Object?>({
     required TResult Function() loading,
-    required TResult Function(List<OrderModel> orders, int page, bool hasMore,
-            bool isLoadingMore, DataError? loadMoreError)
+    required TResult Function(
+            List<OrderModel> orders,
+            int page,
+            bool hasMore,
+            bool isLoadingMore,
+            DataError? loadMoreError,
+            OrderListFilter filter)
         loaded,
     required TResult Function() empty,
     required TResult Function(DataError error) error,
@@ -204,7 +214,7 @@ extension OrderListStatePatterns on OrderListState {
         return loading();
       case OrderListLoaded():
         return loaded(_that.orders, _that.page, _that.hasMore,
-            _that.isLoadingMore, _that.loadMoreError);
+            _that.isLoadingMore, _that.loadMoreError, _that.filter);
       case OrderListEmpty():
         return empty();
       case OrderListError():
@@ -227,8 +237,13 @@ extension OrderListStatePatterns on OrderListState {
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>({
     TResult? Function()? loading,
-    TResult? Function(List<OrderModel> orders, int page, bool hasMore,
-            bool isLoadingMore, DataError? loadMoreError)?
+    TResult? Function(
+            List<OrderModel> orders,
+            int page,
+            bool hasMore,
+            bool isLoadingMore,
+            DataError? loadMoreError,
+            OrderListFilter filter)?
         loaded,
     TResult? Function()? empty,
     TResult? Function(DataError error)? error,
@@ -239,7 +254,7 @@ extension OrderListStatePatterns on OrderListState {
         return loading();
       case OrderListLoaded() when loaded != null:
         return loaded(_that.orders, _that.page, _that.hasMore,
-            _that.isLoadingMore, _that.loadMoreError);
+            _that.isLoadingMore, _that.loadMoreError, _that.filter);
       case OrderListEmpty() when empty != null:
         return empty();
       case OrderListError() when error != null:
@@ -278,11 +293,15 @@ class OrderListLoaded extends OrderListState {
       this.page = 1,
       this.hasMore = false,
       this.isLoadingMore = false,
-      this.loadMoreError})
+      this.loadMoreError,
+      this.filter = OrderListFilter.all})
       : _orders = orders,
         super._();
 
+  /// **Seluruh** pesanan yang sudah dimuat, belum disaring.
   final List<OrderModel> _orders;
+
+  /// **Seluruh** pesanan yang sudah dimuat, belum disaring.
   List<OrderModel> get orders {
     if (_orders is EqualUnmodifiableListView) return _orders;
     // ignore: implicit_dynamic_type
@@ -300,6 +319,8 @@ class OrderListLoaded extends OrderListState {
   @JsonKey()
   final bool isLoadingMore;
   final DataError? loadMoreError;
+  @JsonKey()
+  final OrderListFilter filter;
 
   /// Create a copy of OrderListState
   /// with the given fields replaced by the non-null parameter values.
@@ -319,7 +340,8 @@ class OrderListLoaded extends OrderListState {
             (identical(other.isLoadingMore, isLoadingMore) ||
                 other.isLoadingMore == isLoadingMore) &&
             (identical(other.loadMoreError, loadMoreError) ||
-                other.loadMoreError == loadMoreError));
+                other.loadMoreError == loadMoreError) &&
+            (identical(other.filter, filter) || other.filter == filter));
   }
 
   @override
@@ -329,11 +351,12 @@ class OrderListLoaded extends OrderListState {
       page,
       hasMore,
       isLoadingMore,
-      loadMoreError);
+      loadMoreError,
+      filter);
 
   @override
   String toString() {
-    return 'OrderListState.loaded(orders: $orders, page: $page, hasMore: $hasMore, isLoadingMore: $isLoadingMore, loadMoreError: $loadMoreError)';
+    return 'OrderListState.loaded(orders: $orders, page: $page, hasMore: $hasMore, isLoadingMore: $isLoadingMore, loadMoreError: $loadMoreError, filter: $filter)';
   }
 }
 
@@ -349,7 +372,8 @@ abstract mixin class $OrderListLoadedCopyWith<$Res>
       int page,
       bool hasMore,
       bool isLoadingMore,
-      DataError? loadMoreError});
+      DataError? loadMoreError,
+      OrderListFilter filter});
 }
 
 /// @nodoc
@@ -369,6 +393,7 @@ class _$OrderListLoadedCopyWithImpl<$Res>
     Object? hasMore = null,
     Object? isLoadingMore = null,
     Object? loadMoreError = freezed,
+    Object? filter = null,
   }) {
     return _then(OrderListLoaded(
       orders: null == orders
@@ -391,6 +416,10 @@ class _$OrderListLoadedCopyWithImpl<$Res>
           ? _self.loadMoreError
           : loadMoreError // ignore: cast_nullable_to_non_nullable
               as DataError?,
+      filter: null == filter
+          ? _self.filter
+          : filter // ignore: cast_nullable_to_non_nullable
+              as OrderListFilter,
     ));
   }
 }

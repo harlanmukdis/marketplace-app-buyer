@@ -10,6 +10,22 @@ sealed class WalletState with _$WalletState {
   const factory WalletState.ready({
     required WalletModel wallet,
 
+    /// Rekening tersimpan. Kegagalan memuatnya **tidak** menggagalkan layar
+    /// — saldo tetap tampil, hanya penarikan yang belum bisa dipakai.
+    @Default(<BankAccountModel>[]) List<BankAccountModel> bankAccounts,
+
+    /// Kegagalan memuat [bankAccounts]. Dipisah supaya layar rekening tidak
+    /// menampilkan "belum ada rekening" padahal daftarnya hanya gagal dimuat
+    /// — user akan menambah rekening yang sebenarnya sudah ada.
+    DataError? bankAccountsError,
+
+    /// Penarikan terakhir berhasil diajukan — dipakai layar untuk menutup
+    /// lembar penarikan dan menampilkan konfirmasi.
+    @Default(false) bool withdrawalSubmitted,
+
+    /// PIN baru saja berhasil disetel.
+    @Default(false) bool pinSaved,
+
     /// Sedang mengirim topup atau penarikan.
     @Default(false) bool isSubmitting,
     DataError? actionError,

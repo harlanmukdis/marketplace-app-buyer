@@ -1419,4 +1419,448 @@ class __$WalletTopupResultCopyWithImpl<$Res>
   }
 }
 
+/// @nodoc
+mixin _$BankAccountModel {
+  @IntJson()
+  int get id;
+  @StringJson()
+  @JsonKey(name: 'bank_name')
+  String get bankName;
+  @StringJson()
+  @JsonKey(name: 'account_number')
+  String get accountNumber;
+  @StringJson()
+  @JsonKey(name: 'account_holder_name')
+  String get accountHolderName;
+  @ServerDateTimeJson()
+  @JsonKey(name: 'created_at')
+  DateTime? get createdAt;
+
+  /// Create a copy of BankAccountModel
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  $BankAccountModelCopyWith<BankAccountModel> get copyWith =>
+      _$BankAccountModelCopyWithImpl<BankAccountModel>(
+          this as BankAccountModel, _$identity);
+
+  /// Serializes this BankAccountModel to a JSON map.
+  Map<String, dynamic> toJson();
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is BankAccountModel &&
+            (identical(other.id, id) || other.id == id) &&
+            (identical(other.bankName, bankName) ||
+                other.bankName == bankName) &&
+            (identical(other.accountNumber, accountNumber) ||
+                other.accountNumber == accountNumber) &&
+            (identical(other.accountHolderName, accountHolderName) ||
+                other.accountHolderName == accountHolderName) &&
+            (identical(other.createdAt, createdAt) ||
+                other.createdAt == createdAt));
+  }
+
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @override
+  int get hashCode => Object.hash(
+      runtimeType, id, bankName, accountNumber, accountHolderName, createdAt);
+
+  @override
+  String toString() {
+    return 'BankAccountModel(id: $id, bankName: $bankName, accountNumber: $accountNumber, accountHolderName: $accountHolderName, createdAt: $createdAt)';
+  }
+}
+
+/// @nodoc
+abstract mixin class $BankAccountModelCopyWith<$Res> {
+  factory $BankAccountModelCopyWith(
+          BankAccountModel value, $Res Function(BankAccountModel) _then) =
+      _$BankAccountModelCopyWithImpl;
+  @useResult
+  $Res call(
+      {@IntJson() int id,
+      @StringJson() @JsonKey(name: 'bank_name') String bankName,
+      @StringJson() @JsonKey(name: 'account_number') String accountNumber,
+      @StringJson()
+      @JsonKey(name: 'account_holder_name')
+      String accountHolderName,
+      @ServerDateTimeJson() @JsonKey(name: 'created_at') DateTime? createdAt});
+}
+
+/// @nodoc
+class _$BankAccountModelCopyWithImpl<$Res>
+    implements $BankAccountModelCopyWith<$Res> {
+  _$BankAccountModelCopyWithImpl(this._self, this._then);
+
+  final BankAccountModel _self;
+  final $Res Function(BankAccountModel) _then;
+
+  /// Create a copy of BankAccountModel
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? id = null,
+    Object? bankName = null,
+    Object? accountNumber = null,
+    Object? accountHolderName = null,
+    Object? createdAt = freezed,
+  }) {
+    return _then(_self.copyWith(
+      id: null == id
+          ? _self.id
+          : id // ignore: cast_nullable_to_non_nullable
+              as int,
+      bankName: null == bankName
+          ? _self.bankName
+          : bankName // ignore: cast_nullable_to_non_nullable
+              as String,
+      accountNumber: null == accountNumber
+          ? _self.accountNumber
+          : accountNumber // ignore: cast_nullable_to_non_nullable
+              as String,
+      accountHolderName: null == accountHolderName
+          ? _self.accountHolderName
+          : accountHolderName // ignore: cast_nullable_to_non_nullable
+              as String,
+      createdAt: freezed == createdAt
+          ? _self.createdAt
+          : createdAt // ignore: cast_nullable_to_non_nullable
+              as DateTime?,
+    ));
+  }
+}
+
+/// Adds pattern-matching-related methods to [BankAccountModel].
+extension BankAccountModelPatterns on BankAccountModel {
+  /// A variant of `map` that fallback to returning `orElse`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult maybeMap<TResult extends Object?>(
+    TResult Function(_BankAccountModel value)? $default, {
+    required TResult orElse(),
+  }) {
+    final _that = this;
+    switch (_that) {
+      case _BankAccountModel() when $default != null:
+        return $default(_that);
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// Callbacks receives the raw object, upcasted.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case final Subclass2 value:
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult map<TResult extends Object?>(
+    TResult Function(_BankAccountModel value) $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _BankAccountModel():
+        return $default(_that);
+      case _:
+        throw StateError('Unexpected subclass');
+    }
+  }
+
+  /// A variant of `map` that fallback to returning `null`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? mapOrNull<TResult extends Object?>(
+    TResult? Function(_BankAccountModel value)? $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _BankAccountModel() when $default != null:
+        return $default(_that);
+      case _:
+        return null;
+    }
+  }
+
+  /// A variant of `when` that fallback to an `orElse` callback.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult maybeWhen<TResult extends Object?>(
+    TResult Function(
+            @IntJson() int id,
+            @StringJson() @JsonKey(name: 'bank_name') String bankName,
+            @StringJson() @JsonKey(name: 'account_number') String accountNumber,
+            @StringJson()
+            @JsonKey(name: 'account_holder_name')
+            String accountHolderName,
+            @ServerDateTimeJson()
+            @JsonKey(name: 'created_at')
+            DateTime? createdAt)?
+        $default, {
+    required TResult orElse(),
+  }) {
+    final _that = this;
+    switch (_that) {
+      case _BankAccountModel() when $default != null:
+        return $default(_that.id, _that.bankName, _that.accountNumber,
+            _that.accountHolderName, _that.createdAt);
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// As opposed to `map`, this offers destructuring.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case Subclass2(:final field2):
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult when<TResult extends Object?>(
+    TResult Function(
+            @IntJson() int id,
+            @StringJson() @JsonKey(name: 'bank_name') String bankName,
+            @StringJson() @JsonKey(name: 'account_number') String accountNumber,
+            @StringJson()
+            @JsonKey(name: 'account_holder_name')
+            String accountHolderName,
+            @ServerDateTimeJson()
+            @JsonKey(name: 'created_at')
+            DateTime? createdAt)
+        $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _BankAccountModel():
+        return $default(_that.id, _that.bankName, _that.accountNumber,
+            _that.accountHolderName, _that.createdAt);
+      case _:
+        throw StateError('Unexpected subclass');
+    }
+  }
+
+  /// A variant of `when` that fallback to returning `null`
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? whenOrNull<TResult extends Object?>(
+    TResult? Function(
+            @IntJson() int id,
+            @StringJson() @JsonKey(name: 'bank_name') String bankName,
+            @StringJson() @JsonKey(name: 'account_number') String accountNumber,
+            @StringJson()
+            @JsonKey(name: 'account_holder_name')
+            String accountHolderName,
+            @ServerDateTimeJson()
+            @JsonKey(name: 'created_at')
+            DateTime? createdAt)?
+        $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _BankAccountModel() when $default != null:
+        return $default(_that.id, _that.bankName, _that.accountNumber,
+            _that.accountHolderName, _that.createdAt);
+      case _:
+        return null;
+    }
+  }
+}
+
+/// @nodoc
+@JsonSerializable()
+class _BankAccountModel extends BankAccountModel {
+  const _BankAccountModel(
+      {@IntJson() required this.id,
+      @StringJson() @JsonKey(name: 'bank_name') this.bankName = '',
+      @StringJson() @JsonKey(name: 'account_number') this.accountNumber = '',
+      @StringJson()
+      @JsonKey(name: 'account_holder_name')
+      this.accountHolderName = '',
+      @ServerDateTimeJson() @JsonKey(name: 'created_at') this.createdAt})
+      : super._();
+  factory _BankAccountModel.fromJson(Map<String, dynamic> json) =>
+      _$BankAccountModelFromJson(json);
+
+  @override
+  @IntJson()
+  final int id;
+  @override
+  @StringJson()
+  @JsonKey(name: 'bank_name')
+  final String bankName;
+  @override
+  @StringJson()
+  @JsonKey(name: 'account_number')
+  final String accountNumber;
+  @override
+  @StringJson()
+  @JsonKey(name: 'account_holder_name')
+  final String accountHolderName;
+  @override
+  @ServerDateTimeJson()
+  @JsonKey(name: 'created_at')
+  final DateTime? createdAt;
+
+  /// Create a copy of BankAccountModel
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  _$BankAccountModelCopyWith<_BankAccountModel> get copyWith =>
+      __$BankAccountModelCopyWithImpl<_BankAccountModel>(this, _$identity);
+
+  @override
+  Map<String, dynamic> toJson() {
+    return _$BankAccountModelToJson(
+      this,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _BankAccountModel &&
+            (identical(other.id, id) || other.id == id) &&
+            (identical(other.bankName, bankName) ||
+                other.bankName == bankName) &&
+            (identical(other.accountNumber, accountNumber) ||
+                other.accountNumber == accountNumber) &&
+            (identical(other.accountHolderName, accountHolderName) ||
+                other.accountHolderName == accountHolderName) &&
+            (identical(other.createdAt, createdAt) ||
+                other.createdAt == createdAt));
+  }
+
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @override
+  int get hashCode => Object.hash(
+      runtimeType, id, bankName, accountNumber, accountHolderName, createdAt);
+
+  @override
+  String toString() {
+    return 'BankAccountModel(id: $id, bankName: $bankName, accountNumber: $accountNumber, accountHolderName: $accountHolderName, createdAt: $createdAt)';
+  }
+}
+
+/// @nodoc
+abstract mixin class _$BankAccountModelCopyWith<$Res>
+    implements $BankAccountModelCopyWith<$Res> {
+  factory _$BankAccountModelCopyWith(
+          _BankAccountModel value, $Res Function(_BankAccountModel) _then) =
+      __$BankAccountModelCopyWithImpl;
+  @override
+  @useResult
+  $Res call(
+      {@IntJson() int id,
+      @StringJson() @JsonKey(name: 'bank_name') String bankName,
+      @StringJson() @JsonKey(name: 'account_number') String accountNumber,
+      @StringJson()
+      @JsonKey(name: 'account_holder_name')
+      String accountHolderName,
+      @ServerDateTimeJson() @JsonKey(name: 'created_at') DateTime? createdAt});
+}
+
+/// @nodoc
+class __$BankAccountModelCopyWithImpl<$Res>
+    implements _$BankAccountModelCopyWith<$Res> {
+  __$BankAccountModelCopyWithImpl(this._self, this._then);
+
+  final _BankAccountModel _self;
+  final $Res Function(_BankAccountModel) _then;
+
+  /// Create a copy of BankAccountModel
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $Res call({
+    Object? id = null,
+    Object? bankName = null,
+    Object? accountNumber = null,
+    Object? accountHolderName = null,
+    Object? createdAt = freezed,
+  }) {
+    return _then(_BankAccountModel(
+      id: null == id
+          ? _self.id
+          : id // ignore: cast_nullable_to_non_nullable
+              as int,
+      bankName: null == bankName
+          ? _self.bankName
+          : bankName // ignore: cast_nullable_to_non_nullable
+              as String,
+      accountNumber: null == accountNumber
+          ? _self.accountNumber
+          : accountNumber // ignore: cast_nullable_to_non_nullable
+              as String,
+      accountHolderName: null == accountHolderName
+          ? _self.accountHolderName
+          : accountHolderName // ignore: cast_nullable_to_non_nullable
+              as String,
+      createdAt: freezed == createdAt
+          ? _self.createdAt
+          : createdAt // ignore: cast_nullable_to_non_nullable
+              as DateTime?,
+    ));
+  }
+}
+
 // dart format on

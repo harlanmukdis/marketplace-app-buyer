@@ -160,6 +160,119 @@ void main() {
       expect(order.canCancel, isFalse);
       expect(order.canConfirmDelivery, isFalse);
       expect(order.canComplete, isFalse);
+      expect(order.canRequestRefund, isFalse);
+    });
+
+    test('paid MASIH boleh dibatalkan langsung (Order_model::cancel)', () {
+      // Tahap pertama pembatalan: sebelum penjual mengemas, pembeli boleh
+      // membatalkan tanpa persetujuan penjual — termasuk yang sudah dibayar.
+      expect(withStatus('paid').canCancel, isTrue);
+    });
+
+    test('packed tidak bisa dibatalkan langsung — tahap kedua belum ada endpoint', () {
+      expect(withStatus('packed').canCancel, isFalse);
+      expect(withStatus('processed').canCancel, isFalse);
+    });
+
+    test('komplain dibuka sesudah barang diterima, sekali saja', () {
+      expect(withStatus('shipped').canRequestRefund, isFalse);
+      expect(withStatus('delivered').canRequestRefund, isTrue);
+      expect(withStatus('completed').canRequestRefund, isTrue);
+      final withRefund = OrderModel.fromJson({
+        ..._orderJson,
+        'status': 'completed',
+        'refund': {'id': '3', 'status': 'pending', 'reason': 'Barang rusak: pecah', 'amount': '167000.00'},
+      });
+      expect(withRefund.canRequestRefund, isFalse);
+      expect(withRefund.refund?.amount, 167000);
+    });
+
+    test('invoice hanya untuk pesanan completed', () {
+      expect(withStatus('delivered').hasInvoice, isFalse);
+      expect(withStatus('completed').hasInvoice, isTrue);
+    });
+  });
+
+  group('OrderModel — custom order & kirim sebagian', () {
+    test('custom order paid tanpa konfirmasi = menunggu konfirmasi penjual', () {
+      // Tidak ada status "Menunggu Konfirmasi" di server; statusnya tetap paid.
+      final order = OrderModel.fromJson({
+        ..._orderJson,
+        'status': 'paid',
+        'requires_custom_confirmation': '1',
+        'custom_confirmed_at': null,
+      });
+      expect(order.awaitsSellerConfirmation, isTrue);
+    });
+
+    test('custom order yang sudah dikonfirmasi tidak lagi menunggu', () {
+      final order = OrderModel.fromJson({
+        ..._orderJson,
+        'status': 'paid',
+        'requires_custom_confirmation': '1',
+        'custom_confirmed_at': '2026-09-16 10:00:00',
+      });
+      expect(order.awaitsSellerConfirmation, isFalse);
+    });
+
+    test('pesanan biasa tidak pernah menunggu konfirmasi', () {
+      final order = OrderModel.fromJson({
+        ..._orderJson,
+        'status': 'paid',
+        'requires_custom_confirmation': '0',
+      });
+      expect(order.awaitsSellerConfirmation, isFalse);
+    });
+
+    test('usulan kirim sebagian menunggu jawaban selama decision null', () {
+      final proposed = OrderModel.fromJson({
+        ..._orderJson,
+        'status': 'paid',
+        'partial_fulfillment_proposed_at': '2026-09-16 09:00:00',
+        'partial_fulfillment_decision': null,
+        'items': [
+          <String, dynamic>{
+            ...(_orderJson['items'] as List).first as Map<String, dynamic>,
+            'is_available': '0',
+          },
+        ],
+      });
+      expect(proposed.awaitsPartialDecision, isTrue);
+      expect(proposed.items.single.isAvailable, isFalse);
+
+      final answered = proposed.copyWith(partialFulfillmentDecision: 'continue_partial');
+      expect(answered.awaitsPartialDecision, isFalse);
+    });
+
+    test('tanpa usulan, is_available default true', () {
+      final order = OrderModel.fromJson(_orderJson);
+      expect(order.awaitsPartialDecision, isFalse);
+      expect(order.items.single.isAvailable, isTrue);
+    });
+  });
+
+  group('OrderModel — shipping_address (detail)', () {
+    test('alamat terselesaikan terbaca dan dirangkai satu baris', () {
+      final order = OrderModel.fromJson({
+        ..._orderJson,
+        'shipping_address': {
+          'recipient_name': 'Budi',
+          'phone': '081234567890',
+          'full_address': 'Jl. Melati 10',
+          'city': 'Bandung',
+          'province': 'Jawa Barat',
+          'postal_code': '40111',
+        },
+      });
+      final address = order.shippingAddress!;
+      expect(address.recipientName, 'Budi');
+      expect(address.phone, '081234567890');
+      expect(address.singleLine, 'Jl. Melati 10, Bandung, Jawa Barat 40111');
+    });
+
+    test('alamat yang sudah dihapus jadi null, bukan melempar', () {
+      final order = OrderModel.fromJson({..._orderJson, 'shipping_address': null});
+      expect(order.shippingAddress, isNull);
     });
   });
 

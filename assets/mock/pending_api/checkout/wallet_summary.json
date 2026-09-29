@@ -1,0 +1,8 @@
+{
+  "wallet_balance": "2500000.00",
+  "grand_total": "2543000.00",
+  "shortfall": "43000.00",
+  "can_pay": false,
+  "min_topup": 10000,
+  "pin_set": true
+}

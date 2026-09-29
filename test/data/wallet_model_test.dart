@@ -116,19 +116,39 @@ void main() {
     });
   });
 
-  group('WithdrawalDraft', () {
-    const bank = (
-      name: 'BCA',
-      number: '1234567890',
-      holder: 'Uji Wallet',
-    );
+  group('BankAccountModel', () {
+    /// Baris `GET /me/bank-accounts` — angka sebagai string, seperti tabel
+    /// lain di API ini.
+    const json = <String, dynamic>{
+      'id': '7',
+      'user_id': '409',
+      'bank_name': 'BCA',
+      'account_number': '1234567890',
+      'account_holder_name': 'Uji Wallet',
+      'created_at': '2026-09-28 10:00:00',
+    };
 
-    WithdrawalDraft draft(double amount) => WithdrawalDraft(
-          amount: amount,
-          bankName: bank.name,
-          bankAccountNumber: bank.number,
-          bankAccountName: bank.holder,
-        );
+    test('terbaca dari bentuk server', () {
+      final account = BankAccountModel.fromJson(json);
+      expect(account.id, 7);
+      expect(account.bankName, 'BCA');
+      expect(account.accountHolderName, 'Uji Wallet');
+    });
+
+    test('nomor rekening ditampilkan tersamar, hanya 4 digit terakhir', () {
+      expect(BankAccountModel.fromJson(json).maskedNumber, '•••• 7890');
+    });
+
+    test('nomor pendek tidak disamarkan jadi kosong', () {
+      expect(
+          BankAccountModel.fromJson({...json, 'account_number': '123'}).maskedNumber,
+          '123');
+    });
+  });
+
+  group('WithdrawalDraft', () {
+    WithdrawalDraft draft(double amount, {int? account = 7, String pin = '123456'}) =>
+        WithdrawalDraft(amount: amount, bankAccountId: account, pin: pin);
 
     test('di bawah minimum ditolak sebelum menyentuh jaringan', () {
       // Server menolaknya dengan kode yang SAMA seperti "saldo tidak cukup",
@@ -142,22 +162,29 @@ void main() {
       expect(draft(WithdrawalDraft.minimumAmount).isValid, isTrue);
     });
 
-    test('field bank yang kosong terdeteksi', () {
-      const incomplete = WithdrawalDraft(amount: 100000, bankName: 'BCA');
-      expect(incomplete.missingFields,
-          {'bank_account_number', 'bank_account_name'});
-      expect(incomplete.isValid, isFalse);
+    test('tanpa rekening tersimpan tidak sah', () {
+      expect(draft(100000, account: null).isValid, isFalse);
+    });
+
+    test('PIN harus tepat 6 digit angka', () {
+      expect(draft(100000, pin: '12345').hasValidPin, isFalse);
+      expect(draft(100000, pin: '1234567').hasValidPin, isFalse);
+      expect(draft(100000, pin: '12345a').hasValidPin, isFalse);
+      expect(draft(100000, pin: '000000').hasValidPin, isTrue);
+    });
+
+    test('withPin mempertahankan nominal dan rekening', () {
+      final withPin = draft(80000, pin: '').withPin('654321');
+      expect(withPin.amount, 80000);
+      expect(withPin.bankAccountId, 7);
+      expect(withPin.pin, '654321');
     });
 
     test('body memakai nama field yang diminta server', () {
+      // Field bank mentah (bank_name, dst) kini diabaikan server — yang
+      // dibaca hanya rekening tersimpan dan PIN.
       final json = draft(75000).toJson();
-      expect(json.keys.toSet(), {
-        'amount',
-        'bank_name',
-        'bank_account_number',
-        'bank_account_name',
-      });
-      expect(json['amount'], 75000);
+      expect(json, {'amount': 75000, 'bank_account_id': 7, 'pin': '123456'});
     });
   });
 }

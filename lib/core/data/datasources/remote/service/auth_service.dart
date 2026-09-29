@@ -52,8 +52,8 @@ class AuthService {
       );
       return parseEnvelope(
         response,
-        (raw) => RegisterResultModel.fromJson(
-            Map<String, dynamic>.from(raw as Map)),
+        (raw) =>
+            RegisterResultModel.fromJson(Map<String, dynamic>.from(raw as Map)),
         context: context,
       );
     } on DioException catch (e) {

@@ -1,17 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:marketplace_app_member/core/data_state.dart';
-import 'package:marketplace_app_member/core/function/components.dart';
-import 'package:marketplace_app_member/core/utils/app_styles.dart';
-import 'package:marketplace_app_member/core/utils/constant.dart';
-import 'package:marketplace_app_member/core/utils/extensions.dart';
-import 'package:marketplace_app_member/util/error_message.dart';
+import 'package:marketplace_app_member/core/design/xp_colors.dart';
+import 'package:marketplace_app_member/core/design/xp_text.dart';
+import 'package:marketplace_app_member/ui/main/profile/widgets/account_error_text.dart';
 
 /// Menampilkan kegagalan di dalam alur form, bukan sebagai SnackBar.
 ///
 /// Disengaja: SnackBar menghilang sendiri dan mudah terlewat, sedangkan
 /// kegagalan login/daftar adalah hal yang perlu user baca lalu tindak lanjuti.
 /// Untuk kegagalan yang bisa dicoba ulang ([DataError.isRetryable]) tombol
-/// "coba lagi" ditampilkan; untuk kredensial salah tidak, karena mengulang
+/// "Coba lagi" ditampilkan; untuk kredensial salah tidak, karena mengulang
 /// request yang sama tidak akan mengubah hasilnya.
 class AuthErrorBanner extends StatelessWidget {
   const AuthErrorBanner({super.key, required this.error, this.onRetry});
@@ -25,37 +23,29 @@ class AuthErrorBanner extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      padding: 12.pa,
+      padding: const EdgeInsetsDirectional.fromSTEB(12, 12, 8, 12),
       decoration: BoxDecoration(
-        color: kErrorColor.withValues(alpha: isAppDarkMode() ? .18 : .08),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: kErrorColor.withValues(alpha: .4)),
+        color: XpColors.dangerSubtle,
+        borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          const Icon(Icons.error_outline, color: kErrorColor, size: 20),
-          8.sbw,
+          Icon(Icons.error_outline, color: XpColors.danger, size: 20),
+          const SizedBox(width: 12),
           Expanded(
             child: Text(
-              errorMessageFor(context, error),
-              style: AppStyles.styleRegular14(context).copyWith(
-                color: isAppDarkMode() ? kDarkSecondColor : kLightSecondColor,
-              ),
+              accountErrorText(context, error),
+              style: XpText.bodyM(context),
             ),
           ),
           if (showRetry)
             TextButton(
               onPressed: onRetry,
-              style: TextButton.styleFrom(
-                padding: EdgeInsets.zero,
-                minimumSize: const Size(0, 0),
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              ),
+              style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
               child: Text(
                 'Coba lagi',
-                style: AppStyles.styleMedium14(context)
-                    .copyWith(color: kErrorColor),
+                style: XpText.labelL(context).copyWith(color: XpColors.danger),
               ),
             ),
         ],

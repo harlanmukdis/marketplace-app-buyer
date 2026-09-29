@@ -556,6 +556,18 @@ mixin _$ChatMessageModel {
   @JsonKey(name: 'read_at')
   DateTime? get readAt;
 
+  /// Terisi saat lawan bicara **mengambil** pesan (`/messages` atau poll) —
+  /// ditambahkan backend v1.x. Artinya membuka ruang chat kini menulis ke
+  /// database.
+  @ServerDateTimeJson()
+  @JsonKey(name: 'delivered_at')
+  DateTime? get deliveredAt;
+
+  /// `sent` / `delivered` / `read`, dihitung server.
+  @StringOrNullJson()
+  @JsonKey(name: 'status')
+  String? get deliveryStatus;
+
   /// Create a copy of ChatMessageModel
   /// with the given fields replaced by the non-null parameter values.
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -584,17 +596,31 @@ mixin _$ChatMessageModel {
                 other.sharedOrderId == sharedOrderId) &&
             (identical(other.createdAt, createdAt) ||
                 other.createdAt == createdAt) &&
-            (identical(other.readAt, readAt) || other.readAt == readAt));
+            (identical(other.readAt, readAt) || other.readAt == readAt) &&
+            (identical(other.deliveredAt, deliveredAt) ||
+                other.deliveredAt == deliveredAt) &&
+            (identical(other.deliveryStatus, deliveryStatus) ||
+                other.deliveryStatus == deliveryStatus));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode => Object.hash(runtimeType, id, senderUserId, typeCode,
-      content, sharedProductId, sharedOrderId, createdAt, readAt);
+  int get hashCode => Object.hash(
+      runtimeType,
+      id,
+      senderUserId,
+      typeCode,
+      content,
+      sharedProductId,
+      sharedOrderId,
+      createdAt,
+      readAt,
+      deliveredAt,
+      deliveryStatus);
 
   @override
   String toString() {
-    return 'ChatMessageModel(id: $id, senderUserId: $senderUserId, typeCode: $typeCode, content: $content, sharedProductId: $sharedProductId, sharedOrderId: $sharedOrderId, createdAt: $createdAt, readAt: $readAt)';
+    return 'ChatMessageModel(id: $id, senderUserId: $senderUserId, typeCode: $typeCode, content: $content, sharedProductId: $sharedProductId, sharedOrderId: $sharedOrderId, createdAt: $createdAt, readAt: $readAt, deliveredAt: $deliveredAt, deliveryStatus: $deliveryStatus)';
   }
 }
 
@@ -612,7 +638,11 @@ abstract mixin class $ChatMessageModelCopyWith<$Res> {
       @IntOrNullJson() @JsonKey(name: 'shared_product_id') int? sharedProductId,
       @IntOrNullJson() @JsonKey(name: 'shared_order_id') int? sharedOrderId,
       @ServerDateTimeJson() @JsonKey(name: 'created_at') DateTime? createdAt,
-      @ServerDateTimeJson() @JsonKey(name: 'read_at') DateTime? readAt});
+      @ServerDateTimeJson() @JsonKey(name: 'read_at') DateTime? readAt,
+      @ServerDateTimeJson()
+      @JsonKey(name: 'delivered_at')
+      DateTime? deliveredAt,
+      @StringOrNullJson() @JsonKey(name: 'status') String? deliveryStatus});
 }
 
 /// @nodoc
@@ -636,6 +666,8 @@ class _$ChatMessageModelCopyWithImpl<$Res>
     Object? sharedOrderId = freezed,
     Object? createdAt = freezed,
     Object? readAt = freezed,
+    Object? deliveredAt = freezed,
+    Object? deliveryStatus = freezed,
   }) {
     return _then(_self.copyWith(
       id: null == id
@@ -670,6 +702,14 @@ class _$ChatMessageModelCopyWithImpl<$Res>
           ? _self.readAt
           : readAt // ignore: cast_nullable_to_non_nullable
               as DateTime?,
+      deliveredAt: freezed == deliveredAt
+          ? _self.deliveredAt
+          : deliveredAt // ignore: cast_nullable_to_non_nullable
+              as DateTime?,
+      deliveryStatus: freezed == deliveryStatus
+          ? _self.deliveryStatus
+          : deliveryStatus // ignore: cast_nullable_to_non_nullable
+              as String?,
     ));
   }
 }
@@ -781,7 +821,13 @@ extension ChatMessageModelPatterns on ChatMessageModel {
             @ServerDateTimeJson()
             @JsonKey(name: 'created_at')
             DateTime? createdAt,
-            @ServerDateTimeJson() @JsonKey(name: 'read_at') DateTime? readAt)?
+            @ServerDateTimeJson() @JsonKey(name: 'read_at') DateTime? readAt,
+            @ServerDateTimeJson()
+            @JsonKey(name: 'delivered_at')
+            DateTime? deliveredAt,
+            @StringOrNullJson()
+            @JsonKey(name: 'status')
+            String? deliveryStatus)?
         $default, {
     required TResult orElse(),
   }) {
@@ -796,7 +842,9 @@ extension ChatMessageModelPatterns on ChatMessageModel {
             _that.sharedProductId,
             _that.sharedOrderId,
             _that.createdAt,
-            _that.readAt);
+            _that.readAt,
+            _that.deliveredAt,
+            _that.deliveryStatus);
       case _:
         return orElse();
     }
@@ -831,7 +879,11 @@ extension ChatMessageModelPatterns on ChatMessageModel {
             @ServerDateTimeJson()
             @JsonKey(name: 'created_at')
             DateTime? createdAt,
-            @ServerDateTimeJson() @JsonKey(name: 'read_at') DateTime? readAt)
+            @ServerDateTimeJson() @JsonKey(name: 'read_at') DateTime? readAt,
+            @ServerDateTimeJson()
+            @JsonKey(name: 'delivered_at')
+            DateTime? deliveredAt,
+            @StringOrNullJson() @JsonKey(name: 'status') String? deliveryStatus)
         $default,
   ) {
     final _that = this;
@@ -845,7 +897,9 @@ extension ChatMessageModelPatterns on ChatMessageModel {
             _that.sharedProductId,
             _that.sharedOrderId,
             _that.createdAt,
-            _that.readAt);
+            _that.readAt,
+            _that.deliveredAt,
+            _that.deliveryStatus);
       case _:
         throw StateError('Unexpected subclass');
     }
@@ -879,7 +933,13 @@ extension ChatMessageModelPatterns on ChatMessageModel {
             @ServerDateTimeJson()
             @JsonKey(name: 'created_at')
             DateTime? createdAt,
-            @ServerDateTimeJson() @JsonKey(name: 'read_at') DateTime? readAt)?
+            @ServerDateTimeJson() @JsonKey(name: 'read_at') DateTime? readAt,
+            @ServerDateTimeJson()
+            @JsonKey(name: 'delivered_at')
+            DateTime? deliveredAt,
+            @StringOrNullJson()
+            @JsonKey(name: 'status')
+            String? deliveryStatus)?
         $default,
   ) {
     final _that = this;
@@ -893,7 +953,9 @@ extension ChatMessageModelPatterns on ChatMessageModel {
             _that.sharedProductId,
             _that.sharedOrderId,
             _that.createdAt,
-            _that.readAt);
+            _that.readAt,
+            _that.deliveredAt,
+            _that.deliveryStatus);
       case _:
         return null;
     }
@@ -911,7 +973,9 @@ class _ChatMessageModel extends ChatMessageModel {
       @IntOrNullJson() @JsonKey(name: 'shared_product_id') this.sharedProductId,
       @IntOrNullJson() @JsonKey(name: 'shared_order_id') this.sharedOrderId,
       @ServerDateTimeJson() @JsonKey(name: 'created_at') this.createdAt,
-      @ServerDateTimeJson() @JsonKey(name: 'read_at') this.readAt})
+      @ServerDateTimeJson() @JsonKey(name: 'read_at') this.readAt,
+      @ServerDateTimeJson() @JsonKey(name: 'delivered_at') this.deliveredAt,
+      @StringOrNullJson() @JsonKey(name: 'status') this.deliveryStatus})
       : super._();
   factory _ChatMessageModel.fromJson(Map<String, dynamic> json) =>
       _$ChatMessageModelFromJson(json);
@@ -958,6 +1022,20 @@ class _ChatMessageModel extends ChatMessageModel {
   @JsonKey(name: 'read_at')
   final DateTime? readAt;
 
+  /// Terisi saat lawan bicara **mengambil** pesan (`/messages` atau poll) —
+  /// ditambahkan backend v1.x. Artinya membuka ruang chat kini menulis ke
+  /// database.
+  @override
+  @ServerDateTimeJson()
+  @JsonKey(name: 'delivered_at')
+  final DateTime? deliveredAt;
+
+  /// `sent` / `delivered` / `read`, dihitung server.
+  @override
+  @StringOrNullJson()
+  @JsonKey(name: 'status')
+  final String? deliveryStatus;
+
   /// Create a copy of ChatMessageModel
   /// with the given fields replaced by the non-null parameter values.
   @override
@@ -990,17 +1068,31 @@ class _ChatMessageModel extends ChatMessageModel {
                 other.sharedOrderId == sharedOrderId) &&
             (identical(other.createdAt, createdAt) ||
                 other.createdAt == createdAt) &&
-            (identical(other.readAt, readAt) || other.readAt == readAt));
+            (identical(other.readAt, readAt) || other.readAt == readAt) &&
+            (identical(other.deliveredAt, deliveredAt) ||
+                other.deliveredAt == deliveredAt) &&
+            (identical(other.deliveryStatus, deliveryStatus) ||
+                other.deliveryStatus == deliveryStatus));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode => Object.hash(runtimeType, id, senderUserId, typeCode,
-      content, sharedProductId, sharedOrderId, createdAt, readAt);
+  int get hashCode => Object.hash(
+      runtimeType,
+      id,
+      senderUserId,
+      typeCode,
+      content,
+      sharedProductId,
+      sharedOrderId,
+      createdAt,
+      readAt,
+      deliveredAt,
+      deliveryStatus);
 
   @override
   String toString() {
-    return 'ChatMessageModel(id: $id, senderUserId: $senderUserId, typeCode: $typeCode, content: $content, sharedProductId: $sharedProductId, sharedOrderId: $sharedOrderId, createdAt: $createdAt, readAt: $readAt)';
+    return 'ChatMessageModel(id: $id, senderUserId: $senderUserId, typeCode: $typeCode, content: $content, sharedProductId: $sharedProductId, sharedOrderId: $sharedOrderId, createdAt: $createdAt, readAt: $readAt, deliveredAt: $deliveredAt, deliveryStatus: $deliveryStatus)';
   }
 }
 
@@ -1020,7 +1112,11 @@ abstract mixin class _$ChatMessageModelCopyWith<$Res>
       @IntOrNullJson() @JsonKey(name: 'shared_product_id') int? sharedProductId,
       @IntOrNullJson() @JsonKey(name: 'shared_order_id') int? sharedOrderId,
       @ServerDateTimeJson() @JsonKey(name: 'created_at') DateTime? createdAt,
-      @ServerDateTimeJson() @JsonKey(name: 'read_at') DateTime? readAt});
+      @ServerDateTimeJson() @JsonKey(name: 'read_at') DateTime? readAt,
+      @ServerDateTimeJson()
+      @JsonKey(name: 'delivered_at')
+      DateTime? deliveredAt,
+      @StringOrNullJson() @JsonKey(name: 'status') String? deliveryStatus});
 }
 
 /// @nodoc
@@ -1044,6 +1140,8 @@ class __$ChatMessageModelCopyWithImpl<$Res>
     Object? sharedOrderId = freezed,
     Object? createdAt = freezed,
     Object? readAt = freezed,
+    Object? deliveredAt = freezed,
+    Object? deliveryStatus = freezed,
   }) {
     return _then(_ChatMessageModel(
       id: null == id
@@ -1078,6 +1176,14 @@ class __$ChatMessageModelCopyWithImpl<$Res>
           ? _self.readAt
           : readAt // ignore: cast_nullable_to_non_nullable
               as DateTime?,
+      deliveredAt: freezed == deliveredAt
+          ? _self.deliveredAt
+          : deliveredAt // ignore: cast_nullable_to_non_nullable
+              as DateTime?,
+      deliveryStatus: freezed == deliveryStatus
+          ? _self.deliveryStatus
+          : deliveryStatus // ignore: cast_nullable_to_non_nullable
+              as String?,
     ));
   }
 }

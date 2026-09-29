@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:marketplace_app_member/core/design/xp_colors.dart';
+import 'package:marketplace_app_member/core/design/xp_text.dart';
+import 'package:marketplace_app_member/core/design/xp_widgets.dart';
 import 'package:marketplace_app_member/core/domain/model/reward/reward_models.dart';
 import 'package:marketplace_app_member/core/domain/repositories/reward_repository.dart';
-import 'package:marketplace_app_member/core/function/components.dart';
-import 'package:marketplace_app_member/core/function/custom_app_bar.dart';
-import 'package:marketplace_app_member/core/utils/app_styles.dart';
-import 'package:marketplace_app_member/core/utils/constant.dart';
-import 'package:marketplace_app_member/core/utils/extensions.dart';
 import 'package:marketplace_app_member/ui/main/reward/cubit/reward_cubit.dart';
+import 'package:marketplace_app_member/ui/main/shell/xp_app_bars.dart';
 import 'package:marketplace_app_member/util/error_message.dart';
 import 'package:marketplace_app_member/util/format_helper.dart';
 
@@ -15,7 +14,9 @@ import 'package:marketplace_app_member/util/format_helper.dart';
 ///
 /// ⚠️ **Tidak ada tombol "tukar poin"**, dan itu keputusan sadar: endpointnya
 /// tidak memberi imbalan apa pun, sementara nominal negatif justru mencetak
-/// poin di server. Lihat `RewardService`.
+/// poin di server. Lihat `RewardService`. Riwayat poin dan koin juga tidak
+/// ditampilkan — tidak ada rute yang membaca `point_transactions` maupun
+/// `coin_transactions`.
 class RewardScreen extends StatelessWidget {
   const RewardScreen({super.key});
 
@@ -33,18 +34,19 @@ class _RewardBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dark = isAppDarkMode();
-
     return Scaffold(
-      backgroundColor: dark ? kDarkColor : kWhiteColor,
-      appBar: customAppBar(context, 'Poin & Reward'),
+      backgroundColor: XpColors.canvas,
+      appBar: const XpStackAppBar(title: 'Poin & Reward'),
       body: BlocBuilder<RewardCubit, RewardState>(
         builder: (context, state) {
           return switch (state) {
             RewardLoading() => const Center(child: CircularProgressIndicator()),
-            RewardError(:final error) => _Message(
-                title: errorMessageFor(context, error),
-                onRetry: () => RewardCubit.get(context).refresh(),
+            RewardError(:final error) => XpEmptyState(
+                icon: Icons.cloud_off_rounded,
+                title: 'Reward gagal dimuat',
+                message: errorMessageFor(context, error),
+                actionLabel: 'Coba Lagi',
+                onAction: () => RewardCubit.get(context).refresh(),
               ),
             RewardReady(:final overview) => _Ready(overview: overview),
           };
@@ -65,7 +67,7 @@ class _Ready extends StatelessWidget {
       onRefresh: () => RewardCubit.get(context).refresh(),
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsetsDirectional.all(16),
+        padding: const EdgeInsets.all(16),
         children: [
           Row(
             children: [
@@ -76,7 +78,7 @@ class _Ready extends StatelessWidget {
                   icon: Icons.stars_outlined,
                 ),
               ),
-              12.sbw,
+              const SizedBox(width: 12),
               Expanded(
                 child: _BalanceCard(
                   label: 'Koin',
@@ -86,22 +88,52 @@ class _Ready extends StatelessWidget {
               ),
             ],
           ),
-          20.sbh,
-          if (overview.loyalty != null)
+          if (overview.loyalty != null) ...[
+            const SizedBox(height: 16),
             _LoyaltyCard(
               membership: overview.loyalty!,
               nextTier: overview.nextTier,
+              // Tanpa daftar tier, "tingkat berikutnya" tidak bisa dihitung —
+              // dan itu bukan berarti sudah di puncak.
+              tiersKnown: overview.tiers.isNotEmpty,
             ),
-          24.sbh,
-          const _SectionTitle(title: 'Cashback'),
-          8.sbh,
+          ],
+          const XpSectionHeader(
+            title: 'Cashback',
+            subtitle: 'Cashback terbit setelah pesanan selesai.',
+            padding: EdgeInsets.fromLTRB(0, 24, 0, 12),
+          ),
           if (!overview.hasCashback)
-            const _EmptyNote(
-              'Belum ada cashback. Cashback terbit setelah pesanan selesai.',
+            XpCard(
+              child: Row(
+                children: [
+                  Icon(Icons.savings_outlined,
+                      size: 20, color: XpColors.textTertiary),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Belum ada cashback.',
+                      style: XpText.bodyM(context)
+                          .copyWith(color: XpColors.textSecondary),
+                    ),
+                  ),
+                ],
+              ),
             )
           else
-            for (final row in overview.cashback) _CashbackRow(row: row),
-          24.sbh,
+            XpCard(
+              padding: EdgeInsets.zero,
+              child: Column(
+                children: [
+                  for (var i = 0; i < overview.cashback.length; i++) ...[
+                    if (i > 0)
+                      Divider(height: 1, color: XpColors.borderSubtle),
+                    _CashbackRow(row: overview.cashback[i]),
+                  ],
+                ],
+              ),
+            ),
+          const SizedBox(height: 24),
         ],
       ),
     );
@@ -121,31 +153,29 @@ class _BalanceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dark = isAppDarkMode();
-    final primary = dark ? kDarkPrimaryColor : kLightPrimaryColor;
-
-    return Container(
-      padding: const EdgeInsetsDirectional.all(16),
-      decoration: BoxDecoration(
-        color: primary.withValues(alpha: 0.10),
-        borderRadius: BorderRadius.circular(16),
-      ),
+    return XpCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 20, color: primary),
-          8.sbh,
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: XpColors.primarySubtle,
+              borderRadius: BorderRadius.circular(XpRadius.m),
+            ),
+            child: Icon(icon, size: 20, color: XpColors.primary),
+          ),
+          const SizedBox(height: 12),
           Text(
             label,
-            style: AppStyles.styleRegular12(context).copyWith(
-              color: dark ? kDarkThirdColor : kLightThirdColor,
-            ),
+            style: XpText.labelM(context)
+                .copyWith(color: XpColors.textSecondary),
           ),
-          4.sbh,
-          Text(
-            formatNumber(value),
-            style: AppStyles.styleSemiBold24(context).copyWith(color: primary),
-          ),
+          const SizedBox(height: 2),
+          // Bukan formatRupiah: poin dan koin tidak setara rupiah, dan
+          // awalan "Rp" akan membuatnya terbaca sebagai uang.
+          Text(formatNumber(value), style: XpText.stat(context)),
         ],
       ),
     );
@@ -153,83 +183,87 @@ class _BalanceCard extends StatelessWidget {
 }
 
 class _LoyaltyCard extends StatelessWidget {
-  const _LoyaltyCard({required this.membership, required this.nextTier});
+  const _LoyaltyCard({
+    required this.membership,
+    required this.nextTier,
+    required this.tiersKnown,
+  });
 
   final LoyaltyMembershipModel membership;
   final LoyaltyTierModel? nextTier;
+  final bool tiersKnown;
 
   @override
   Widget build(BuildContext context) {
-    final dark = isAppDarkMode();
-    final primary = dark ? kDarkPrimaryColor : kLightPrimaryColor;
-    final muted = dark ? kDarkThirdColor : kLightThirdColor;
     final target = nextTier;
+    final onNavySoft = XpColors.textOnBrand.withValues(alpha: 0.75);
 
     return Container(
-      padding: const EdgeInsetsDirectional.all(16),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        border: Border.all(color: dark ? kDarkThirdColor : kBorderColor),
-        borderRadius: BorderRadius.circular(16),
+        color: XpColors.navy,
+        borderRadius: BorderRadius.circular(XpRadius.l),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(Icons.workspace_premium_outlined, size: 20, color: primary),
-              8.sbw,
+              const Icon(Icons.workspace_premium,
+                  size: 20, color: XpColors.signatureGold),
+              const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   membership.tierName,
-                  style: AppStyles.styleSemiBold16(context).copyWith(
-                    color: dark ? kDarkSecondColor : kLightSecondColor,
-                  ),
+                  style: XpText.titleL(context)
+                      .copyWith(color: XpColors.textOnBrand),
                 ),
               ),
               Text(
                 '${formatNumber(membership.tierPoints)} poin tingkat',
-                style: AppStyles.styleRegular11(context).copyWith(color: muted),
+                style: XpText.labelM(context).copyWith(color: onNavySoft),
               ),
             ],
           ),
           if (target != null) ...[
-            12.sbh,
+            const SizedBox(height: 12),
             ClipRRect(
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(XpRadius.full),
               child: LinearProgressIndicator(
                 value: membership.progressToward(target),
                 minHeight: 8,
-                backgroundColor: primary.withValues(alpha: 0.12),
-                valueColor: AlwaysStoppedAnimation(primary),
+                backgroundColor: XpColors.textOnBrand.withValues(alpha: 0.2),
+                valueColor:
+                    const AlwaysStoppedAnimation(XpColors.textOnBrand),
               ),
             ),
-            8.sbh,
+            const SizedBox(height: 8),
             Text(
               '${formatNumber(membership.pointsUntil(target))} poin lagi '
               'menuju ${target.name}',
-              style: AppStyles.styleRegular12(context).copyWith(color: muted),
+              style: XpText.bodyS(context).copyWith(color: onNavySoft),
             ),
-          ] else ...[
-            12.sbh,
+          ] else if (tiersKnown) ...[
+            const SizedBox(height: 12),
             Text(
               'Sudah di tingkat tertinggi.',
-              style: AppStyles.styleRegular12(context).copyWith(color: muted),
+              style: XpText.bodyS(context).copyWith(color: onNavySoft),
             ),
           ],
           if (membership.validUntil != null) ...[
-            8.sbh,
+            const SizedBox(height: 8),
             Text(
               'Berlaku sampai ${formatServerDate(membership.validUntil)}',
-              style: AppStyles.styleRegular11(context).copyWith(color: muted),
+              style: XpText.caption(context).copyWith(color: onNavySoft),
             ),
           ],
-          8.sbh,
+          const SizedBox(height: 12),
           Text(
             // Dua angka poin yang berbeda di satu layar pasti membingungkan
             // kalau tidak dijelaskan: menukar poin tidak menurunkan tingkat.
             'Poin tingkat dihitung terpisah dari saldo poin, dan tidak '
             'berkurang saat poin dipakai.',
-            style: AppStyles.styleRegular11(context).copyWith(color: muted),
+            style: XpText.caption(context).copyWith(color: onNavySoft),
           ),
         ],
       ),
@@ -244,11 +278,8 @@ class _CashbackRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dark = isAppDarkMode();
-    final muted = dark ? kDarkThirdColor : kLightThirdColor;
-
     return Padding(
-      padding: const EdgeInsetsDirectional.only(bottom: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -260,105 +291,38 @@ class _CashbackRow extends StatelessWidget {
                   row.orderId == null
                       ? 'Cashback'
                       : 'Cashback pesanan #${row.orderId}',
-                  style: AppStyles.styleMedium14(context).copyWith(
-                    color: dark ? kDarkSecondColor : kLightSecondColor,
-                  ),
+                  style: XpText.titleM(context),
                 ),
+                const SizedBox(height: 2),
                 Text(
                   formatServerDateTime(row.createdAt),
-                  style:
-                      AppStyles.styleRegular11(context).copyWith(color: muted),
+                  style: XpText.caption(context)
+                      .copyWith(color: XpColors.textTertiary),
                 ),
               ],
             ),
           ),
+          const SizedBox(width: 12),
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
                 formatRupiah(row.amount),
-                style: AppStyles.styleMedium14(context).copyWith(
-                  color: row.isCredited ? kSuccessColor : muted,
+                style: XpText.priceS(context).copyWith(
+                  color: row.isCredited
+                      ? XpColors.success
+                      : XpColors.textSecondary,
                 ),
               ),
+              const SizedBox(height: 2),
               Text(
                 row.statusLabel,
-                style: AppStyles.styleRegular11(context).copyWith(color: muted),
+                style: XpText.caption(context)
+                    .copyWith(color: XpColors.textTertiary),
               ),
             ],
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _SectionTitle extends StatelessWidget {
-  const _SectionTitle({required this.title});
-
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    final dark = isAppDarkMode();
-    return Text(
-      title,
-      style: AppStyles.styleSemiBold16(context).copyWith(
-        color: dark ? kDarkSecondColor : kLightSecondColor,
-      ),
-    );
-  }
-}
-
-class _EmptyNote extends StatelessWidget {
-  const _EmptyNote(this.text);
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    final dark = isAppDarkMode();
-    return Padding(
-      padding: const EdgeInsetsDirectional.symmetric(vertical: 8),
-      child: Text(
-        text,
-        style: AppStyles.styleRegular14(context).copyWith(
-          color: dark ? kDarkThirdColor : kLightThirdColor,
-        ),
-      ),
-    );
-  }
-}
-
-class _Message extends StatelessWidget {
-  const _Message({required this.title, required this.onRetry});
-
-  final String title;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    final dark = isAppDarkMode();
-    return Center(
-      child: Padding(
-        padding: const EdgeInsetsDirectional.symmetric(horizontal: 32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.cloud_off_rounded,
-                size: 48, color: dark ? kDarkThirdColor : kLightThirdColor),
-            16.sbh,
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              style: AppStyles.styleMedium16(context).copyWith(
-                color: dark ? kDarkSecondColor : kLightSecondColor,
-              ),
-            ),
-            16.sbh,
-            FilledButton(onPressed: onRetry, child: const Text('Coba lagi')),
-          ],
-        ),
       ),
     );
   }

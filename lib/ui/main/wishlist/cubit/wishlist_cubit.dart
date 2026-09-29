@@ -11,10 +11,11 @@ part 'wishlist_state.dart';
 
 /// Wishlist pembeli.
 ///
-/// Dipakai dua tempat: layar wishlist sendiri, dan tombol hati di halaman
-/// detail produk. Keduanya memakai instance masing-masing — tidak ada provider
-/// global di repo ini — jadi [toggle] selalu membaca ulang dari server
-/// daripada mengandalkan keadaan layar lain.
+/// **Satu instance untuk seluruh app**, disediakan `AppScope` di atas router:
+/// hati di kartu beranda, pencarian, detail produk, dan layar wishlist harus
+/// menunjukkan keadaan yang sama. Dulu tiap layar memegang instance sendiri,
+/// sehingga produk yang disimpan di detail belum tampil tersimpan di beranda.
+/// [toggle] tetap membaca ulang dari server sesudah mutasi.
 class WishlistCubit extends Cubit<WishlistState> {
   WishlistCubit()
       : _repository = injector<WishlistRepository>(),
@@ -64,6 +65,50 @@ class WishlistCubit extends Cubit<WishlistState> {
     _apply(result, previous: current, mutatedId: productId);
   }
 
+  /// Menyalakan/mematikan pantau harga & stok satu produk (docs/22 #13).
+  ///
+  /// 🔶 Endpoint usulan (`PATCH /wishlist/items/{product_id}`), mock di debug.
+  /// Mengembalikan keadaan baru hasil baca ulang, atau `null` kalau gagal —
+  /// layar memakainya untuk memilih toast yang benar.
+  Future<bool?> setAlert(int productId, {required bool enabled}) async {
+    final current = state;
+    if (current is! WishlistReady) return null;
+    if (current.alertMutatingIds.contains(productId)) return null;
+
+    emit(current.copyWith(
+      alertMutatingIds: {...current.alertMutatingIds, productId},
+      actionError: null,
+    ));
+    final result = await _repository.setAlert(productId, enabled: enabled);
+    if (isClosed) return null;
+
+    final latest = state is WishlistReady ? state as WishlistReady : current;
+    switch (result) {
+      case DataSuccess(:final data, :final meta):
+        emit(latest.copyWith(
+          items: data,
+          meta: meta,
+          alertMutatingIds: {...latest.alertMutatingIds}..remove(productId),
+        ));
+        return data.where((i) => i.productId == productId).firstOrNull?.isWatched;
+      case DataFailed(:final error):
+        emit(latest.copyWith(
+          alertMutatingIds: {...latest.alertMutatingIds}..remove(productId),
+          actionError: error,
+        ));
+        return null;
+      case DataEmpty(:final meta):
+        emit(latest.copyWith(
+          items: const [],
+          meta: meta,
+          alertMutatingIds: {...latest.alertMutatingIds}..remove(productId),
+        ));
+        return null;
+      case DataLoading():
+        return null;
+    }
+  }
+
   void clearActionError() {
     final current = state;
     if (current is! WishlistReady || current.actionError == null) return;
@@ -76,10 +121,10 @@ class WishlistCubit extends Cubit<WishlistState> {
     int? mutatedId,
   }) {
     switch (result) {
-      case DataSuccess(:final data):
-        emit(WishlistState.ready(items: data));
-      case DataEmpty():
-        emit(const WishlistState.ready());
+      case DataSuccess(:final data, :final meta):
+        emit(WishlistState.ready(items: data, meta: meta));
+      case DataEmpty(:final meta):
+        emit(WishlistState.ready(meta: meta));
       case DataFailed(:final error):
         if (previous != null) {
           // Gagal menyimpan tidak boleh mengosongkan daftar yang sudah tampil.

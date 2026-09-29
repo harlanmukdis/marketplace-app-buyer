@@ -117,18 +117,32 @@ class ChatService {
 
   /// `POST /chat/conversations/{id}/messages` → id pesan baru.
   ///
-  /// ⚠️ **Server tidak memvalidasi apa pun**: body tanpa `content` dibalas
-  /// `201` dengan isi `null`, dan `message_type` di luar ENUM tersimpan
-  /// sebagai string kosong (MySQL non-strict). Aplikasi yang menjaganya.
+  /// ⚠️ Body tanpa `content` tetap dibalas `201` dengan isi `null` —
+  /// aplikasi yang menolak teks kosong. `message_type` di luar
+  /// `text|image|product_share|order_share` sejak backend v1.x ditolak
+  /// `422 VALIDATION_ERROR`. Pesan bagikan (`product_share`/`order_share`)
+  /// dikirim **tanpa** `content`, sehingga moderasi konten tidak menyentuhnya.
   Future<ApiEnvelope<int>> sendMessage(
     int conversationId, {
-    required String content,
+    String? content,
+    ChatMessageType type = ChatMessageType.text,
+    int? sharedProductId,
+    int? sharedOrderId,
   }) async {
     final context = 'POST /chat/conversations/$conversationId/messages';
     try {
       final response = await _dio.post<dynamic>(
         '/chat/conversations/$conversationId/messages',
-        data: {'message_type': ChatMessageType.text.code, 'content': content},
+        // `shared_product_id` / `shared_order_id` diteruskan apa adanya ke
+        // INSERT oleh `Chat_model::send_message` — server tidak memeriksa
+        // kepemilikan pesanan maupun keberadaan produk, jadi aplikasi hanya
+        // menawarkan pesanan milik pembeli sendiri.
+        data: {
+          'message_type': type.code,
+          if (content != null) 'content': content,
+          if (sharedProductId != null) 'shared_product_id': sharedProductId,
+          if (sharedOrderId != null) 'shared_order_id': sharedOrderId,
+        },
       );
       return parseEnvelope(
         response,
@@ -148,8 +162,8 @@ class ChatService {
   Future<ApiEnvelope<void>> markRead(int conversationId) async {
     final context = 'POST /chat/conversations/$conversationId/read';
     try {
-      final response = await _dio
-          .post<dynamic>('/chat/conversations/$conversationId/read');
+      final response =
+          await _dio.post<dynamic>('/chat/conversations/$conversationId/read');
       return parseEnvelope(response, (_) {}, context: context);
     } on DioException catch (e) {
       throw ApiException.fromDio(e, context: context);

@@ -47,6 +47,28 @@ class ChatRepositoryImpl with RepositoryGuard implements ChatRepository {
   }
 
   @override
+  Future<DataState<List<ChatMessageModel>>> share(
+    int conversationId, {
+    int? productId,
+    int? orderId,
+  }) async {
+    assert((productId == null) != (orderId == null), 'bagikan tepat satu hal');
+    try {
+      await _service.sendMessage(
+        conversationId,
+        type: productId != null
+            ? ChatMessageType.productShare
+            : ChatMessageType.orderShare,
+        sharedProductId: productId,
+        sharedOrderId: orderId,
+      );
+    } on ApiException catch (e) {
+      return DataFailed(e.error);
+    }
+    return guard(() => _service.fetchMessages(conversationId));
+  }
+
+  @override
   Future<DataState<void>> markRead(int conversationId) =>
       guardVoid(() => _service.markRead(conversationId));
 }

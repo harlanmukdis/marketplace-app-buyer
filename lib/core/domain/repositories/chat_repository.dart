@@ -27,5 +27,14 @@ abstract class ChatRepository {
     required String content,
   });
 
+  /// Membagikan satu produk **atau** satu pesanan (`product_share` /
+  /// `order_share`), lalu membaca ulang halaman pertama seperti
+  /// [sendMessage].
+  Future<DataState<List<ChatMessageModel>>> share(
+    int conversationId, {
+    int? productId,
+    int? orderId,
+  });
+
   Future<DataState<void>> markRead(int conversationId);
 }

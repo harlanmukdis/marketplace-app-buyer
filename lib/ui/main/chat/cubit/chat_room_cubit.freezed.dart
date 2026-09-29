@@ -145,7 +145,7 @@ extension ChatRoomStatePatterns on ChatRoomState {
   TResult maybeWhen<TResult extends Object?>({
     TResult Function()? loading,
     TResult Function(List<ChatMessageModel> messages, bool isSending,
-            DataError? actionError)?
+            String? pendingText, DataError? actionError)?
         ready,
     TResult Function(DataError error)? error,
     required TResult orElse(),
@@ -155,7 +155,8 @@ extension ChatRoomStatePatterns on ChatRoomState {
       case ChatRoomLoading() when loading != null:
         return loading();
       case ChatRoomReady() when ready != null:
-        return ready(_that.messages, _that.isSending, _that.actionError);
+        return ready(_that.messages, _that.isSending, _that.pendingText,
+            _that.actionError);
       case ChatRoomError() when error != null:
         return error(_that.error);
       case _:
@@ -180,7 +181,7 @@ extension ChatRoomStatePatterns on ChatRoomState {
   TResult when<TResult extends Object?>({
     required TResult Function() loading,
     required TResult Function(List<ChatMessageModel> messages, bool isSending,
-            DataError? actionError)
+            String? pendingText, DataError? actionError)
         ready,
     required TResult Function(DataError error) error,
   }) {
@@ -189,7 +190,8 @@ extension ChatRoomStatePatterns on ChatRoomState {
       case ChatRoomLoading():
         return loading();
       case ChatRoomReady():
-        return ready(_that.messages, _that.isSending, _that.actionError);
+        return ready(_that.messages, _that.isSending, _that.pendingText,
+            _that.actionError);
       case ChatRoomError():
         return error(_that.error);
     }
@@ -211,7 +213,7 @@ extension ChatRoomStatePatterns on ChatRoomState {
   TResult? whenOrNull<TResult extends Object?>({
     TResult? Function()? loading,
     TResult? Function(List<ChatMessageModel> messages, bool isSending,
-            DataError? actionError)?
+            String? pendingText, DataError? actionError)?
         ready,
     TResult? Function(DataError error)? error,
   }) {
@@ -220,7 +222,8 @@ extension ChatRoomStatePatterns on ChatRoomState {
       case ChatRoomLoading() when loading != null:
         return loading();
       case ChatRoomReady() when ready != null:
-        return ready(_that.messages, _that.isSending, _that.actionError);
+        return ready(_that.messages, _that.isSending, _that.pendingText,
+            _that.actionError);
       case ChatRoomError() when error != null:
         return error(_that.error);
       case _:
@@ -255,6 +258,7 @@ class ChatRoomReady extends ChatRoomState {
   const ChatRoomReady(
       {required final List<ChatMessageModel> messages,
       this.isSending = false,
+      this.pendingText,
       this.actionError})
       : _messages = messages,
         super._();
@@ -269,6 +273,16 @@ class ChatRoomReady extends ChatRoomState {
   /// Sedang mengirim pesan.
   @JsonKey()
   final bool isSending;
+
+  /// Isi pesan yang sedang dikirim, dirender sebagai gelembung "menunggu"
+  /// (ikon jam) di ujung percakapan.
+  ///
+  /// Bukan [ChatMessageModel] palsu: pesan sungguhan baru ada setelah baca
+  /// ulang (balasan `POST` hanya `{id}`), dan menyisipkan model karangan ke
+  /// [messages] berarti ia ikut diurutkan dan digabung seolah datang dari
+  /// server. Dikosongkan lagi begitu pengiriman selesai, berhasil maupun
+  /// gagal.
+  final String? pendingText;
   final DataError? actionError;
 
   /// Create a copy of ChatRoomState
@@ -286,17 +300,23 @@ class ChatRoomReady extends ChatRoomState {
             const DeepCollectionEquality().equals(other._messages, _messages) &&
             (identical(other.isSending, isSending) ||
                 other.isSending == isSending) &&
+            (identical(other.pendingText, pendingText) ||
+                other.pendingText == pendingText) &&
             (identical(other.actionError, actionError) ||
                 other.actionError == actionError));
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType,
-      const DeepCollectionEquality().hash(_messages), isSending, actionError);
+  int get hashCode => Object.hash(
+      runtimeType,
+      const DeepCollectionEquality().hash(_messages),
+      isSending,
+      pendingText,
+      actionError);
 
   @override
   String toString() {
-    return 'ChatRoomState.ready(messages: $messages, isSending: $isSending, actionError: $actionError)';
+    return 'ChatRoomState.ready(messages: $messages, isSending: $isSending, pendingText: $pendingText, actionError: $actionError)';
   }
 }
 
@@ -310,6 +330,7 @@ abstract mixin class $ChatRoomReadyCopyWith<$Res>
   $Res call(
       {List<ChatMessageModel> messages,
       bool isSending,
+      String? pendingText,
       DataError? actionError});
 }
 
@@ -327,6 +348,7 @@ class _$ChatRoomReadyCopyWithImpl<$Res>
   $Res call({
     Object? messages = null,
     Object? isSending = null,
+    Object? pendingText = freezed,
     Object? actionError = freezed,
   }) {
     return _then(ChatRoomReady(
@@ -338,6 +360,10 @@ class _$ChatRoomReadyCopyWithImpl<$Res>
           ? _self.isSending
           : isSending // ignore: cast_nullable_to_non_nullable
               as bool,
+      pendingText: freezed == pendingText
+          ? _self.pendingText
+          : pendingText // ignore: cast_nullable_to_non_nullable
+              as String?,
       actionError: freezed == actionError
           ? _self.actionError
           : actionError // ignore: cast_nullable_to_non_nullable

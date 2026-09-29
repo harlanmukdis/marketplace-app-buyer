@@ -5,6 +5,7 @@ import '../../core/services/auth_events.dart';
 import '../../core/services/token_store.dart';
 import 'interceptors/auth_interceptor.dart';
 import 'interceptors/logging_interceptor.dart';
+import 'mock/pending_api_mock.dart';
 import 'token_refresher.dart';
 
 /// Pabrik `Dio` untuk API Markas.
@@ -72,6 +73,13 @@ abstract final class DioClient {
         retryClient: createBare(baseUrl),
       ),
     );
+
+    // Sesudah auth, sebelum logging: request yang dijawab mock tetap tercatat
+    // di log (dengan penanda `x-mock`), dan respons sungguhan yang diperkaya
+    // mock sudah membawa field tambahannya saat dicetak.
+    if (PendingApiMock.enabled) {
+      dio.interceptors.add(PendingApiMockInterceptor(PendingApiMock.routes));
+    }
 
     if (kDebugMode) {
       dio.interceptors.add(const LoggingInterceptor());

@@ -108,6 +108,31 @@ class CartCubit extends Cubit<CartState> {
         action: () => _repository.removeItem(itemId),
       );
 
+  /// Mencentang / melepas centang banyak baris sekaligus — dipakai "Pilih
+  /// Semua" dan centang per toko.
+  ///
+  /// Server **tidak punya endpoint massal**: tiap baris tetap satu `PATCH`
+  /// (plus baca ulang dari repository). Baris yang sudah bernilai sama
+  /// dilewati supaya tidak ada request sia-sia.
+  Future<void> setSelectedMany(Iterable<int> itemIds, bool isSelected) {
+    final targets = [
+      for (final id in itemIds)
+        if (_itemById(id) case final item? when item.isSelected != isSelected)
+          id,
+    ];
+    return _mutateMany(
+      targets,
+      (id) => _repository.setSelected(id, isSelected),
+    );
+  }
+
+  /// Menghapus banyak baris sekaligus (tombol "Hapus" di atas keranjang).
+  /// Sama seperti [setSelectedMany], satu `DELETE` per baris.
+  Future<void> removeItems(Iterable<int> itemIds) => _mutateMany(
+        itemIds.toList(),
+        _repository.removeItem,
+      );
+
   Future<void> applyVoucher(String code) => _mutate(
         itemId: null,
         action: () => _repository.applyVoucher(code),
@@ -168,6 +193,58 @@ class CartCubit extends Cubit<CartState> {
       case DataLoading():
         break;
     }
+  }
+
+  /// Menjalankan mutasi per baris secara **berurutan**, bukan paralel:
+  /// `php -S` di dev single-threaded, dan tiap mutasi diikuti baca ulang —
+  /// paralel hanya menghasilkan snapshot yang saling mendahului.
+  ///
+  /// Berhenti pada kegagalan pertama; isi keranjang terakhir yang diketahui
+  /// tetap tampil dan kegagalannya jadi [CartReady.actionError].
+  Future<void> _mutateMany(
+    List<int> itemIds,
+    Future<DataState<CartSnapshot>> Function(int itemId) action,
+  ) async {
+    final current = state;
+    if (current is! CartReady || itemIds.isEmpty) return;
+    if (itemIds.any(current.mutatingItemIds.contains)) return;
+    emit(current.copyWith(
+      mutatingItemIds: {...current.mutatingItemIds, ...itemIds},
+      actionError: null,
+    ));
+
+    CartSnapshot? latest;
+    DataError? failure;
+    for (final id in itemIds) {
+      final result = await action(id);
+      if (isClosed) return;
+      switch (result) {
+        case DataSuccess(:final data):
+          latest = data;
+        case DataEmpty():
+          latest = CartSnapshot.empty;
+        case DataFailed(:final error):
+          failure = error;
+        case DataLoading():
+          break;
+      }
+      if (failure != null) break;
+    }
+
+    final previous = state;
+    final remaining = previous is CartReady
+        ? ({...previous.mutatingItemIds}..removeAll(itemIds))
+        : <int>{};
+    final cart = latest ?? (previous is CartReady ? previous.cart : null);
+    if (cart == null) {
+      if (failure != null) emit(CartState.error(failure));
+      return;
+    }
+    emit(CartState.ready(
+      cart: cart,
+      mutatingItemIds: remaining,
+      actionError: failure,
+    ));
   }
 
   CartItemModel? _itemById(int itemId) {

@@ -47,6 +47,7 @@ class AddressService {
     bool isPrimary = false,
     double? latitude,
     double? longitude,
+    int? cityId,
   }) async {
     const context = 'POST /me/addresses';
     try {
@@ -63,6 +64,8 @@ class AddressService {
           isPrimary: isPrimary,
           latitude: latitude,
           longitude: longitude,
+          cityId: cityId,
+          includeCityId: cityId != null,
         ),
       );
       return parseEnvelope(
@@ -89,6 +92,8 @@ class AddressService {
     bool? isPrimary,
     double? latitude,
     double? longitude,
+    int? cityId,
+    bool includeCityId = false,
   }) async {
     final context = 'PATCH /me/addresses/$id';
     try {
@@ -105,6 +110,8 @@ class AddressService {
           isPrimary: isPrimary,
           latitude: latitude,
           longitude: longitude,
+          cityId: cityId,
+          includeCityId: includeCityId,
         ),
       );
       return parseEnvelope(response, (raw) => raw, context: context);
@@ -125,6 +132,11 @@ class AddressService {
 
   /// Menyusun body, membuang field yang `null` supaya `PATCH` benar-benar
   /// parsial dan tidak menimpa kolom lain dengan kosong.
+  ///
+  /// `city_id` pengecualian: dengan [includeCityId] ia dikirim **walau
+  /// `null`**, supaya kota yang diganti ke teks bebas melepas tautan master
+  /// lamanya — kalau tidak, alamat menyimpan teks "Bogor" dengan `city_id`
+  /// milik Bandung.
   Map<String, dynamic> _body({
     String? label,
     String? recipientName,
@@ -136,6 +148,8 @@ class AddressService {
     bool? isPrimary,
     double? latitude,
     double? longitude,
+    int? cityId,
+    bool includeCityId = false,
   }) {
     return <String, dynamic>{
       if (label != null) 'label': label,
@@ -149,6 +163,7 @@ class AddressService {
       if (isPrimary != null) 'is_primary': isPrimary ? 1 : 0,
       if (latitude != null) 'latitude': latitude,
       if (longitude != null) 'longitude': longitude,
+      if (includeCityId) 'city_id': cityId,
     };
   }
 }

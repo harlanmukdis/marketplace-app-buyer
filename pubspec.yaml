@@ -60,6 +60,9 @@ dependencies:
   json_annotation: ^4.12.0
   envied: ^1.3.8
   flutter_secure_storage: ^11.0.0
+  pdf: ^3.12.0
+  printing: ^5.14.3
+  image_picker: ^1.2.3
 #  flutter_native_splash: ^2.4.1
 
 
@@ -135,6 +138,13 @@ flutter:
   assets:
     - assets/images/
     - assets/icon/
+    # Fixture mock untuk API yang belum dibangun backend — lihat
+    # lib/config/network/mock/pending_api_mock.dart. Setiap subfolder wajib
+    # didaftarkan sendiri; Flutter tidak mendaftarkan folder secara rekursif.
+    - assets/mock/pending_api/account/
+    - assets/mock/pending_api/checkout/
+    - assets/mock/pending_api/order/
+    - assets/mock/pending_api/discovery/
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
 
@@ -146,15 +156,21 @@ flutter:
   # "family" key with the font family name, and a "fonts" key with a
   # list giving the asset and other descriptors for the font. For
   # example:
-  # fonts:
-  # STUB SEMENTARA — font Hanimation tidak ada di repo ini.
-  # Font tidak bisa dibuat placeholder (OTF palsu gagal di-parse Flutter),
-  # jadi deklarasinya dinonaktifkan dan teks jatuh ke font sistem.
-  # Aktifkan kembali begitu assets/fonts/ diisi. Lihat assets/PLACEHOLDER-README.md
-  # fonts:
-  #   - family: Hanimation
-  #     fonts:
-  #       - asset: assets/fonts/Hanimation_Arabic_Regular.otf
+  # Inter — satu-satunya font di design system Xpedia (design_buyer.md §2).
+  # Empat bobot statis yang dipakai skala tipenya: 400/500/600/700. Lisensi OFL
+  # ada di assets/fonts/inter/OFL.txt. Font Hanimation milik UI kit tidak
+  # pernah ada di repo ini dan sudah tidak dipakai.
+  fonts:
+    - family: Inter
+      fonts:
+        - asset: assets/fonts/inter/Inter-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/inter/Inter-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/inter/Inter-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/inter/Inter-Bold.ttf
+          weight: 700
 
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
